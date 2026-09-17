@@ -1,24 +1,31 @@
-# Database Structure — AI App Builder Platform
+# Database Structure — AI App Builder Platform (Dynamic per Prompt)
 
 ## Overview
 
 - **Database Engine**: SQLite (via `better-sqlite3`)
-- **ORM**: TypeORM 1.1 (`EntitySchema` pattern; **17 EntitySchemas / ~23 physical tables**: RBAC 9 schemas / 12 tables + Builder 8 schemas / +11 tables)
-- **Database File**: `apps/web/db.sqlite`
-- **Migrations**: `synchronize: true` dev (default, override `DB_SYNCHRONIZE`), `synchronize: false` + `migrationsRun: true` production. Baseline `server/migrations/1788914913928-Baseline.ts` (RBAC) + `server/migrations/<ts>-AiBuilder.ts` (Builder 8 schemas) auto-run via `getDataSource()`. Drift → `MIGRATION_DRIFT` via `server/utils/migration-status.ts`. CLI: `npm run migration:generate -- <Name>` / `migration:run` / `migration:revert` (detail `docs/production-runbook.md` §1). BR-001: never edit applied migration.
-- **Seed**: idempotent via `server/plugins/database.server.ts` (RBAC + Builder templates)
-- **Startup gating**: dev `synchronize:true` suppress `JWT_SECRET_DEFAULT` + `MIGRATION_DRIFT` warns (Task 24); prod fatals.
+- **ORM**: TypeORM 1.1 (`EntitySchema` pattern)
+- **Platform Tables (static)**: **~14 EntitySchemas / 18 physical tables** — RBAC 6 core + 3 junctions + Builder META 8 + Platform (`activity_logs`, `settings`) — di-migrate via baseline. **Tidak ada tabel bisnis hardcode.**
+- **Dynamic App Tables**: `N` tabel fisik `{slug}_{entity}` dibuat **runtime per prompt** (`buatkan aplikasi kasir` → `pos_kasir_products`, `pos_kasir_categories`, dll). Tidak dihitung di baseline, tidak ada default. Lihat § Dynamic App Tables.
+- **Database File**: `apps/web/db.sqlite` (atau `data/db.sqlite`), single file. Dynamic tables hidup di file yang sama.
+- **Migrations**: `synchronize: true` dev (default, override `DB_SYNCHRONIZE`), `synchronize: false` + `migrationsRun: true` production. Baseline `lib/db/migrations/1788914913928-Baseline.ts` (PLATFORM tables) + `lib/db/migrations/<ts>-AiBuilder.ts` (Builder META) auto-run via `getDataSource()` (`lib/db/data-source.ts`). Drift → `MIGRATION_DRIFT` via `lib/utils/migration-status.ts`. CLI: `npm run migration:generate -- <Name>` / `migration:run` / `migration:revert` (detail `docs/production-runbook.md` §1). BR-001: never edit applied migration. **Dynamic tables TIDAK via migration file** — via `queryRunner.createTable` di `lib/services/ai-builder/codegen.service.ts`.
+- **Seed**: idempotent via `instrumentation.ts` / `lib/db/seed.ts` (RBAC users/roles/permissions/guards + Builder Templates META) — dipanggil saat Next.js boot. **Tidak seed tabel bisnis** — data bisnis di-seed runtime setelah generate (5-10 rows per entity, idempotent `WHERE NOT EXISTS`).
+- **Startup gating**: dev `synchronize:true` suppress `JWT_SECRET_DEFAULT` + `MIGRATION_DRIFT` warns; prod fatals.
 
 ---
 
-## Current vs Planned
+## Current vs Planned — Platform vs Dynamic
 
-- **CURRENT DATABASE (v1 AI Builder)**: 17 schemas / ~23 tabel fisik — RBAC foundation (9 schemas) + Builder (8 schemas). Lihat § Entity Details & § Builder Entities.
-- **PLANNED**: schema baru untuk generated apps: tiap `AiProject` generate EntitySchemas dinamis di `server/entities/generated/{slug}/` — tidak dihitung di baseline, diregistrasi runtime di `appEntities` via `orm-data-source.ts` (generated schemas di-import dinamis atau di-register via `getGeneratedEntities(slug)`). Future builder schema changes ship sebagai additive migration baru setelah baseline builder.
+- **CURRENT PLATFORM (static, di-migrate)**: ~14 EntitySchemas / 18 tabel fisik — RBAC foundation + Builder META + Platform. Lihat § Entity Relationship Diagram & § Entity Details — Platform Tables. Ini yang ada di `lib/db/data-source.ts` `appEntities` sejak awal.
+- **DYNAMIC (per prompt, runtime)**: Setiap `AiProject` menghasilkan `ai_data_models` rows (spec JSON) → `lib/services/ai-builder/codegen.service.ts` generate **physical tables** `lib/db/entities/generated/{slug}/{entity}.entity.ts` + `app/api/generated/[slug]/[entity]/route.ts`. Tabel dinamis diregistrasi runtime via `getGeneratedEntities(slug)` dan `appEntities` dynamic. **Jumlah tabel = 0 di awal, N setelah prompt.** Tidak ada `pos_kasir_products` default — hanya muncul jika user prompt `kasir`.
+- **PLANNED**: Platform schema changes ship sebagai additive migration baru setelah baseline. Dynamic tables tidak perlu migration — additive DDL per project (`ADD COLUMN`/`CREATE TABLE`). Jika butuh perubahan platform, buat migration baru.
+
+> **Prinsip AI App Builder DB:** `Platform tables = fixed & minimal. Business tables = 100% dynamic per prompt.` Jangan hardcode entity bisnis di baseline.
 
 ---
 
-## Entity Relationship Diagram — RBAC (9 schemas)
+## Entity Relationship Diagram — Platform (Static)
+
+### RBAC Core
 
 ```
 ┌──────────────┐       ┌──────────────────┐       ┌──────────────┐
@@ -60,7 +67,7 @@
                                                     └──────────┘    └───────────────┘
 ```
 
-## Entity Relationship Diagram — Builder (8 schemas)
+### Builder META (Static)
 
 ```
 ┌──────────────┐       ┌──────────────┐       ┌──────────────┐
@@ -103,11 +110,28 @@
                     └──────────────┘        └──────────────┘        └──────────────────┘
 ```
 
-Generasi dinamis: `ai_data_models` tiap row → `server/entities/generated/{slug}/{entity}.entity.ts` + tabel fisik `"{slug}_{entity}"` (mis. `pos_kasir_products`).
+### Dynamic App Tables (Virtual — per Prompt)
+
+```
+ai_data_models (META: fields JSON, relations JSON)
+       │
+       ├─runtime─> lib/db/entities/generated/{slug}/{entity}.entity.ts
+       │           + queryRunner.createTable("{slug}_{entity}")
+       │           → physical table "{slug}_{entity}" (e.g., "pos_kasir_products")
+       │             id PK, name VARCHAR, price NUMERIC, stock INTEGER,
+       │             categoryId INTEGER FK → {slug}_categories.id,
+       │             createdAt DATETIME, updatedAt DATETIME
+       │
+       └─> app/api/generated/[slug]/[entity]/route.ts (CRUD via TypeORM)
+```
+
+> Dynamic tables **tidak muncul di baseline** — hanya ilustrasi virtual. Struktur kolom 100% dari `ai_data_models.fields` hasil inference prompt.
 
 ---
 
-## Entity Details — RBAC (1-9 + junctions)
+## Entity Details — Platform Tables (Static)
+
+> Hanya tabel platform yang di-migrate. Tidak ada `pos_kasir_products` hardcode.
 
 ### 1. users
 
@@ -207,31 +231,31 @@ PK(userId, roleId), CASCADE.
 
 ---
 
-## Entity Details — Builder (11-18)
+## Entity Details — Builder META (Static, 8 schemas)
+
+> Ini adalah **spesifikasi** aplikasi, bukan data bisnis. Data bisnis ada di Dynamic App Tables.
 
 ### 11. ai_projects
 
-Container aplikasi yang di-generate.
+Container aplikasi yang di-generate (per prompt).
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
 | `id` | INTEGER | PK, AUTO_INCREMENT | ID |
-| `name` | VARCHAR(100) | NOT NULL | `Kasir POS` |
-| `slug` | VARCHAR(100) | NOT NULL, UNIQUE | `pos-kasir` URL-safe lowercase hyphen |
-| `initialPrompt` | TEXT | NOT NULL | prompt pertama |
+| `name` | VARCHAR(100) | NOT NULL | `Kasir POS` (dari inference `domainLabel`) |
+| `slug` | VARCHAR(100) | NOT NULL, UNIQUE | `pos-kasir` URL-safe `^[a-z0-9]+(-[a-z0-9]+)*$` |
+| `initialPrompt` | TEXT | NOT NULL | prompt pertama (`buatkan aplikasi kasir`) |
 | `status` | VARCHAR(20) | NOT NULL, DEFAULT 'drafting' | `drafting`/`generating`/`ready`/`failed` |
 | `previewUrl` | VARCHAR(500) | NULLABLE | `/generated/pos-kasir` |
 | `ownerId` | INTEGER | NULLABLE, FK→users.id ON DELETE SET NULL | pembuat project |
 | `createdAt` | DATETIME | | |
 | `updatedAt` | DATETIME | | |
 
-Indexes: PK id, UNIQUE slug, INDEX ownerId, INDEX status.
-
-**Business rule**: slug auto-generate dari name + collision suffix `-2`.
+Indexes: PK id, UNIQUE slug, INDEX ownerId, INDEX status. Slug collision → auto suffix `-2`.
 
 ### 12. ai_prompts
 
-Riwayat prompt per project (versioning).
+Riwayat prompt per project (versioning, untuk refine `tambahkan ...`).
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
@@ -242,7 +266,7 @@ Riwayat prompt per project (versioning).
 | `version` | INTEGER | NOT NULL, DEFAULT 1 | increment per project |
 | `createdAt` | DATETIME | | |
 
-Indexes: PK id, INDEX projectId, UNIQUE(projectId, version).
+UNIQUE(projectId, version).
 
 ### 13. ai_generations
 
@@ -254,101 +278,97 @@ Satu run generation (queued → running → success/failed).
 | `projectId` | INTEGER | NOT NULL, FK→ai_projects.id ON DELETE CASCADE | |
 | `promptId` | INTEGER | NULLABLE, FK→ai_prompts.id ON DELETE SET NULL | prompt pemicu |
 | `status` | VARCHAR(20) | NOT NULL, DEFAULT 'queued' | `queued`/`running`/`success`/`failed` |
-| `spec` | TEXT | NULLABLE (JSON) | snapshot AiAppSchema saat generation |
+| `spec` | TEXT | NULLABLE (JSON) | snapshot `AiAppSchema` saat generation |
 | `error` | TEXT | NULLABLE | error message jika failed |
 | `durationMs` | INTEGER | NULLABLE | lama generation ms |
 | `createdAt` | DATETIME | | |
 | `updatedAt` | DATETIME | | |
 
-Indexes: PK id, INDEX projectId, INDEX status.
+INDEX status (queue monitoring).
 
 ### 14. ai_app_schemas
 
-Blueprint aplikasi (1 per successful generation).
+Blueprint aplikasi (1 per successful generation, source of truth untuk codegen).
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
 | `id` | INTEGER | PK | ID |
 | `generationId` | INTEGER | NOT NULL, UNIQUE, FK→ai_generations.id ON DELETE CASCADE | |
-| `entities` | TEXT | NOT NULL (JSON) | array entity definitions |
+| `entities` | TEXT | NOT NULL (JSON) | array entity definitions (nama + fields) |
 | `pages` | TEXT | NOT NULL (JSON) | array page definitions |
 | `roles` | TEXT | NOT NULL (JSON) | array role definitions |
 | `flows` | TEXT | NULLABLE (JSON) | business flows |
 | `apiContract` | TEXT | NULLABLE (JSON) | endpoints contract |
 | `createdAt` | DATETIME | | |
 
-### 15. ai_data_models
+### 15. ai_data_models (META — bukan tabel bisnis)
 
-Model data yang di-generate (per entity).
+Spec per entity yang akan menjadi **dynamic table**. 1 row di sini → 1 physical table `{slug}_{entity}`.
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
 | `id` | INTEGER | PK | ID |
 | `schemaId` | INTEGER | NOT NULL, FK→ai_app_schemas.id ON DELETE CASCADE | |
-| `name` | VARCHAR(100) | NOT NULL | `Product` |
-| `slug` | VARCHAR(100) | NOT NULL | `products` (table slug) |
-| `fields` | TEXT | NOT NULL (JSON) | `[{name:"price", type:"decimal", required:true, ...}]` |
-| `relations` | TEXT | NULLABLE (JSON) | `[{type:"ManyToOne", target:"Category", field:"categoryId"}]` |
+| `name` | VARCHAR(100) | NOT NULL | `Product` (PascalCase) |
+| `slug` | VARCHAR(100) | NOT NULL | `products` (snake plural, table suffix) |
+| `fields` | TEXT | NOT NULL (JSON) | `[{name:"price", type:"decimal", required:true, unique:false, enumValues:null}]` |
+| `relations` | TEXT | NULLABLE (JSON) | `[{type:"ManyToOne", target:"Category", field:"categoryId", onDelete:"SET NULL"}]` |
 | `indexes` | TEXT | NULLABLE (JSON) | `["name","categoryId"]` |
 | `createdAt` | DATETIME | | |
 
-Indexes: PK id, INDEX schemaId, UNIQUE(schemaId, slug).
-
-**Field type enum** (di JSON): `string`, `text`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `enum`, `relation`.
+UNIQUE(schemaId, slug). **Field type enum** (di JSON): `string`→VARCHAR(255), `text`→TEXT, `integer`→INTEGER, `decimal`→NUMERIC(10,2), `boolean`→INTEGER 0/1, `date`→DATE, `datetime`→DATETIME, `enum`→VARCHAR+CHECK, `relation`→INTEGER FK.
 
 ### 16. ai_pages
 
-Halaman yang di-generate.
+Halaman yang di-generate (spec, bukan tabel bisnis).
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
 | `id` | INTEGER | PK | ID |
 | `schemaId` | INTEGER | NOT NULL, FK→ai_app_schemas.id ON DELETE CASCADE | |
-| `route` | VARCHAR(255) | NOT NULL | `/generated/pos-kasir/products` |
-| `title` | VARCHAR(100) | NOT NULL | `Produk` |
+| `route` | VARCHAR(255) | NOT NULL | `/generated/pos-kasir/products` (jika prompt `kasir`; jika `klinik` → `/generated/crm-klinik/patients`) |
+| `title` | VARCHAR(100) | NOT NULL | `Produk` / `Pasien` (dari inference) |
 | `type` | VARCHAR(20) | NOT NULL | `dashboard`/`list`/`detail`/`form`/`report` |
-| `componentTree` | TEXT | NOT NULL (JSON) | `{"root":"PageShell","children":["DataTable","FormModal"]}` |
+| `componentTree` | TEXT | NOT NULL (JSON) | `{"root":"PageShell","children":["DataTable","FormModal"]}` (shadcn/ui) |
 | `createdAt` | DATETIME | | |
-
-Indexes: PK id, INDEX schemaId.
 
 ### 17. ai_component_specs
 
-Spec komponen reusable.
+Spec komponen reusable (shadcn/ui props, bukan tabel bisnis).
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
 | `id` | INTEGER | PK | ID |
 | `schemaId` | INTEGER | NOT NULL, FK→ai_app_schemas.id ON DELETE CASCADE | |
-| `name` | VARCHAR(100) | NOT NULL | `ProductTable` |
-| `type` | VARCHAR(50) | NOT NULL | `DataTable`/`FormModal`/`DetailDrawer`/`StatCard`/`FilterBar` |
-| `props` | TEXT | NOT NULL (JSON) | props spec |
+| `name` | VARCHAR(100) | NOT NULL | `ProductTable` / `PatientTable` (sesuai entity) |
+| `type` | VARCHAR(50) | NOT NULL | `DataTable`/`FormModal`/`DetailDrawer`/`StatCard`/`FilterBar` (shadcn) |
+| `props` | TEXT | NOT NULL (JSON) | props spec (columns, validation) |
 | `tokens` | TEXT | NULLABLE (JSON) | design tokens override |
 | `createdAt` | DATETIME | | |
 
 ### 18. ai_deployments
 
-Info preview/deploy.
+Info preview/deploy (static).
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
 | `id` | INTEGER | PK | ID |
 | `projectId` | INTEGER | NOT NULL, FK→ai_projects.id ON DELETE CASCADE | |
 | `env` | VARCHAR(20) | NOT NULL | `preview`/`production` |
-| `url` | VARCHAR(500) | NOT NULL | `/generated/pos-kasir` atau external URL |
+| `url` | VARCHAR(500) | NOT NULL | `/generated/{slug}` |
 | `builtAt` | DATETIME | NOT NULL | |
 | `createdAt` | DATETIME | | |
 
-### 19. activity_logs
+### 19. activity_logs (Platform)
 
-Audit trail (tetap).
+Audit trail.
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
 | `id` | INTEGER | PK | ID |
 | `userId` | INTEGER | NULLABLE, FK→users.id ON DELETE SET NULL | |
-| `action` | VARCHAR | NOT NULL | CREATE/UPDATE/DELETE/LOGIN/GENERATE/REFINE |
-| `entity` | VARCHAR | NOT NULL | User/Role/AiProject/AiGeneration/Product/... |
+| `action` | VARCHAR | NOT NULL | CREATE/UPDATE/DELETE/LOGIN/GENERATE/REFINE (GENERATE/REFINE untuk builder) |
+| `entity` | VARCHAR | NOT NULL | User/Role/AiProject/AiGeneration/{DynamicEntity} (entity dynamic sesuai prompt) |
 | `entityId` | INTEGER | NULLABLE | |
 | `description` | TEXT | NULLABLE | |
 | `metadata` | TEXT | NULLABLE | JSON before/after |
@@ -357,11 +377,9 @@ Audit trail (tetap).
 | `level` | VARCHAR(20) | DEFAULT 'INFO' | INFO/WARNING/ERROR |
 | `createdAt` | DATETIME | | |
 
-Tambah action `GENERATE`, `REFINE` + entity `AiProject`, `AiGeneration`.
+### 20. settings (Platform)
 
-### 20. settings
-
-Key-value (tetap).
+Key-value.
 
 | Column | Type | Constraint | Description |
 |--------|------|-----------|-------------|
@@ -371,26 +389,113 @@ Key-value (tetap).
 | `createdAt` | DATETIME | | |
 | `updatedAt` | DATETIME | | |
 
-Seed tambahan: `builder_default_template = pos-kasir`, `ai_inference_provider = stub`.
-
-### Generated Tables (Dynamic per Project)
-
-Contoh untuk `pos-kasir`:
-
-| Tabel Fisik | Kolom Contoh | Keterangan |
-|-------------|--------------|------------|
-| `pos_kasir_products` | id, name, price, stock, categoryId (FK), createdAt | dari AiDataModel `Product` |
-| `pos_kasir_categories` | id, name, description | |
-| `pos_kasir_transactions` | id, customerId, total, status, createdAt | |
-| `pos_kasir_customers` | id, name, phone, email | |
-
-Naming: `{slug_snake}_{entity_snake}`. FK ke generated tables lain via `AiDataModel.relations`. Index otomatis untuk FK + `searchField`.
+Seed: `app_name`, `login_bg_gradient`, `builder_default_template = pos-kasir`, `ai_inference_provider = stub` (bukan tabel bisnis).
 
 ---
 
-## Seed Data — RBAC (Sumber kebenaran: `server/services/seeder.service.ts`)
+## Dynamic App Tables (Generated per Prompt — TIDAK ADA DEFAULT)
 
-### Users
+> **Tidak ada tabel bisnis hardcode di baseline.** Semua tabel bisnis dibuat saat `POST /api/builder/generate` dengan `prompt`.
+
+### Kontrak Generasi
+
+**Input:** prompt `buatkan aplikasi kasir` → `AiInferenceService.infer(prompt)` → `InferredIntent.entities` (mis. `Product, Category, Transaction, Customer`)
+
+**Output:** untuk tiap entity:
+
+1. **Spec row** `ai_data_models` (`name`, `slug`, `fields` JSON, `relations` JSON)
+2. **Entity file** `lib/db/entities/generated/{slug}/{entity}.entity.ts` (EntitySchema)
+3. **Physical table** `{slug_snake}_{entity_snake}` via `queryRunner.createTable()` — **runtime**, additive only (`ADD COLUMN` / `CREATE TABLE`, never `DROP COLUMN` pada refine)
+4. **DTO** `lib/dto/{slug}/{entity}.dto.ts` (Zod `Create{Entity}Schema`), **Service** `lib/services/{slug}/{entity}.service.ts`, **Route Handler** `app/api/generated/{slug}/{entity}/route.ts`, **UI** `app/generated/[slug]/**` (shadcn)
+
+### Naming
+
+- Slug: `^[a-z0-9]+(?:-[a-z0-9]+)*$` lower-hyphen, unique, collision → `-2`
+- Table: `{slug_snake}_{entity_snake}` lower_snake. Contoh: prompt `kasir` slug `pos-kasir` + entity `Product` → table `pos_kasir_products`; prompt `klinik` slug `crm-klinik` + entity `Patient` → `crm_klinik_patients`
+- Column: `camelCase` di spec → `snake_case` di DB? Spec `field.name` disimpan as-is, TypeORM mapping ke `name` (VARCHAR). Konsisten `camelCase` di API.
+
+### Field Type Mapping (spec → SQLite)
+
+| Spec `type` | SQLite | TypeORM | Validasi Zod |
+|-------------|--------|---------|--------------|
+| `string` | VARCHAR(255) | `varchar` | `z.string().min(1).max(255)` |
+| `text` | TEXT | `text` | `z.string()` |
+| `integer` | INTEGER | `int` | `z.number().int()` |
+| `decimal` | NUMERIC(10,2) | `decimal` | `z.number()` |
+| `boolean` | INTEGER 0/1 | `boolean` | `z.boolean()` |
+| `date` | DATE | `date` | `z.string().date()` atau `z.coerce.date()` |
+| `datetime` | DATETIME | `datetime` | `z.string().datetime()` |
+| `enum` | VARCHAR(50) + CHECK | `varchar` | `z.enum([...])` |
+| `relation` ManyToOne | INTEGER FK | `int` + `ManyToOne` relation | `z.number().int()` nullable |
+
+### Relation Handling
+
+- `ai_data_models.relations` contoh: `[{type:"ManyToOne", target:"Category", field:"categoryId", onDelete:"SET NULL"}]` → di EntitySchema `relations: { category: { type:"many-to-one", target:"Category", joinColumn: { name:"categoryId" }, onDelete:"SET NULL" } }` + `columns: { categoryId: { type:"int", nullable:true } }` + `INDEX categoryId`
+- FK constraint dibuat runtime `FOREIGN KEY (categoryId) REFERENCES {slug}_categories(id) ON DELETE SET NULL`
+- OneToMany inverse otomatis, tidak buat kolom.
+
+### Index Strategy
+
+- Otomatis: `PRIMARY KEY id`, `INDEX` untuk tiap FK (`categoryId`), `UNIQUE` jika `fields.unique=true`, `INDEX` untuk `fields.index=true` atau `searchField` (untuk DataTable global search 320px).
+- Manual via `ai_data_models.indexes` JSON `["name","categoryId"]`.
+
+### DDL Generation (Next.js)
+
+```typescript
+// lib/services/ai-builder/codegen.service.ts (pseudo)
+for (const model of aiDataModels) {
+  const columns = model.fields.map(f => mapFieldToColumn(f)) // + id, createdAt, updatedAt
+  const relations = model.relations.map(r => mapRelationToFK(r, slug))
+  await queryRunner.createTable(new Table({
+    name: `${slug_snake}_${model.slug}`,
+    columns, indices, foreignKeys: relations
+  }))
+}
+// Refine: alterTable → addColumn only, never drop
+```
+
+### Contoh Virtual (BUKAN FIXED — hanya ilustrasi per prompt)
+
+> Label jelas **CONTOH DINAMIS** — akan berbeda tiap prompt, tidak ada di baseline.
+
+**Jika prompt = `buatkan aplikasi kasir` (slug `pos-kasir`):**
+
+| Tabel Fisik Virtual | Kolom (dari inference) | Keterangan |
+|---------------------|------------------------|------------|
+| `pos_kasir_products` | `id PK, name VARCHAR NOT NULL, price NUMERIC NOT NULL, stock INTEGER NOT NULL, barcode VARCHAR NULL, categoryId INTEGER FK → pos_kasir_categories.id, createdAt DATETIME, updatedAt DATETIME` | Dari entity `Product` fields `[name, price, stock, barcode]` + relation `ManyToOne Category` |
+| `pos_kasir_categories` | `id PK, name VARCHAR UNIQUE NOT NULL, description TEXT NULL` | Dari entity `Category` |
+| `pos_kasir_transactions` | `id PK, customerId INTEGER FK → pos_kasir_customers.id NULL, total NUMERIC NOT NULL, status VARCHAR CHECK('pending','paid','cancelled') NOT NULL, createdAt DATETIME` | Dari `Transaction` |
+| `pos_kasir_customers` | `id PK, name VARCHAR NOT NULL, phone VARCHAR NULL, email VARCHAR UNIQUE NULL` | Dari `Customer` |
+
+**Jika prompt = `buatkan CRM untuk klinik` (slug `crm-klinik`):**
+
+| Tabel Fisik Virtual | Kolom | Keterangan |
+|---------------------|-------|------------|
+| `crm_klinik_patients` | `id PK, name VARCHAR NOT NULL, phone VARCHAR NOT NULL, birthDate DATE NULL` | Dari `Patient` |
+| `crm_klinik_doctors` | `id PK, name VARCHAR NOT NULL, specialty VARCHAR NOT NULL` | Dari `Doctor` |
+| `crm_klinik_appointments` | `id PK, patientId FK, doctorId FK, date DATETIME NOT NULL, status VARCHAR CHECK('scheduled','done','cancelled')` | Dari `Appointment` relations |
+
+**Jika prompt = `todo app dengan share` (slug `todo-share`):**
+
+| Tabel Fisik Virtual | Kolom |
+|---------------------|-------|
+| `todo_share_todos` | `id PK, title VARCHAR NOT NULL, done INTEGER 0/1 NOT NULL, projectId FK, createdAt DATETIME` |
+| `todo_share_projects` | `id PK, name VARCHAR NOT NULL` |
+
+> Hapus `pos_kasir_products` dari baseline — tabel ini **hanya ada setelah prompt `kasir` dieksekusi**.
+
+### Lifecycle & Seed
+
+- `AiProject.status`: `drafting` → `generating` (codegen running) → `ready` (tables + seed selesai) / `failed` (spec `error`)
+- Seed dynamic: setelah `createTable`, insert 5-10 rows realistis (contoh `Product` → `[{name:"Kopi Arabika", price:25000, stock:50}, ...]`) — idempotent `WHERE NOT EXISTS` (cek `COUNT(*) == 0` sebelum seed). **Bukan** seed global hardcode.
+
+---
+
+## Seed Data — Platform Only (Sumber kebenaran: `lib/db/seed.ts`)
+
+> Hanya RBAC + Builder META, **tidak ada seed tabel bisnis**.
+
+### Users (Platform)
 
 | id | username | email | password | roles |
 |----|----------|-------|----------|-------|
@@ -400,51 +505,54 @@ Naming: `{slug_snake}_{entity_snake}`. FK ke generated tables lain via `AiDataMo
 | 4 | manager | manager@example.com | P455w0rd!!! | Manager |
 | 5 | guest | guest@example.com | P455w0rd!!! | Guest |
 
-### Roles / Guards / Permissions
+### Roles / Guards / Permissions (Platform, 7/8/10)
 
-Sama seperti sebelumnya (7 roles, 8 guards, 10 permissions). Lihat ringkasan di `docs/PRD.md` §22.
+Sama, ringkasan di `docs/PRD.md` §22.
 
-**Tambahan Builder Permissions** (seed baru):
+**Tambahan Builder Permissions (platform, seed):**
 
 | id | permissionName | methods | urls |
 |----|----------------|---------|------|
 | 11 | Builder Generate | POST | `/api/builder/generate`, `/api/builder/refine` |
 | 12 | Builder Read | GET | `/api/builder/projects/*`, `/api/builder/generations/*`, `/api/builder/templates` |
 | 13 | Builder Manage | DELETE | `/api/builder/projects/*` |
-| 14 | Generated Read | GET | `/api/*/*` (atau granular per slug) |
-| 15 | Generated Write | POST,PUT,DELETE | `/api/*/*` |
+| 14 | Generated Read | GET | `/api/generated/*/*` |
+| 15 | Generated Write | POST,PUT,DELETE | `/api/generated/*/*` |
 
-Assignment: Super Admin → semua; Admin → Builder Generate/Read + Generated Write; Builder User (role baru) → Builder Generate/Read + Generated Write own slug; Viewer → Generated Read.
+Granular per slug (`Generated:pos-kasir:Products:Read` → `GET /api/generated/pos-kasir/products`) dibuat **runtime** saat project `ready` (bukan seed hardcode).
 
-### Builder Templates Seed
+### Builder Templates META (Contoh Prompt, bukan tabel bisnis)
 
-| slug | name | prompt | entities JSON | roles JSON |
-|------|------|--------|---------------|------------|
+| slug | name | prompt (contoh) | entities (inference contoh) | roles |
+|------|------|-----------------|-----------------------------|-------|
 | pos-kasir | Kasir POS | buatkan aplikasi kasir | Product, Category, Transaction, Customer | Admin, Kasir |
 | crm-klinik | CRM Klinik | buatkan CRM klinik | Patient, Doctor, Appointment, Record | Admin, Dokter |
 | todo-share | Todo Share | todo app share | Todo, Project, ShareLink | Owner, Member |
 | inventory | Inventory Gudang | aplikasi inventory | Item, Warehouse, Movement | Admin, Staff |
 | sekolah | Sekolah | aplikasi sekolah | Student, Teacher, Class, Attendance | Admin, Guru |
 
-Dipakai untuk `GET /api/builder/templates` + fallback inference jika LLM stub tidak kenal domain.
+> Ini adalah **baris di `ai_projects`/`ai_app_schemas` sebagai inspirasi prompt** untuk `GET /api/builder/templates`, **bukan tabel fisik** `pos_kasir_products`. Tabel fisik hanya muncul setelah `POST /api/builder/generate` dengan prompt tersebut.
 
 ---
 
-## Relationships Summary — Builder
+## Relationships Summary
+
+### Platform (Static)
 
 ```
 users ──< ai_projects (owner)
 ai_projects ──< ai_prompts
 ai_projects ──< ai_generations
 ai_generations ──1 ai_app_schemas
-ai_app_schemas ──< ai_data_models
+ai_app_schemas ──< ai_data_models (META)
 ai_app_schemas ──< ai_pages
 ai_app_schemas ──< ai_component_specs
 ai_projects ──< ai_deployments
 ai_generations ── ai_prompts (via promptId, nullable)
+users ──< activity_logs (SET NULL)
 ```
 
-Cardinalities:
+Cardinalities Platform:
 
 | Relationship | Type | On Delete |
 |--------------|------|-----------|
@@ -457,52 +565,91 @@ Cardinalities:
 | AiAppSchema → AiComponentSpec | One-to-Many | CASCADE |
 | AiProject → AiDeployment | One-to-Many | CASCADE |
 
+### Dynamic (Virtual, per Prompt)
+
+```
+ai_data_models (META: fields JSON)
+    --runtime DDL--> {slug}_{entity} physical tables
+         │
+         ├─ {slug}_products (id, name, price, categoryId FK → {slug}_categories)
+         ├─ {slug}_categories (id, name)
+         └─ {slug}_transactions (id, customerId FK → {slug}_customers)
+```
+
+- Tiap dynamic table punya `ManyToOne` FK ke sesama slug (index + constraint)
+- Tidak ada FK lintas slug (isolasi project)
+- Dynamic tables tidak ada di ERD platform — ERD dynamic digenerate per project dari `ai_data_models.relations`
+
 ---
 
-## Indexes & Constraints — Builder
+## Indexes & Constraints
 
-- `ai_projects.slug` UNIQUE + `ai_projects.status` index (filter ready)
+### Platform
+
+- `ai_projects.slug` UNIQUE + `ai_projects.status` INDEX
 - `ai_prompts` UNIQUE(projectId, version)
-- `ai_generations.status` index (queue monitoring)
+- `ai_generations.status` INDEX
 - `ai_data_models` UNIQUE(schemaId, slug)
-- `ai_pages.route` index (optional lookup)
+- `ai_pages.route` INDEX
 - Semua FK `ON DELETE CASCADE` kecuali `ownerId`/`promptId`/`userId` → `SET NULL`
+
+### Dynamic (per Generated Table)
+
+- `PRIMARY KEY id` auto-increment
+- `INDEX` untuk tiap FK column (`categoryId`, `customerId`)
+- `UNIQUE` jika `fields.unique=true` (mis. `email` di `customers` jika spec `unique`)
+- `INDEX` untuk `searchField` (DataTable global search 320px) & `indexes` JSON
 
 ---
 
 ## Migration Strategy
 
-- Dev: `synchronize: true` (auto-sync, no migration file needed). Reset: `rm apps/web/db.sqlite`.
-- Production: `synchronize: false`, `migrationsRun: true`. Baseline RBAC + builder baseline auto-apply at boot; drift fail-fast.
-- Generated tables: tidak di-migrate via file — dibuat runtime via `synchronize` atau `queryRunner.createTable` di `codegen.service.ts` (controlled, additive only). Refine tidak drop column, hanya `ADD COLUMN` atau create new table.
-- Workflow incremental: `npm run migration:generate -- AiBuilderAddX` → wire di `orm-data-source.ts` `appMigrations`.
+### Platform (baseline)
+
+- Dev: `synchronize: true` (auto-sync platform tables, no migration file needed). Reset: `rm apps/web/db.sqlite`.
+- Production: `synchronize: false`, `migrationsRun: true`. Baseline platform auto-apply at boot (`lib/db/migrations/1788914913928-Baseline.ts` + `*AiBuilder.ts`); drift fail-fast `MIGRATION_DRIFT`.
+- Workflow incremental: `npm run migration:generate -- AiBuilderAddX` → wire di `lib/db/data-source.ts` `appMigrations`. **Hanya untuk platform tables.**
+
+### Dynamic (per Prompt, NO migration file)
+
+- **Tidak via `lib/db/migrations`** — `ai_data_models` → `queryRunner.createTable()` di `lib/services/ai-builder/codegen.service.ts` (controlled, transactional).
+- Refine `tambahkan barcode ke produk` → `queryRunner.addColumn("{slug}_products", { name:"barcode", type:"varchar", isNullable:true })`, never `dropColumn`/`dropTable` pada refine (additive only). Hapus project → `queryRunner.dropTable()` per entity (cascade).
+- Backup: platform backup `db.sqlite` sudah include dynamic tables (single file). Restore: `COUNT(*) FROM ai_data_models WHERE schemaId=?` untuk verifikasi DDL vs META.
+- Rollback dynamic: jika generation `failed`, `queryRunner` rollback transaction, `ai_generations.error` diisi, `ai_projects.status=failed`.
 
 ---
 
 ## Data Integrity Rules
 
-1. Slug generation harus `^[a-z0-9]+(?:-[a-z0-9]+)*$`, unique, lower-hyphen.
-2. `AiGeneration` harus punya `projectId`; `spec` JSON valid (Zod `AiAppSchemaSchema`).
-3. `AiDataModel.fields` JSON harus valid `FieldDef[]` (Zod di DTO).
-4. Generated table names snake_case + prefix slug untuk avoid collision.
-5. `AiProject.status` hanya enum drafting/generating/ready/failed.
-6. Seed idempotent — check existence sebelum insert.
+### Platform
+
+1. Slug generation `^[a-z0-9]+(?:-[a-z0-9]+)*$`, unique, lower-hyphen, collision → `-2`
+2. `AiGeneration` harus punya `projectId`; `spec` JSON valid `AiAppSchemaSchema` (Zod)
+3. `AiDataModel.fields` JSON valid `FieldDef[]` (Zod `FieldDefSchema` di `lib/dto/ai-builder.dto.ts`)
+4. `AiProject.status` hanya enum `drafting`/`generating`/`ready`/`failed`
+5. Seed platform idempotent — check existence sebelum insert
+
+### Dynamic
+
+6. Generated table names `^[a-z0-9]+_[a-z0-9_]+$` (`{slug_snake}_{entity_snake}`) lower_snake, collision across slugs impossible due prefix, within slug UNIQUE
+7. Generated columns: `id` auto PK + `createdAt`/`updatedAt` DATETIME default + fields dari spec (required → `NOT NULL`, `enumValues` → `CHECK`)
+8. FK ke dynamic tables lain harus target exist dalam same slug, `ON DELETE SET NULL` / `CASCADE` sesuai `relations.onDelete`, `INDEX` wajib
+9. Dynamic seed idempotent — `SELECT COUNT(*) FROM {slug}_{entity} WHERE 1` → if 0 then insert 5-10 rows realistis (bukan `test1`), else skip
+10. Dynamic DDL harus transactional — `queryRunner.startTransaction()` → `createTable` → `commit`, on error `rollback` + mark `failed`
 
 ---
 
 ## Change Log
 
+### AI App Builder — Dynamic Database (2026-09-15)
+
+- **PIVOT DB dari default tables → 100% dynamic per prompt.** Overview: `17 schemas / ~23 tabel` (dengan contoh hardcode) → `~14 platform tables static + N dynamic {slug}_{entity}` (0 di awal, N setelah prompt). Current vs Planned: `CURRENT 17` + `PLANNED dynamic incremental` → `CURRENT PLATFORM ~14` + `DYNAMIC per prompt runtime`. ERD: split Platform (static) vs Dynamic Virtual (per prompt). Entity Details: judul `Platform Tables (Static)` + `Builder META (Static)` vs sebelumnya `Builder (11-18)` dengan contoh hardcode. **HILANGKAN**: `## Generated Tables` hardcode `pos_kasir_products` (5 baris fixed) — diganti `## Dynamic App Tables` kontrak lengkap (naming, field type mapping SQLite, relation handling FK, index strategy, DDL generation via queryRunner, contoh virtual label `CONTOH DINAMIS BUKAN FIXED`). Seed: `pos_kasir_products` rows dihapus — hanya `users/roles/permissions/guards` + `Builder Templates META` (contoh prompt di `ai_projects`, bukan tabel fisik). Relationships: split Platform vs Dynamic Virtual. Indexes: split Platform vs Dynamic per FK. Migration Strategy: split Platform (baseline) vs Dynamic (NO migration file, queryRunner transactional). Data Integrity: split Platform 1-5 vs Dynamic 6-10 (table names, FK, seed idempotent, transactional DDL).
+
+### Stack Migration — Next.js + React (2026-09-15)
+
+- MIGRASI paths `server/*` → `lib/db/*`, `instrumentation.ts`, `lib/services/ai-builder/*`. Overview, Current vs Planned, Relationships, Indexes, Seed source, MigrationStrategy semua diupdate ke Next.js.
+
 ### AI App Builder — Platform Pivot (2026-09-15)
 
-- **PIVOT** dari 9 schemas/12 tabel RBAC-Only ke **17 schemas/~23 tabel** (RBAC 9 + Builder 8: AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment).
-- **Baru**: § Entity Details Builder (11-18), § Builder Templates Seed, § Generated Tables (dynamic per slug), § Relationships Builder, § Indexes Builder, § Migration Strategy (generated tables additive). Entity diagram builder baru. Activity logs tambah action GENERATE/REFINE.
-- **Dipertahankan**: RBAC entities 1-10 + seed RBAC eksak.
-
-### Docs Tidy — Seed selaras seeder (2026-09-13)
-
-- Seed 5 users, 7 roles, 8 guards, 10 permissions + junctions lengkap.
-
-### Task 01 — Platform Scope Reduction (2026-09-12)
-
-- Removed Dynamic Administration 14 tabel — diarsip git history.
+- PIVOT dari 9 schemas/12 tabel RBAC-Only ke 17 schemas/~23 tabel (RBAC 9 + Builder 8). Baru: Builder META, Generated Tables, Relationships, Indexes, Migration Strategy additive.
 

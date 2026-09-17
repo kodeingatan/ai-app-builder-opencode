@@ -2,7 +2,7 @@
 
 ## Overview
 
-Design system menggunakan **Naive UI** sebagai komponen utama dengan **Tailwind CSS v4 sebagai pendekatan utama untuk CSS pada component**. Semua token didefinisikan melalui `GlobalThemeOverrides` + CSS variables di `app/assets/css/main.css`; utilities Tailwind memakai nilai token yang sama. **Generated apps WAJIB re-use token kanonis ini** — tidak ada app jelek/generic. Hasil generate harus terlihat seperti dibuat Designer Senior, bukan template murahan.
+Design system menggunakan **shadcn/ui** (Radix UI primitives) + **Tailwind CSS v4** sebagai foundation komponen. Semua token didefinisikan sebagai CSS variables HSL di `app/globals.css` (`:root` + `.dark`) + Tailwind utilities; utilities Tailwind memakai nilai token yang sama. **Generated apps WAJIB re-use token kanonis ini** — tidak ada app jelek/generic. Hasil generate harus terlihat seperti dibuat Designer Senior, bukan template murahan.
 
 Filosofi: **Notion-calm + Professional Workspace** — warm paper, satu aksen struktural, chrome monokrom, personality dari ilustrasi & data.
 
@@ -233,16 +233,16 @@ Modifiers: `.detail-value--text` (400 #334155), `.detail-value--mono` (mono 13px
 
 | Feature | Component |
 |---------|-----------|
-| Global Search 320px | NInput + Search icon + clearable + debounce 300ms + placeholder `Cari...` |
-| Field-Specific Search 160px | NSelect filterable `Semua Kolom` |
+| Global Search 320px | <Input> + Search icon + clearable + debounce 300ms + placeholder `Cari...` |
+| Field-Specific Search 160px | Select (shadcn) filterable `Semua Kolom` |
 | Column Visibility | NPopover + NCheckbox + Settings icon |
 | Sorting | NDataTable sorter (ArrowUp/ArrowDown 14px Primary) |
 | Pagination | `Menampilkan {from}-{to} dari {total}` (ID) |
 | Page Size | 10, 20, 50, 100 — default 20 |
-| Refresh | NButton + Restart icon + `emit('refresh')` |
-| Error Slot | NAlert error + `Coba lagi` retry |
-| Empty | NEmpty `Belum ada data` + CTA `+ Buat ...` |
-| Loading | NSpin overlay semi-transparan |
+| Refresh | <Button> + Restart icon + `emit('refresh')` |
+| Error Slot | Alert (shadcn) error + `Coba lagi` retry |
+| Empty | Empty (shadcn) `Belum ada data` + CTA `+ Buat ...` |
+| Loading | Spinner overlay semi-transparan |
 
 **Generated apps**: DataTable per entity wajib pakai `app/components/common/DataTable/DataTable.vue` — jangan buat `NDataTable` manual tanpa toolbar kanonis. Toolbar layout:
 
@@ -265,10 +265,10 @@ Kartu prompt builder — center stage di `/builder`.
 |----------|-------|
 | Container | Canvas `#ffffff` + radius xl `16px` + hairline `#e6e6e6` + shadow Level-1 + padding `24px` |
 | Title | H2 24px/700 `Buat Aplikasi dari 1 Baris` + subtitle Small 13px Muted `Ketik ide... mis. buatkan aplikasi kasir` |
-| Input | NInput `size=large` + `placeholder="Ketik ide aplikasi... mis. buatkan aplikasi kasir"` + `clearable` + prefix `Sparkles` (Carbon) via `h(NIcon)` + height 44px + radius 9999 pill? **No** — input tetap **radius xs 4px** (tight) sesuai rule; CTA yang pill |
-| CTA | NButton `type=primary` + `size=large` + pill `Full 9999px` + `Buat Aplikasi` + suffix `ArrowRight` + `#0075de` bg + `#e8f2fd` hover? (follow GlobalThemeOverrides) |
+| Input | <Input> shadcn `size=lg` + `placeholder="Ketik ide aplikasi... mis. buatkan aplikasi kasir"` + `clearable` + prefix `Sparkles` (lucide-react) via `h(lucide-react)` + height 44px + radius 9999 pill? **No** — input tetap **radius xs 4px** (tight) sesuai rule; CTA yang pill |
+| CTA | <Button> shadcn + `size=large` + pill `Full 9999px` + `Buat Aplikasi` + suffix `ArrowRight` (lucide-react) + `#0075de` bg + `#e8f2fd` hover? (follow GlobalThemeOverrides) |
 | Hint | Caption 12px Faint `Tekan Enter — AI akan langsung paham dan generate` + `prefers-reduced-motion` |
-| States | empty → hint + disabled CTA; loading → CTA loading + progress; error → NAlert error + retry |
+| States | empty → hint + disabled CTA; loading → CTA loading + progress; error → Alert (shadcn) error + retry |
 
 **Layout**:
 ```
@@ -290,9 +290,9 @@ Card badge list sebelum generate (atau inline setelah submit):
 |----------|-------|
 | Container | Canvas Soft `#f6f5f4` + radius lg `12px` + padding `16px` + gap `12px` |
 | Title | Eyebrow 12px/600 `AI MENGERTI SEBAGAI:` |
-| Badges | Domain: pill `Sky #62aef0` text Deep; Entities: 3-5 pills `NTag` medium; Roles: pills `Purple`; Pages: pills `Orange` |
+| Badges | Domain: pill `Sky #62aef0` text Deep; Entities: 3-5 pills `<Badge>` medium; Roles: pills `Purple`; Pages: pills `Orange` |
 | Seed | Small 13px `Otomatis siapkan 8 produk contoh, 5 pelanggan` |
-| CTA | `Generate Sekarang` NButton small pill primary (jika butuh konfirmasi) |
+| CTA | `Generate Sekarang` <Button> shadcn small pill primary (jika butuh konfirmasi) |
 | Animation | slideUp 250ms stagger per badge |
 
 ### GenerationProgress — Stepper
@@ -300,7 +300,7 @@ Card badge list sebelum generate (atau inline setelah submit):
 | Property | Value |
 |----------|-------|
 | Steps | `Memahami intent` → `Merancang struktur` → `Membuat database` → `Merakit UI` → `Menyiapkan preview` |
-| Component | NSteps `current` + NProgress line + NSpin |
+| Component | Steps (shadcn) + Progress + Spinner |
 | Step done | CheckmarkFilled Teal `#1aae39` |
 | Step active | Primary `#0075de` + pulse |
 | Log | Mono 12px `inference.service.ts: infer "kasir" → domain=pos` (collapsible NCollapse) |
@@ -310,10 +310,10 @@ Card badge list sebelum generate (atau inline setelah submit):
 | Property | Value |
 |----------|-------|
 | Surface | Canvas `#ffffff` + radius lg `12px` + hairline + Level-0 (hover Level-1) |
-| Header | H3 20px/600 + slug Caption 12px Muted `pos-kasir` + status badge `NTag` (ready=success, generating=warning, failed=error) |
+| Header | H3 20px/600 + slug Caption 12px Muted `pos-kasir` + status badge `<Badge>` (ready=success, generating=warning, failed=error) |
 | Body | Small 13px Muted `Prompt: "buatkan aplikasi kasir"` + 2-line clamp |
 | Footer | Entities count `4 entitas` + Pages `5 halaman` + Roles `Admin, Kasir` (Eyebrow) + actions: `Preview` primary ghost + `Refine` + `Hapus` danger |
-| Empty | NEmpty + illustration sticker + `Belum ada aplikasi — coba "buatkan aplikasi kasir"` + CTA |
+| Empty | Empty (shadcn) + illustration sticker + `Belum ada aplikasi — coba "buatkan aplikasi kasir"` + CTA |
 
 ### Template Gallery — Starter Templates
 
@@ -322,7 +322,7 @@ Grid 3-col (desktop) / 1-col (mobile) — tiap template card:
 | Property | Value |
 |----------|-------|
 | Card | Same as ProjectCard + icon tile 40px Sky/Purple/Orange + title H3 + description Small + entities Eyebrow |
-| Action | `Gunakan Template` NButton small secondary on hover |
+| Action | `Gunakan Template` <Button> shadcn small secondary on hover |
 | Click | Fill AiPromptBar dengan prompt template + auto-focus Generate |
 
 ### Refine Bar — Iterate Prompt Pendek
@@ -332,8 +332,8 @@ Di `/builder/:slug`:
 | Property | Value |
 |----------|-------|
 | Container | Sticky bottom atau top of detail — Canvas `#ffffff` + hairline top + padding `12px 20px` |
-| Input | NInput small + placeholder `Tambahkan fitur... mis. tambahkan barcode scanner` + clearable |
-| CTA | NButton small primary pill `Perbarui` + `Refresh` icon |
+| Input | <Input> shadcn small + placeholder `Tambahkan fitur... mis. tambahkan barcode scanner` + clearable |
+| CTA | <Button> small primary pill `Perbarui` + `Refresh` icon |
 | Hint | Caption `Perubahan tanpa menghapus data — patch aman` |
 
 ---
@@ -344,16 +344,16 @@ Setiap generated app **harus** mengikuti aturan ini (enforced di codegen templat
 
 | Rule | Detail |
 |------|--------|
-| **PageShell wajib** | Tiap list page pakai `<PageShell title>` + breadcrumb + `actions` slot (Create NButton pill primary) |
+| **PageShell wajib** | Tiap list page pakai `<PageShell title>` + breadcrumb + `actions` slot (Create <Button> pill primary) |
 | **DataTable kanonis** | Jangan bikin table manual — re-use `DataTable.vue` dengan toolbar 320/160 + pagination ID + error/empty slot |
 | **DetailDrawer wajib** | Pakai `NDrawer` + `.detail-view` pattern + footer actions `Edit`/`Hapus`; jangan NDescriptions |
-| **FormModal wajib** | `NModal` + `NForm` dengan Zod errors + pill CTA `Simpan` primary + `Batal` secondary |
-| **Dashboard** | NGrid 2-col (stats) + NCards StatCard (icon tile Sky/Purple + value 24px/700 + label Eyebrow) + recent table mini |
+| **FormModal wajib** | `<Dialog> (shadcn)` + `<Form> (react-hook-form + zodResolver)` dengan Zod errors + pill CTA `Simpan` primary + `Batal` secondary |
+| **Dashboard** | Grid 2-col (Tailwind `grid grid-cols-2`) (stats) + Cards (shadcn `Card`) StatCard (icon tile Sky/Purple + value 24px/700 + label Eyebrow) + recent table mini |
 | **Warna** | Hanya `#0075de` untuk primary; sticker Sky/Purple/Orange hanya untuk icon tile / category dot — **jangan** buat button pink/ungu |
 | **Radius** | Card lg 12, modal xl 16, button pill, input xs 4 — konsisten |
-| **Icon** | `@vicons/carbon` via `h(NIcon)` — mapping: Product=`Box`, Transaction=`Report`, Customer=`User`, Appointment=`Calendar` etc. |
-| **Validation** | Tiap field punya `NFormItem` dengan `rule` Zod message ID |
-| **States** | Loading `NSpin`, Empty `NEmpty` + CTA `+ Buat Produk`, Error `NAlert` + retry, Success `useMessage` `Berhasil` |
+| **Icon** | `lucide-react` via `h(lucide-react)` — mapping: Product=`Box`, Transaction=`Report`, Customer=`User`, Appointment=`Calendar` etc. |
+| **Validation** | Tiap field punya `<Form> (react-hook-form + zodResolver)Item` dengan `rule` Zod message ID |
+| **States** | Loading `Spinner`, Empty `Empty (shadcn)` + CTA `+ Buat Produk`, Error `Alert (shadcn)` + retry, Success `useMessage` `Berhasil` |
 | **Responsive** | NGrid responsive + PageShell flex-wrap + table horizontal scroll di mobile |
 | **RBAC** | Create/Edit/Delete buttons gated `v-if="hasPermission('Generated:{Slug}:Write')"` |
 
@@ -363,7 +363,7 @@ Setiap generated app **harus** mengikuti aturan ini (enforced di codegen templat
 
 ## System Logs Design (Tetap)
 
-Sama seperti sebelumnya — log levels TRACE-EMERGENCY, NTag mapping, table columns Timestamp/Level/Context/Message/Actions, detail drawer, VS Code URI.
+Sama seperti sebelumnya — log levels TRACE-EMERGENCY, <Badge> mapping, table columns Timestamp/Level/Context/Message/Actions, detail drawer, VS Code URI.
 
 ---
 
@@ -433,18 +433,18 @@ Builder: AiPromptBar full-width di mobile (padding 16px), library 1-col. Generat
 
 ---
 
-## Icons
+## Icons (Next.js + React)
 
 ### Icon Library
-- Library: `@vicons/carbon`
-- Wrapper: `NIcon`
-- Render: `h(NIcon, null, { default: () => h(IconName) })`
+- Library: `lucide-react` (tree-shakable SVG, 24x24 default)
+- Usage: `import { Sparkles, ShoppingCart, Hospital, Plus, Trash2, Search, RotateCw } from 'lucide-react'` + `<Sparkles size={16} className="text-[#0075de]" />`
+- No wrapper: langsung `<Icon size={16} />` atau `<Icon className="h-4 w-4" />` (Tailwind sizing) — **jangan** `h(lucide-react)`
 
 ### Builder Icons (Baru)
 
 | Action | Icon | Mapping |
 |--------|------|---------|
-| Buat Aplikasi / Generate | `Sparkles` atau `Wand` (`Carbon`) | AiPromptBar CTA |
+| Buat Aplikasi / Generate | `Sparkles` atau `Wand` (`lucide-react`) | AiPromptBar CTA |
 | Inference domain POS | `ShoppingCart` atau `Store` | Domain badge |
 | Inference domain CRM | `Customer` / `UserMultiple` | |
 | Clinic | `Hospital` | |
@@ -467,9 +467,9 @@ Builder: AiPromptBar full-width di mobile (padding 16px), library 1-col. Generat
 
 ## Animations
 
-### Library
-- Primary: CSS Transitions & Vue `<Transition>`
-- Optional: anime.js (~17KB)
+### Library (Next.js)
+- Primary: **Framer Motion 12** (`motion/react`) + CSS Transitions + Tailwind `transition` utilities
+- Fallback: CSS `transition` untuk micro-interactions sederhana; Anime.js **dihapus** (Vue-only) → **Framer Motion** untuk PageTransitions
 
 ### Tokens
 
@@ -486,7 +486,7 @@ Builder: AiPromptBar full-width di mobile (padding 16px), library 1-col. Generat
 |---------|-----------|
 | AiPromptBar mount | slideUp 250ms + fade |
 | InferencePreview badges | stagger 50ms per badge |
-| GenerationProgress steps | NSteps transition + progress bar 300ms |
+| GenerationProgress steps | Steps (shadcn) transition + progress bar 300ms |
 | ProjectCard mount | staggerFadeIn 250ms per card |
 | Generated page mount | fadeInUp via usePageTransition |
 
@@ -500,34 +500,34 @@ Builder: AiPromptBar full-width di mobile (padding 16px), library 1-col. Generat
 
 ---
 
-## Implementation Notes
+## Implementation Notes (Next.js + shadcn/ui)
 
-- **Naive UI** override via `GlobalThemeOverrides` di `NConfigProvider` + token `:root` di `main.css`
-- **Tailwind v4** sebagai pendekatan utama untuk CSS pada component (utilities inline, `<style scoped>` hanya untuk `:deep()` override Naive UI)
-- **Generated code lint**: setiap `app/generated/{slug}/pages/*.vue` harus import `PageShell`, `DataTable` — tidak boleh buat layout custom yang break token
-- **CTA pill**: `.cta-primary { border-radius: 9999px; background: #0075de; }` — generated FormModal primary button wajib pill
-- **Input tight**: `NInput` override border-radius `4px` via `GlobalThemeOverrides` — jangan override jadi pill
+- **shadcn/ui** primitives (Radix UI) + **Tailwind CSS v4** utility-first. Tokens sebagai HSL CSS variables di `app/globals.css` — `components/ui/*` (Button, Input, Card, Dialog, Table, Sheet, Badge, etc.) adalah copy-paste shadcn, bukan dependency global. Theming via `:root { --primary: 210 100% 44%; }` (~ `#0075de`), border `hsl(var(--border))` (`#e6e6e6`), radius `12px/8px/4px` di `tailwind.config.ts` / `globals.css`.
+- **Tailwind v4** sebagai pendekatan utama untuk styling component (utility inline di `className`, arbitrary values untuk token kanonis seperti `bg-[#f6f5f4]`, `border-[#e6e6e6]`, `text-[#0075de]` atau `bg-primary`). Hindari hard-coded color di luar token.
+- **Generated code lint**: setiap `app/generated/[slug]/**/*.tsx` harus import `PageShell` (`@/components/layout/PageShell`) + `DataTable` (`@/components/common/DataTable`) — tidak boleh buat layout custom yang break token. Native `<table>` manual tanpa shadcn `Table` → fail review.
+- **CTA pill**: `<Button className="rounded-full bg-[#0075de] hover:bg-[#0069c4]">` — generated FormModal primary button wajib pill (`rounded-full`). Jangan pakai `rounded-md` generik untuk CTA primer.
+- **Input tight**: `<Input className="rounded-[4px]">` shadcn Input tetap tight 4px — jangan override jadi pill. Focus ring `ring-[#0075de]`.
 
 ---
 
 ## Authorization UI Patterns
 
-### Access Denied — Single Floating Global
+### Access Denied — Single Floating Global (Next.js)
 
-`AccessDeniedAlert.vue` via `Teleport` + `ClientOnly` top 16 right 16 max 448, slideIn 300ms / slideOut 200ms, auto-dismiss 4s, `rbac-denied` event → satu `NAlert` `[data-testid=access-denied]`.
+`components/common/AccessDeniedAlert.tsx` via React Portal (`createPortal` ke `document.body`) top 16 right 16 max 448, `Framer Motion` slideIn 300ms / slideOut 200ms, auto-dismiss 4s, event `rbac-denied` (dispatch di `hooks/useApi.ts` + `middleware.ts`) → satu `<Alert variant="destructive">` `[data-testid="access-denied"]` + `sonner` toast.
 
 ### Builder Guard
 
-AiPromptBar CTA disabled + tooltip `Anda tidak memiliki izin Builder:Generate` jika `!hasPermission('Builder:Generate')`.
+AiPromptBar CTA disabled + shadcn `<Tooltip>` `Anda tidak memiliki izin Builder:Generate` jika `!hasPermission('Builder:Generate')` (`hooks/useAuthorization.ts`).
 
 ---
 
-## Chrome Patterns (Notion — diadaptasi)
+## Chrome Patterns (Notion — diadaptasi, Next.js + shadcn/ui)
 
-Badge Pill, Empty-State Card, Toast, Auth Card, Modal Card, App-Shell Row — tetap sesuai § sebelumnya. Generated apps re-use sama:
+Badge Pill, Empty-State Card, Toast (sonner), Auth Card, Modal Card (`Dialog`), App-Shell Row — tetap sesuai § sebelumnya namun dengan shadcn primitives. Generated apps re-use sama:
 
-- **StatCard** (dashboard generated) = Empty-State Card variant: Canvas `#ffffff` + radius xl 16 + icon tile 32px Sky/Purple + value 24px/700 + label Eyebrow Muted
-- **Empty di generated list** = NEmpty via DataTable `#empty` + `+ Buat {EntityLabel}` CTA pill primary
+- **StatCard** (dashboard generated) = `Card` shadcn + Canvas `#ffffff` + radius xl 16 + icon tile 32px Sky/Purple (`<div className="bg-[#62aef0] rounded-md p-2"> <Box size={20}/> </div>` lucide-react) + value 24px/700 + label Eyebrow Muted
+- **Empty di generated list** = shadcn `Empty` + DataTable `empty` prop (`Belum ada data`) + CTA `<Button className="rounded-full">+ Buat {EntityLabel}</Button>` pill primary
 
 ---
 
@@ -554,6 +554,10 @@ Badge Pill, Empty-State Card, Toast, Auth Card, Modal Card, App-Shell Row — te
 ---
 
 ## Change Log
+
+### Stack Migration — Next.js + React (2026-09-15)
+
+- **MIGRASI** dari Naive UI + `lucide-react` + Anime.js + Vue `<Transition>` → **shadcn/ui (Radix) + Tailwind v4 + lucide-react + Framer Motion** untuk Next.js 15 + React 19. Overview, Implementation Notes, Authorization UI (Portal + Alert + sonner), Chrome Patterns (Card/Dialog/Empty), Icons (lucide-react), Animations (Framer Motion) semua diupdate. Tokens tetap `#0075de`/`#f6f5f4`/`#e6e6e6`, radius 12/8/4/full, Inter. Generated lint tetap `PageShell` + `DataTable` wajib, namun kini import `@/components/layout/PageShell` + `@/components/common/DataTable` (shadcn Table) + `lucide-react`.
 
 ### AI App Builder — Platform Pivot (2026-09-15)
 

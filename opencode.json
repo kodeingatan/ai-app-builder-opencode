@@ -1,9 +1,24 @@
 {
-    "$schema": "https://opencode.ai/config.json",
-    "instructions": [
-        "AI App Builder Platform — Minimal Prompt → Maximal App. User ketik perintah singkat (mis. 'buatkan aplikasi kasir', 'todo app dengan share') → AI LANGSUNG paham intent, LANGSUNG generate aplikasi lengkap + cantik + siap pakai. JANGAN banyak tanya balik. Infer yang terbaik, opinionated defaults, production-ready, beautiful by default. Lihat AGENTS.md Behaviour Contract § AI App Builder.",
-        "Tech: Nuxt 4 + Vue 3.5 + TypeScript + Naive UI 2.44 + Tailwind v4 + Pinia + TypeORM 1.1 EntitySchema + SQLite + Zod + JWT. All commands from apps/web/. Entity canonical server/utils/orm-data-source.ts (17 schemas/~23 tables: RBAC 9 + Builder 8). Design tokens: #0075de primary, #f6f5f4 canvas, #e6e6e6 hairline, Inter, PageShell + DataTable kanonis, detail-view.",
-        "Generation flow: Prompt → Inference (domain/entities/pages/roles) → Spec (AiAppSchema) → Architecture Planning → CodeGen (EntitySchema+DTO+Service+API+Types) → UI Assembly (PageShell+DataTable+FormModal+DetailDrawer) → Integration (orm-data-source, seed, sidebar) → Preview (/generated/{slug}) → Iterate (refine prompt). Isolate generated code app/generated/{slug}/.",
-        "Saat user minta aplikasi: 1) Infer domain & entities (2-4 CRUD + dashboard) + roles + business rules, 2) Generate langsung (jangan minta spec panjang), 3) Pakai design system kanonis, 4) Jelaskan singkat hasil + route + saran refine 1-2 baris. Contoh: 'buatkan aplikasi kasir' → POS dengan Produk, Transaksi, Pelanggan, Laporan, Dashboard, di /generated/pos-kasir."
-    ]
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AI App Builder Platform — Minimal Prompt → Maximal App. User ketik perintah singkat (mis. 'buatkan aplikasi kasir', 'todo app dengan share') → AI LANGSUNG paham intent, LANGSUNG generate aplikasi lengkap + cantik + siap pakai. JANGAN banyak tanya balik. Infer yang terbaik, opinionated defaults, production-ready, beautiful by default. Lihat AGENTS.md Behaviour Contract § AI App Builder.",
+    "Tech: Next.js 15 (App Router) + React 19 + TypeScript + shadcn/ui + Tailwind v4 + Zustand + TanStack Query + lucide-react + Framer Motion + TypeORM 1.1 EntitySchema + SQLite better-sqlite3 + Zod + JWT (httpOnly cookie, middleware.ts). All commands from apps/web/. Entity canonical lib/db/data-source.ts (17 schemas/~23 tables: RBAC 9 + Builder 8). Design tokens: #0075de primary (HSL 210 100% 44%), #f6f5f4 canvas, #e6e6e6 hairline, Inter, PageShell + DataTable (shadcn Table) kanonis, detail-view.",
+    "Generation flow: Prompt → Inference (domain/entities/pages/roles) → Spec (AiAppSchema) → Architecture Planning → CodeGen (EntitySchema+DTO Zod+Service+Route Handlers app/api/**/route.ts+Types) → UI Assembly (app/generated/[slug]/** + PageShell+DataTable+Dialog+Form shadcn) → Integration (lib/db/data-source.ts, seed instrumentation.ts, sidebar) → Preview (/generated/[slug]) → Iterate (refine prompt). Isolate generated code app/generated/[slug]/.",
+    "Saat user minta aplikasi: 1) Infer domain & entities (2-4 CRUD + dashboard) + roles + business rules, 2) Generate langsung Next.js (jangan minta spec panjang) — buat EntitySchema lib/db/entities/generated/[slug], DTO lib/dto, Service lib/services, Route Handlers app/api/generated/[slug], Pages app/generated/[slug] dengan shadcn/ui + lucide-react, 3) Pakai design system kanonis, 4) Jelaskan singkat hasil + route + saran refine 1-2 baris. Contoh: 'buatkan aplikasi kasir' → POS dengan Produk, Transaksi, Pelanggan, Laporan, Dashboard, di /generated/pos-kasir.",
+    "Next.js conventions: Server Components default, 'use client' hanya interaktif, params bisa Promise (await params), NextRequest/NextResponse, TanStack Query untuk server state, Zustand untuk UI state, lucide-react untuk icons, Framer Motion untuk animasi. Jangan pakai Naive UI, Pinia, atau @vicons/carbon — itu stack Nuxt/Vue lama."
+  ],
+  "plugin": [
+    "opencode-browser"
+  ],
+  "mcp": {
+    "browsermcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@browsermcp/mcp@0.1.3"
+      ],
+      "enabled": true
+    }
+  }
 }

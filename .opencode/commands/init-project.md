@@ -422,7 +422,7 @@ Represent the concept using a concise model where useful.
 Example:
 
 ```text
-Global Table
+Dynamic Entity (per prompt, e.g., Product/Category/Transaction)
       │
       ▼
 Component

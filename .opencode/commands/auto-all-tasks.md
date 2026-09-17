@@ -104,7 +104,7 @@ Berhenti (whichever comes first):
 2. **Human-only blocker** — secret yang tidak ada, approval eksternal, aksi destruktif di luar scope task, tooling/infra yang benar-benar tidak bisa di-workaround (contoh: registry down total, kredensial produksi). Catat di Detail `Notes` task tersebut di `tasks/task-logs.md`, laporkan di Final Response, STOP untuk task itu (jangan lompat diam-diam ke task berikutnya bila task berikutnya depends on task yang blocked — laporkan dependency impact-nya).
 3. Infrastructure blocker parsial (misal: Playwright browser binary belum install, Storybook binary missing) BUKAN alasan berhenti total: record di Detail `Notes`, kerjakan semua yang lain, coba workaround (`npx playwright install`, verifikasi file-level), dan tetap kejar `[x][x][x]` via jalur yang tersedia.
 
-Yang BUKAN stop condition: lelah mengulang, 1–2x fix gagal, test flaky, build cache stale — semua itu WAJIB diatasi (clean `.nuxt/.output`, `npx nuxt prepare`, rebuild, re-run test) sampai gate penuh.
+Yang BUKAN stop condition: lelah mengulang, 1–2x fix gagal, test flaky, build cache stale — semua itu WAJIB diatasi (clean `.next/.output`, `npx next prepare`, rebuild, re-run test) sampai gate penuh.
 
 ---
 

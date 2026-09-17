@@ -30,7 +30,7 @@ Determine which task to plan.
 
 If `$ARGUMENTS` is:
 
-- a file path (e.g., `tasks/01-migrate-admin-panel-to-nuxt.md`) → use that file
+- a file path (e.g., `tasks/01-migrate-admin-panel-to-next.md`) → use that file
 - a task number (e.g., `01`) → find matching task in `tasks/`
 - a task name (e.g., `authentication`) → find matching task in `tasks/`
 - empty → list available tasks and ask the user to choose
@@ -113,11 +113,11 @@ From the task specification, extract:
 ### Affected Areas
 
 - Backend files to create/modify
-- Frontend files to create/modify — termasuk **Storybook stories** `apps/web/stories/{feature}/*.stories.ts` untuk FASE 1 (prototype langsung di project, Naive UI + Tailwind + `naiveui-theme.ts`)
+- Frontend files to create/modify — termasuk **Storybook stories** `apps/web/stories/{feature}/*.stories.tsx` untuk FASE 1 (prototype langsung di project, shadcn/ui + Tailwind + `globals.css`)
 - Database changes
 - Configuration changes
 - Documentation changes
-- Test files to create (`tests/unit`, `tests/nuxt`, `tests/e2e`) — bertindak sebagai QA
+- Test files to create (`tests/unit`, `tests/next`, `tests/e2e`) — bertindak sebagai QA
 - Storybook verification — `npm run storybook` (:6006) + `npm run build-storybook`
 
 ### Patterns to Follow
@@ -127,7 +127,7 @@ From the task specification, extract:
 - Existing API route patterns
 - Existing DTO patterns
 - Existing entity patterns
-- Existing test patterns (`apps/web/tests/` — unit, nuxt, e2e, Playwright)
+- Existing test patterns (`apps/web/tests/` — unit, next, e2e, Playwright)
 
 ---
 
@@ -137,24 +137,24 @@ Before planning new code, inspect what already exists:
 
 ### Backend
 
-- Check existing entities in `server/entities/`
-- Check existing services in `server/services/`
-- Check existing API routes in `server/api/`
-- Check existing DTOs in `server/dto/`
-- Check existing utils in `server/utils/`
+- Check existing entities in `lib/db/entities/`
+- Check existing services in `lib/services/`
+- Check existing API routes in `app/api/`
+- Check existing DTOs in `lib/dto/`
+- Check existing utils in `lib/utils/`
 
 ### Frontend
 
-- Check existing pages in `app/pages/`
-- Check existing components in `app/components/`
-- Check existing composables in `app/composables/`
-- Check existing stores in `app/stores/`
-- Check existing plugins in `app/plugins/`
-- Check existing middleware in `app/middleware/`
+- Check existing pages in `app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → `
+- Check existing components in `components/`
+- Check existing composables in `hooks/`
+- Check existing stores in `stores/`
+- Check existing plugins in `app/`
+- Check existing middleware in `middleware.ts`
 
 ### Shared
 
-- Check existing types in `shared/types/`
+- Check existing types in `lib/types/`
 
 Identify what already exists and what needs to be created.
 
@@ -164,7 +164,7 @@ Identify what already exists and what needs to be created.
 
 > Catatan: File `tasks/NN-*.md` hasil `/gen-tasks` dan `/task` SUDAH mencantumkan plan terperinci di `## Tasks` (+ `## Test Plan` QA + `## Verification`). Command `/plan` bersifat **optional/refinement**: jika Tasks di task file sudah lengkap, plan hanya memperinci langkah eksekusi file-by-file. Jika belum lengkap, plan melengkapinya. Selalu konsisten dengan User Flow + UI FASE 1 (termasuk **Storybook prototype di project**) + QA perspective.
 
-> **Deliverables Design Dulu — Storybook-First**: Untuk FASE 1, prototype WAJIB langsung implementasi pada project (`app/components/...` + `app/pages/...` + `apps/web/stories/{feature}/*.stories.ts`) dengan Naive UI + Tailwind + token `app/utils/naiveui-theme.ts`, dibaca via `npm run storybook` (port 6006) dan `npm run build-storybook`. Figma/PNG hanya sebagai arsip, bukan deliverable utama.
+> **Deliverables Design Dulu — Storybook-First**: Untuk FASE 1, prototype WAJIB langsung implementasi pada project (`components/...` + `app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → ...` + `apps/web/stories/{feature}/*.stories.tsx`) dengan shadcn/ui + Tailwind + token `app/globals.css`, dibaca via `npm run storybook` (port 6006) dan `npm run build-storybook`. Figma/PNG hanya sebagai arsip, bukan deliverable utama.
 
 Create a detailed plan with these sections:
 
@@ -184,14 +184,14 @@ Create a detailed plan with these sections:
 
 ## Prerequisites
 
-- [ ] Task `NN-ui-design.md` DONE — termasuk Storybook stories `apps/web/stories/{feature}/*.stories.ts` PASS (`npm run storybook` + `npm run build-storybook`) (jika FASE 2)
+- [ ] Task `NN-ui-design.md` DONE — termasuk Storybook stories `apps/web/stories/{feature}/*.stories.tsx` PASS (`npm run storybook` + `npm run build-storybook`) (jika FASE 2)
 - [ ] Dependencies installed
 - [ ] Database ready
-- [ ] Design tokens `app/utils/naiveui-theme.ts` + Storybook prototype tersedia & runnable (jika FASE 2)
+- [ ] Design tokens `app/globals.css` + Storybook prototype tersedia & runnable (jika FASE 2)
 
 ## Implementation Steps
 
-> Untuk FASE 1: langkah adalah Discovery → Wireframe → Mockup (Naive UI + Tailwind + `naiveui-theme.ts`) → Prototype **Storybook di project** (`apps/web/stories/{feature}/*.stories.ts` + `app/components/...`) → Handoff via `npm run storybook` (:6006) + `npm run build-storybook`.
+> Untuk FASE 1: langkah adalah Discovery → Wireframe → Mockup (shadcn/ui + Tailwind + `globals.css`) → Prototype **Storybook di project** (`apps/web/stories/{feature}/*.stories.tsx` + `components/...`) → Handoff via `npm run storybook` (:6006) + `npm run build-storybook`.
 > Untuk FASE 2: langkah mengikuti `## Tasks` di task file (Backend → Frontend → Test Plan QA), selalu mengacu mockup + **Storybook stories** FASE 1 dan User Flow.
 
 ### Step 1: {Step Name} — {User Flow Step / AC mapping}
@@ -221,9 +221,9 @@ Create a detailed plan with these sections:
 
 | Action | File | Description | Fase | User Flow / AC |
 |--------|------|-------------|------|----------------|
-| CREATE | `server/entities/xxx.entity.ts` | New entity | FASE 2 | DR-01, Step 3 |
-| CREATE | `app/components/xxx/XXX.vue` | New component (sesuai mockup + stories FASE 1) | FASE 2 | Step 2, AC-002 |
-| CREATE | `apps/web/stories/{feature}/*.stories.ts` | **Storybook prototype (FASE 1 — Naive UI + Tailwind + `naiveui-theme.ts`, a11y)** | FASE 1 | All Steps, States |
+| CREATE | `lib/db/entities/xxx.entity.ts` | New entity | FASE 2 | DR-01, Step 3 |
+| CREATE | `components/xxx/XXX.react` | New component (sesuai mockup + stories FASE 1) | FASE 2 | Step 2, AC-002 |
+| CREATE | `apps/web/stories/{feature}/*.stories.tsx` | **Storybook prototype (FASE 1 — shadcn/ui + Tailwind + `globals.css`, a11y)** | FASE 1 | All Steps, States |
 | CREATE | `tests/e2e/xxx.spec.ts` | E2E happy path (QA) | FASE 2 | User Flow Steps 1→3 |
 | CREATE | `docs/wireframes/xxx/list.png` | Wireframe low-fi | FASE 1 | Step 1 |
 
@@ -234,12 +234,12 @@ Create a detailed plan with these sections:
 | Test ID | Jenis | File | Mengcover (User Flow / AC / BR) | Ekspektasi Given/When/Then |
 |---------|-------|------|----------------------------------|-----------------------------|
 | UT-01 | unit | `tests/unit/{feature}.service.test.ts` | FR-001, BR-001, INV-01 | Given valid input When create Then 201 + invariant hold |
-| NT-01 | nuxt | `tests/nuxt/{feature}.form.test.ts` | Step 2, States validation | Given empty When submit Then inline error |
+| NT-01 | next | `tests/next/{feature}.form.test.ts` | Step 2, States validation | Given empty When submit Then inline error |
 | E2E-01 | e2e | `tests/e2e/{feature}.spec.ts` | Steps 1→3 happy path, AC-001..003 | Given logged in When flow Then success |
 | E2E-02 | e2e | `tests/e2e/{feature}.alt.spec.ts` | ALT-01, ERR-01, EC-01, permission | Given ... When ... Then ... |
 
 - Unit: `npm run test:unit` — semua UT PASS
-- Nuxt: `npm run test:nuxt` — semua NT PASS (semua state loading/empty/error/success/validation/permission)
+- Next.js: `npm run test:next` — semua NT PASS (semua state loading/empty/error/success/validation/permission)
 - E2E: `npm run test:e2e` — semua E2E PASS (happy + alternate/error + edge + permission)
 - Coverage: User Flow 100%, AC 100%, BR 100%, EC 100%
 
@@ -247,9 +247,9 @@ Create a detailed plan with these sections:
 
 ### Automated (wajib lolos)
 
-- [ ] Typecheck (`vue-tsc`)
+- [ ] Typecheck (`react-tsc`)
 - [ ] Unit (`npm run test:unit`) — traceability ke FR/BR/DR/INV
-- [ ] Nuxt (`npm run test:nuxt`) — traceability ke UI States
+- [ ] Next.js (`npm run test:next`) — traceability ke UI States
 - [ ] E2E (`npm run test:e2e`) — traceability ke User Flow Steps + AC
 - [ ] Storybook build (`npm run build-storybook`) — stories FASE 1 tetap PASS, no error (FASE 1 & FASE 2)
 - [ ] Build (`npm run build`)
@@ -261,7 +261,7 @@ Create a detailed plan with these sections:
 - [ ] Business Rules & Edge Cases PASS
 - [ ] States loading/empty/error/success/validation/permission ter-render — ada NT + **Storybook story** + E2E
 - [ ] Permission 401/403 matrix
-- [ ] Pixel-perfect vs mockup + **Storybook stories** FASE 1 (jika FASE 2) — token `naiveui-theme.ts`
+- [ ] Pixel-perfect vs mockup + **Storybook stories** FASE 1 (jika FASE 2) — token `globals.css`
 - [ ] Responsive + Accessibility — Storybook viewport + `@storybook/addon-a11y` PASS
 - [ ] Storybook — `npm run storybook` (:6006) tampil, semua stories ada, controls & docs render
 
@@ -280,7 +280,7 @@ Create a detailed plan with these sections:
 
 ## Execution Order
 
-1. {FASE 1: wireframe → mockup (Naive UI + Tailwind + `naiveui-theme.ts`) → Storybook prototype di project (`apps/web/stories/{feature}/*.stories.ts` + `app/components/...`) → handoff via `npm run storybook` + `npm run build-storybook`}
+1. {FASE 1: wireframe → mockup (shadcn/ui + Tailwind + `globals.css`) → Storybook prototype di project (`apps/web/stories/{feature}/*.stories.tsx` + `components/...`) → handoff via `npm run storybook` + `npm run build-storybook`}
 2. {FASE 2: entity → DTO → service → API → frontend (sesuai Storybook stories FASE 1) → tests QA → Storybook + build verification}
 ````
 
@@ -299,7 +299,7 @@ Create the user service.
 GOOD:
 
 ```text
-Create `server/services/users.service.ts` with:
+Create `lib/services/users.service.ts` with:
 - `findAll(query)` — paginated list with search
 - `findOne(id)` — single user with roles relation
 - `create(data)` — hash password, save user

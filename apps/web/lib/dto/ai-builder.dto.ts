@@ -16,17 +16,7 @@ export const QueryProjectsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
-  searchField: z.string().optional(),
   status: z.enum(['drafting', 'generating', 'ready', 'failed']).optional(),
   sortBy: z.string().default('updatedAt'),
   sortOrder: z.enum(['ASC', 'DESC']).default('DESC')
-})
-
-export const FieldDefSchema = z.object({
-  name: z.string(),
-  type: z.enum(['string', 'text', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'enum', 'relation']),
-  required: z.boolean().default(true),
-  unique: z.boolean().optional(),
-  enumValues: z.array(z.string()).optional(),
-  relationTarget: z.string().optional()
 })

@@ -1,32 +1,34 @@
-# Production Runbook — AI App Builder Platform
+# Production Runbook — AI App Builder Platform (Next.js)
 
 Single-node SQLite deployment. Multi-node/HA out of scope.
 
 ## 1. Production boot & baseline migration
 
 ```bash
-NODE_ENV=production JWT_SECRET=<strong-secret> DB_SYNCHRONIZE=false npm run build && npm run preview
+NODE_ENV=production JWT_SECRET=<strong-secret> DB_SYNCHRONIZE=false npm run build && npm run start
+# Next.js: next build → next start (bukan nuxt preview)
+# Atau standalone: npm run build && NODE_ENV=production node .next/standalone/server.js
 ```
 
-- `synchronize:false` production (`server/utils/db.ts` — override `DB_SYNCHRONIZE=true` only for scratch/dev). On fresh DB the server applies checked-in baselines automatically at boot (`migrationsRun` in `getDataSource()`):
-  - `server/migrations/1788914913928-Baseline.ts` — RBAC 9 schemas / 12 tables
-  - `server/migrations/<ts>-AiBuilder.ts` — Builder 8 schemas / +11 tables (AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment + indexes + FKs)
+- `synchronize:false` production (`lib/db/data-source.ts` / `lib/db/index.ts` — override `DB_SYNCHRONIZE=true` only for scratch/dev). On fresh DB the server applies checked-in baselines automatically at boot (`migrationsRun` in `getDataSource()`):
+  - `lib/db/migrations/1788914913928-Baseline.ts` — RBAC 9 schemas / 12 tables
+  - `lib/db/migrations/<ts>-AiBuilder.ts` — Builder 8 schemas / +11 tables (AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment + indexes + FKs)
   → total **17 schemas / ~23 tables**, then runs idempotent seed (RBAC + builder templates). Dev default unchanged (`synchronize:true`, no migration enforcement).
-- On drift the server fails fast with `MIGRATION_DRIFT` pointing here (see `server/utils/startup-check.ts` + `server/utils/migration-status.ts` via `server/plugins/database.server.ts`).
+- On drift the server fails fast with `MIGRATION_DRIFT` pointing here (see `lib/utils/startup-check.ts` + `lib/utils/migration-status.ts` via `instrumentation.ts` / `lib/db/init.ts`). Next.js `instrumentation.ts` hook (atau `app/layout.tsx` startup) yang init DataSource.
 - Fresh-install seed idempotent: every `seed*` checks existence first — re-running never duplicates permissions/roles/users/templates.
 - Startup self-check fails fast in production when `JWT_SECRET` is default, storage unwritable, or migrations drift. Dev boots (`synchronize:true`) are warn-free by design (Task 24); prod fatals unchanged.
-- Generated tables (`{slug}_{entity}`) — **not** covered by baseline migrations. They are created runtime via `synchronize` or `queryRunner.createTable` in `codegen.service.ts` (additive only, never drop). Backup file before refine that adds columns.
+- Generated tables (`{slug}_{entity}`) — **not** covered by baseline migrations. They are created runtime via `synchronize` or `queryRunner.createTable` in `lib/services/ai-builder/codegen.service.ts` (additive only, never drop). Backup file before refine that adds columns.
 
 ### Migration workflow (from `apps/web/`)
 
 ```bash
-npm run migration:run                    # apply pending migrations (DB_PATH defaults to db.sqlite)
+npm run migration:run                    # apply pending migrations (DB_PATH defaults to db.sqlite atau data/db.sqlite)
 DB_PATH=/tmp/scratch.sqlite npm run migration:run
 npm run migration:revert                 # revert last
-npm run migration:generate -- <Name>     # diff EntitySchemas vs DB → server/migrations/<timestamp>-<Name>.ts
+npm run migration:generate -- <Name>     # diff EntitySchemas vs DB → lib/db/migrations/<timestamp>-<Name>.ts
 ```
 
-- `generate` diffs entity metadata vs target DB: point `DB_PATH` at fully-migrated copy so only delta emitted, then wire new class into `appMigrations` in `server/utils/orm-data-source.ts` (CLI prints reminder).
+- `generate` diffs entity metadata vs target DB: point `DB_PATH` at fully-migrated copy so only delta emitted, then wire new class into `appMigrations` in `lib/db/data-source.ts` (CLI prints reminder).
 - BR-001: never edit applied migration; schema changes ship as new files.
 - Up/down drill on empty scratch file before touching prod:
 
@@ -62,7 +64,7 @@ Wire to process monitor / LB probe. Include builder counts for observability (op
 SQLite is single file: `apps/web/db.sqlite`.
 
 ```bash
-# Backup (stop writes or checkpoint first; single-node so stopping Nitro is enough)
+# Backup (stop writes or checkpoint first; single-node so stopping Next.js is enough)
 sqlite3 apps/web/db.sqlite "PRAGMA wal_checkpoint(TRUNCATE);"
 cp apps/web/db.sqlite backups/db-$(date +%F).sqlite
 sqlite3 backups/db-$(date +%F).sqlite "PRAGMA integrity_check;"  # must print: ok
@@ -152,21 +154,25 @@ Builder endpoints (NEW):
 - `POST /api/builder/preview/:slug` — rebuild preview
 - `GET /api/builder/templates` — starter templates
 
-Generated dynamic endpoints (per project slug):
+Generated dynamic endpoints (per project slug — Next.js Route Handlers):
 
-- `GET|POST /api/:slug/:entity` — list/create (paginated, search/sort)
-- `GET|PUT|DELETE /api/:slug/:entity/:id` — detail/update/delete
+- `GET|POST /api/generated/:slug/:entity` — list/create (paginated, search/sort) → `app/api/generated/[slug]/[entity]/route.ts`
+- `GET|PUT|DELETE /api/generated/:slug/:entity/:id` — detail/update/delete → `app/api/generated/[slug]/[entity]/[id]/route.ts`
 
-Example: `GET /api/pos-kasir/products?page=1&limit=20&search=kopi` → `{ data, total, page, limit, totalPages }`
+Example: `GET /api/generated/pos-kasir/products?page=1&limit=20&search=kopi` → `{ data, total, page, limit, totalPages }`
 
 ## 9. Builder — observability & ops
 
 - **Generation queue**: `ai_generations.status` = `queued`/`running`/`success`/`failed`. Monitor `failed` count via `GET /api/builder/generations?status=failed`.
 - **Duration**: `durationMs` per generation — alert if p95 > 30s or `failed` ratio >5%.
-- **Storage**: generated code `app/generated/{slug}/` + entities `server/entities/generated/{slug}/` tracked in gitignore? — runtime files untracked; backup DB + code archive for deploy.
-- **Deploy**: `AiDeployment` `env=preview` auto, `production` manual. URL `/generated/{slug}` served via Nuxt `[...all].vue` mount.
+- **Storage**: generated code `app/generated/[slug]/` (Next.js app dir) + entities `lib/db/entities/generated/{slug}/` tracked in gitignore? — runtime files untracked; backup DB + code archive for deploy.
+- **Deploy**: `AiDeployment` `env=preview` auto, `production` manual. URL `/generated/[slug]` served via Next.js `app/generated/[slug]/page.tsx` + Route Handlers `app/api/generated/[slug]/[entity]/route.ts`. Vercel/Node standalone both `next start` ready.
 
 ## Change Log
+
+### Stack Migration — Next.js + React (2026-09-15)
+
+- **MIGRASI** dari Nuxt/Nitro ke Next.js 15 (App Router) + React 19: boot `npm run build && npm run start` (bukan `preview`), paths `server/*` → `lib/db/*` + `app/api/**/route.ts` + `instrumentation.ts`, generated code `app/generated/[slug]/`, deploy `next start` standalone. Health check tetap `/api/health` (Route Handler `app/api/health/route.ts`).
 
 ### AI App Builder — Platform Pivot (2026-09-15)
 

@@ -34,7 +34,7 @@ Determine which task to implement.
 
 If `$ARGUMENTS` is:
 
-- a file path (e.g., `tasks/01-migrate-admin-panel-to-nuxt.md`) → use that file
+- a file path (e.g., `tasks/01-migrate-admin-panel-to-next.md`) → use that file
 - a task number (e.g., `01`) → find matching task in `tasks/`
 - a task name (e.g., `authentication`) → find matching task in `tasks/`
 - empty → list available tasks and ask the user to choose
@@ -93,7 +93,7 @@ Before writing any code:
 - [ ] Task specification fully understood — termasuk Fase (1=design / 2=implementation), User Flow, dan referensi `tasks/NN-ui-design.md` jika FASE 2
 - [ ] User Flow steps + Alternate/Error flows + Flow→UI/API mapping dipahami dan KONSISTEN dengan FASE 1
 - [ ] Implementation plan reviewed (jika ada — note: `tasks/NN-*.md` sudah berisi plan di `## Tasks`; `/plan` bersifat optional refinement)
-- [ ] Existing code patterns identified (termasuk test patterns `tests/unit`, `tests/nuxt`, `tests/e2e`)
+- [ ] Existing code patterns identified (termasuk test patterns `tests/unit`, `tests/next`, `tests/e2e`)
 - [ ] Dependencies verified — untuk FASE 2: pastikan `tasks/NN-ui-design.md` sudah DONE atau minimal tersedia sebagai acuan
 - [ ] Test Plan QA dipahami — setiap User Flow step / AC / BR/EC harus memiliki UT/NT/E2E (bertindak sebagai QA engineer)
 - [ ] No conflicts with existing code atau dengan prototype FASE 1 detected
@@ -153,7 +153,7 @@ After each step:
 ### Entity Pattern
 
 ```typescript
-// server/entities/{name}.entity.ts
+// lib/db/entities/{name}.entity.ts
 import { EntitySchema } from 'typeorm'
 
 export const {Name}Schema = new EntitySchema({
@@ -172,9 +172,9 @@ export const {Name}Schema = new EntitySchema({
 ### Service Pattern
 
 ```typescript
-// server/services/{name}.service.ts
-import { getDataSource } from '~/server/utils/db'
-import { {Name}Schema } from '~/server/entities/{name}.entity'
+// lib/services/{name}.service.ts
+import { getDataSource } from '~/lib/utils/db'
+import { {Name}Schema } from '~/lib/db/entities/{name}.entity'
 
 export const {Name}Service = {
   async findAll(query: QueryInput) { /* ... */ },
@@ -189,13 +189,13 @@ export const {Name}Service = {
 ### API Route Pattern
 
 ```typescript
-// server/api/{name}/index.get.ts
-import { defineEventHandler, getQuery } from 'h3'
-import { QuerySchema } from '~~/server/dto/{name}.dto'
-import { {Name}Service } from '~~/server/services/{name}.service'
+// app/api/{name}/index.get.ts
+import { Route Handler, getQuery } from 'next/server'
+import { QuerySchema } from '~~/lib/dto/{name}.dto'
+import { {Name}Service } from '~~/lib/services/{name}.service'
 
-export default defineEventHandler(async (event) => {
-  const query = QuerySchema.parse(getQuery(event))
+export default Route Handler(async (event) => {
+  const query = QuerySchema.parse(req.nextUrl.searchParams)
   return {Name}Service.findAll(query)
 })
 ```
@@ -204,7 +204,7 @@ export default defineEventHandler(async (event) => {
 ### DTO Pattern
 
 ```typescript
-// server/dto/{name}.dto.ts
+// lib/dto/{name}.dto.ts
 import { z } from 'zod'
 
 export const CreateSchema = z.object({ /* ... */ })
@@ -219,28 +219,28 @@ export type QueryInput = z.infer<typeof QuerySchema>
 
 # 8. Frontend Implementation — Storybook-First
 
-> **FASE 1 — UI Design — Deliverables Design Dulu**: WAJIB buat **wireframe low-fi** → **mockup hi-fi** (Naive UI 2.44 + Tailwind CSS v4 + token `app/utils/naiveui-theme.ts` — primary `#3B82F6`, Inter, radius `6/4/8`, `@vicons/carbon`) → **prototype interaktif LANGSUNG implementasi pada project** (`app/components/...` + `app/pages/...` + **Storybook stories** `apps/web/stories/{feature}/*.stories.ts`) — sesuai `## UI` dan `## User Flow` di task FASE 1. Simpan wireframe di `docs/wireframes/{feature}/`, mockup di `docs/mockups/{feature}/`, **prototype di `apps/web/stories/{feature}/` dibaca via `npm run storybook` (port 6006) & `npm run build-storybook`**. Config: `apps/web/.storybook/main.ts` (`../stories/**/*.stories.*`, addons `a11y`+`docs`, `vue3-vite`) + `apps/web/.storybook/preview.ts` (import `../assets/css/main.css`). Checklist ada di `## Tasks (Design)` di task file. **Figma/PNG hanya arsip, bukan deliverable utama — Storybook adalah single source of truth.**
+> **FASE 1 — UI Design — Deliverables Design Dulu**: WAJIB buat **wireframe low-fi** → **mockup hi-fi** (shadcn/ui + Tailwind CSS v4 + token `app/globals.css` — primary `#0075de`, Inter, radius `6/4/8`, `lucide-react`) → **prototype interaktif LANGSUNG implementasi pada project** (`components/...` + `app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → ...` + **Storybook stories** `apps/web/stories/{feature}/*.stories.tsx`) — sesuai `## UI` dan `## User Flow` di task FASE 1. Simpan wireframe di `docs/wireframes/{feature}/`, mockup di `docs/mockups/{feature}/`, **prototype di `apps/web/stories/{feature}/` dibaca via `npm run storybook` (port 6006) & `npm run build-storybook`**. Config: `apps/web/.storybook/main.ts` (`../stories/**/*.stories.*`, addons `a11y`+`docs`, `react + next`) + `apps/web/.storybook/preview.ts` (import `../assets/css/main.css`). Checklist ada di `## Tasks (Design)` di task file. **Figma/PNG hanya arsip, bukan deliverable utama — Storybook adalah single source of truth.**
 
-> **FASE 2 — Implementation**: Implementasi frontend HARUS pixel-perfect terhadap **mockup + Storybook stories FASE 1** (`tasks/NN-ui-design.md` + `apps/web/stories/{feature}/*.stories.ts`). Jangan desain ulang. Jika ada deviasi, catat di `## UI > Penyesuaian dari design`. Verifikasi Storybook tetap PASS (`npm run build-storybook` sukses) setelah perubahan.
+> **FASE 2 — Implementation**: Implementasi frontend HARUS pixel-perfect terhadap **mockup + Storybook stories FASE 1** (`tasks/NN-ui-design.md` + `apps/web/stories/{feature}/*.stories.tsx`). Jangan desain ulang. Jika ada deviasi, catat di `## UI > Penyesuaian dari design`. Verifikasi Storybook tetap PASS (`npm run build-storybook` sukses) setelah perubahan.
 
 ### Page Pattern
 
-```vue
-<!-- app/pages/{route}/index.vue — sesuai ## UI > Halaman di task FASE 1/2 -->
+```react
+<!-- app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → {route}/index.react — sesuai ## UI > Halaman di task FASE 1/2 -->
 <script setup lang="ts">
-definePageMeta({ layout: 'default', middleware: 'auth' })
+// auth via middleware.ts (JWT)
 // logic — mapping ke User Flow Step
 </script>
 
 <template>
-  <!-- template — Naive UI first, Tailwind utility, no NDescriptions -->
+  <!-- template — shadcn/ui first, Tailwind utility, no detail-view div -->
 </template>
 ```
 
 ### Component Pattern
 
-```vue
-<!-- app/components/features/{name}/{Name}.vue — sesuai ## UI > Components -->
+```react
+<!-- components/features/{name}/{Name}.react — sesuai ## UI > Components -->
 <script setup lang="ts">
 // ... props, emits, logic — sesuai mockup FASE 1
 </script>
@@ -253,7 +253,7 @@ definePageMeta({ layout: 'default', middleware: 'auth' })
 ### Composable Pattern
 
 ```typescript
-// app/composables/use{Name}Data.ts — sesuai task file Frontend checklist
+// hooks/use{Name}Data.ts — sesuai task file Frontend checklist
 export function use{Name}Data() {
   // ... logic — wrap useApi() dengan auth interceptor
   return { /* ... */ }
@@ -263,31 +263,31 @@ export function use{Name}Data() {
 ### Store Pattern
 
 ```typescript
-// app/stores/{name}.ts
-import { defineStore } from 'pinia'
+// stores/{name}.ts
+import { create } from 'zustand'
 
-export const use{Name}Store = defineStore('{name}', () => {
+export const use{Name}Store = create<{Name}State>((set) => (, () => {
   // ... state, actions, getters
 })
 ```
 
 ### States (WAJIB — sesuai ## UI > States di task)
 
-- Implementasikan semua state: loading (NSpin/NSkeleton), empty (NEmpty + CTA), error (NAlert + retry), success (useMessage), validation (NFormItem), permission denied (NAlert 403 + `rbac-denied`) — **setiap state WAJIB memiliki Storybook story variant di FASE 1** (`Default`, `Loading`, `Empty`, `Error`, `ValidationError`, `PermissionDenied`)
-- Setiap state HARUS memiliki test NT-XXX (nuxt) + E2E-XXX (+ story `args` + a11y check via `@storybook/addon-a11y`) — sebagai QA, pastikan ada.
+- Implementasikan semua state: loading (Spinner (Loader2)/Skeleton), empty (Empty + CTA), error (Alert + retry), success (useMessage), validation (FormItem), permission denied (Alert 403 + `rbac-denied (Alert variant=destructive + Portal)`) — **setiap state WAJIB memiliki Storybook story variant di FASE 1** (`Default`, `Loading`, `Empty`, `Error`, `ValidationError`, `PermissionDenied`)
+- Setiap state HARUS memiliki test NT-XXX (next) + E2E-XXX (+ story `args` + a11y check via `@storybook/addon-a11y`) — sebagai QA, pastikan ada.
 
 ### Storybook Stories (WAJIB FASE 1 — Prototype Langsung di Project)
 
-- Lokasi: `apps/web/stories/{feature}/*.stories.ts` (pattern `../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)` dari `.storybook/main.ts`)
-- Per feature minimal 2–3 stories files (mis. `List.stories.ts`, `Form.stories.ts`, `Detail.stories.ts`) — tiap file: `meta` (`title`, `component`, `parameters: { docs, a11y }`) + story variants untuk semua state + interaction (klik, validasi, transisi Anime.js hormati `prefers-reduced-motion`).
-- Token check: `NConfigProvider` + `themeOverrides` dari `app/utils/naiveui-theme.ts` di decorator/preview; direct import `import { NButton } from 'naive-ui'`; Tailwind utility only; icon `h(NIcon, null, { default: () => h(Icon) })` dari `@vicons/carbon`.
+- Lokasi: `apps/web/stories/{feature}/*.stories.tsx` (pattern `../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)` dari `.storybook/main.ts`)
+- Per feature minimal 2–3 stories files (mis. `List.stories.ts`, `Form.stories.ts`, `Detail.stories.ts`) — tiap file: `meta` (`title`, `component`, `parameters: { docs, a11y }`) + story variants untuk semua state + interaction (klik, validasi, transisi Framer Motion hormati `prefers-reduced-motion`).
+- Token check: `ThemeProvider` + `globals.css HSL tokens` dari `app/globals.css` di decorator/preview; direct import `import { Button } from 'naive-ui'`; Tailwind utility only; icon `<Icon, null, { default: () => h(Icon) })` dari `lucide-react`.
 - Verifikasi: `npm run storybook` (6006) tampil tanpa error, semua stories render; `npm run build-storybook` sukses.
 
 ---
 
 # 9. During Implementation — QA Test Creation (Bertindak sebagai QA Engineer)
 
-> Selain code feature, ANDA BERTINDAK SEBAGAI QA ENGINEER: buat file test `unit`, `nuxt`, `e2e` yang memverifikasi semua User Flow berjalan benar dan semua logika benar. Test ini adalah bagian dari `## Tasks > Test Plan` di task file dan akan dipakai `/verify` + `/review`.
+> Selain code feature, ANDA BERTINDAK SEBAGAI QA ENGINEER: buat file test `unit`, `next`, `e2e` yang memverifikasi semua User Flow berjalan benar dan semua logika benar. Test ini adalah bagian dari `## Tasks > Test Plan` di task file dan akan dipakai `/verify` + `/review`.
 
 ### Test Creation (WAJIB — FASE 2)
 
@@ -302,10 +302,10 @@ Ikuti `## Tasks > Test Plan` di task file (UT/NT/E2E mapping ke User Flow/AC/BR/
 // - Service logic — happy + error + edge + permission
 ```
 
-**Nuxt tests** (`tests/nuxt/` atau `app/components/**/ *.test.ts`):
+**Next.js tests** (`tests/next/` atau `components/**/ *.test.ts`):
 
 ```typescript
-// tests/nuxt/{feature}.form.test.ts
+// tests/next/{feature}.form.test.ts
 // - Render semua state: loading/empty/error/success/validation/permission
 // - Interaction: klik, submit, validation, navigation — sesuai User Flow
 // - Responsive & accessibility — desktop/tablet/mobile, keyboard, ARIA
@@ -321,8 +321,8 @@ Ikuti `## Tasks > Test Plan` di task file (UT/NT/E2E mapping ke User Flow/AC/BR/
 ```
 
 Aturan:
-- Setiap User Flow step → minimal 1 E2E case. Setiap AC → minimal 1 test (unit/nuxt/e2e). Setiap BR/EC → test. Setiap UI State → nuxt + e2e.
-- Tulis file test eksplisit, jangan placeholder generik. File harus runnable via `npm run test:unit`, `npm run test:nuxt`, `npm run test:e2e`.
+- Setiap User Flow step → minimal 1 E2E case. Setiap AC → minimal 1 test (unit/next/e2e). Setiap BR/EC → test. Setiap UI State → next + e2e.
+- Tulis file test eksplisit, jangan placeholder generik. File harus runnable via `npm run test:unit`, `npm run test:next`, `npm run test:e2e`.
 - Untuk FASE 1 (design task), tidak ada code test — verifikasi adalah design review (lihat `## Verification (Design)`), bukan vitest/playwright.
 
 ### Track Progress
@@ -340,7 +340,7 @@ Update the task file's `## Tasks` checklist (centang `[x]` per item) dan sesuaik
 ### Frontend
 * [x] Pages (sesuai mockup FASE 1)
 * [x] Components — semua states
-* [x] Nuxt tests — NT-01/NT-02
+* [x] Next.js tests — CT-01/CT-02
 
 ### Test Plan (QA)
 * [x] UT-01 — ...
@@ -386,7 +386,7 @@ After implementing all steps — jalankan smoke check sebagai QA sebelum `/verif
 ```bash
 # From apps/web/
 npm run test:unit        # Unit — UT-01/UT-02 harus PASS, cover FR/BR/DR/INV
-npm run test:nuxt        # Nuxt — NT-01/NT-02 harus PASS, semua state ter-render
+npm run test:next        # Next.js — CT-01/CT-02 harus PASS, semua state ter-render
 npm run test:e2e         # E2E — E2E-01/E2E-02 harus PASS, semua User Flow steps
 npm run build-storybook  # Storybook build — stories FASE 1 PASS, no error
 npm run build            # Production build — 0 error
@@ -401,7 +401,7 @@ Checklist QA smoke (mapping ke task file):
 - [ ] Semua BR/EC ada test dan PASS
 - [ ] Semua UI States (loading/empty/error/success/validation/permission) ter-cover NT + **Storybook story variant** + E2E
 - [ ] Permission matrix 401/403 ter-test (E2E + Storybook `PermissionDenied` story)
-- [ ] Pixel-perfect vs mockup + **Storybook stories** FASE 1 (FASE 2) — token `naiveui-theme.ts`, manual check atau visual test
+- [ ] Pixel-perfect vs mockup + **Storybook stories** FASE 1 (FASE 2) — token `globals.css`, manual check atau visual test
 - [ ] Storybook — `npm run storybook` (:6006) tampil + `npm run build-storybook` sukses (semua stories ada, a11y addon PASS)
 
 Jika salah satu gagal, perbaiki sebelum `/verify` — jangan claim implemented dengan test gagal.

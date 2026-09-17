@@ -12,7 +12,7 @@
 - **Infer, don't ask** — AI menebak requirement lengkap dari prompt minimal (tanpa tanya balik bertele-tele)
 - **Opinionated defaults** — pilih stack, struktur data, role, UI terbaik secara otomatis
 - **Production-ready** — hasil bukan prototype, tapi app dengan auth, CRUD, dashboard, search, pagination, validasi, responsive, siap dipakai user akhir
-- **Beautiful by default** — setiap app yang di-generate wajib memakai Design System kanonis (Notion-calm + Naive UI + Tailwind) → tidak ada app jelek
+- **Beautiful by default** — setiap app yang di-generate wajib memakai Design System kanonis (Notion-calm + shadcn/ui + Tailwind) → tidak ada app jelek
 
 **Contoh**:
 - Input: `buatkan aplikasi kasir`
@@ -21,9 +21,9 @@
 **Current Implementation State**: Platform dibangun di atas **RBAC Foundation** (9 EntitySchemas / 12 tabel: User/Role/Permission/Guard/ActivityLog/Setting) yang menjadi fondasi auth & permission untuk semua generated app. Di atasnya, **AI Builder Layer** menambahkan 8 EntitySchemas baru (AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment) → total **17 EntitySchemas / ~23 tabel**. Generation flow: Prompt → Intent Inference → Spec → Architecture → CodeGen → UI Assembly → Preview → Iterate.
 
 **Tech Stack**:
-- Frontend: Nuxt 4 + Vue 3 + TypeScript + Naive UI + Tailwind CSS v4
-- Backend: Nitro (Nuxt 4) + TypeORM + SQLite
-- Auth: JWT (JSON Web Token) 24 jam
+- Frontend: Next.js 15 (App Router) + React 19 + TypeScript + shadcn/ui + Tailwind CSS v4 + lucide-react + Framer Motion
+- Backend: Next.js Route Handlers (`app/api/**/route.ts`) + TypeORM 1.1 EntitySchema + SQLite (`better-sqlite3`) + Zod + JWT
+- Auth: JWT (JSON Web Token) 24 jam, `httpOnly` cookie + `middleware.ts` guard
 - AI Builder: Prompt Inference Engine + Spec-to-Schema Generator + UI Assembly Engine + Preview & Iteration
 
 ---
@@ -153,10 +153,10 @@ AI memilih 2-3 role paling masuk akal untuk tiap domain tanpa minta konfirmasi.
 - Prompt input single-line + generate (Enter → langsung jalan, jangan minta form panjang)
 - Inference engine: domain detection, entity extraction (3-5 entities), role inference (2-3 roles), page mapping (4-7 pages), business rules
 - Spec generation: mini-PRD + ERD + API contract + UI map sebagai `AiAppSchema` JSON
-- Code generation: EntitySchema + DTO Zod + Service (plain object) + API Routes + Shared Types
-- UI Assembly: Pages + Components (DataTable, PageShell, FormModal, DetailDrawer, StatCard) + Stores + Composables — wajib pakai design tokens
-- Integration: register di `orm-data-source.ts`, generate migrations/seeds, sidebar nav, routes `app/generated/{slug}/...`
-- Preview: dev server + seed data otomatis, URL preview per project
+- Code generation: EntitySchema + DTO Zod + Service (plain object) + Route Handlers (`app/api/generated/[slug]/[entity]/route.ts`) + Types (`lib/types/`)
+- UI Assembly: Pages (`app/generated/[slug]/**`) + Components (DataTable, PageShell, FormModal, DetailDrawer, StatCard) + Hooks + Zustand stores — wajib pakai design tokens shadcn/ui
+- Integration: register di `lib/db/data-source.ts`, generate migrations/seeds, sidebar nav, routes `app/generated/[slug]/`
+- Preview: Next.js dev server hot-reload + seed data otomatis, URL preview per project
 - Iteration: delta inference, patch generation, merge tanpa hapus data user
 
 ### 10.2 Generated App Quality Bar (Wajib — Bukan Prototype Jelek)
@@ -199,10 +199,10 @@ Dashboard, User/Role/Permission/Guard CRUD, Activity Logs, System Logs, Settings
 
 ## 12. Constraints
 
-- Database: SQLite (better-sqlite3) — cocok untuk skala kecil-menengah, single file. `synchronize: true` dev, `synchronize: false` + `migrationsRun: true` production.
-- Monolith: Nuxt 4 + Nitro — frontend + backend satu package, tanpa microservice
-- Auth JWT 24 jam, bcrypt
-- TypeScript strict, Zod validation single source of truth
+- Database: SQLite (better-sqlite3) — cocok untuk skala kecil-menengah, single file. `synchronize: true` dev, `synchronize: false` + `migrationsRun: true` production. TypeORM via Next.js Route Handlers.
+- Monolith: Next.js 15 (App Router) — frontend (React Server Components + Client Islands) + API Routes satu package, tanpa microservice
+- Auth JWT 24 jam, bcrypt, `httpOnly` cookie, `middleware.ts` guard
+- TypeScript strict (`strict: true`), Zod validation single source of truth (DTOs di `lib/dto/`)
 - AI inference di v1 bisa berupa rule-based + LLM call (stub dulu, interface `AiInferenceProvider`). Jangan hard-code ke vendor spesifik di schema.
 
 ---
@@ -262,13 +262,13 @@ Platform **AI App Builder** yang menyediakan:
 
 ### 17.1 Builder — Prompt → Generate
 
-**Halaman utama builder** (`/builder` atau `/dashboard/builder`):
+**Halaman utama builder** (`/builder`):
 
 #### AiPromptBar
-| Element | Spesifikasi |
+| Element | Spesifikasi (Next.js + shadcn/ui) |
 |---------|-------------|
-| Input | NInput `size=large`, placeholder `Ketik ide aplikasi... mis. buatkan aplikasi kasir` , `clearable`, prefix `Sparkles` |
-| CTA | NButton `type=primary` pill `Buat Aplikasi` (primary `#0075de`) + Enter to submit |
+| Input | `<Input size="lg">` shadcn + `placeholder="Ketik ide aplikasi... mis. buatkan aplikasi kasir"` + clearable + prefix `<Sparkles size={16} />` (lucide-react) |
+| CTA | `<Button variant="default">` pill `Buat Aplikasi` (primary `#0075de` via `app/globals.css` HSL) + Enter to submit |
 | Hint | Text kecil `Tekan Enter — AI akan langsung paham dan generate` |
 
 #### Inference Preview (opsional, <2s)
@@ -296,11 +296,11 @@ Aksi: Preview, Refine, Duplicate, Delete, View Spec
 ### 17.3 Generated App — Quality Bar
 
 Setiap generated app punya:
-- **Dashboard** — stats (total produk, transaksi hari ini, omzet), recent 5 items, chart mini (jika relevan)
-- **CRUD Pages** — per entity: DataTable kanonis (search 320px, field 160px, sort, visibility, pagination), FormModal (validasi Zod), DetailDrawer (`.detail-view`)
-- **Relations** — tampilkan relasi (Produk → Kategori, Transaksi → Pelanggan) dengan NSelect/NTag
+- **Dashboard** — stats (total produk, transaksi hari ini, omzet), recent 5 items, chart mini (jika relevan) — `app/generated/[slug]/page.tsx` (Server Component + Client islands)
+- **CRUD Pages** — per entity: DataTable kanonis (shadcn Table + search 320px + field 160px + sort + visibility + pagination), FormModal (`Dialog` + `react-hook-form` + `zodResolver`), DetailDrawer (`Sheet`/`Drawer` + `.detail-view`)
+- **Relations** — tampilkan relasi (Produk → Kategori, Transaksi → Pelanggan) dengan `Select`/`Badge` shadcn
 - **Seed Data** — 5-10 rows realistis
-- **Mobile-friendly** — responsive, PageShell breadscrumb
+- **Mobile-friendly** — responsive (Tailwind), PageShell breadcrumb (`next/link`)
 
 ### 17.4 Table Browse Features (Kanonis — Berlaku untuk Semua Tabel: RBAC + Generated)
 
@@ -357,17 +357,19 @@ Guard `allow/deny` dievaluasi client-side untuk menu visibility (`useAuthorizati
 | POST | `/api/builder/preview/:slug` | (Re)build preview / get preview URL | Bearer |
 | GET | `/api/builder/templates` | List template starter (kasir, crm, todo, dll) | Public |
 
-### Generated App API (Otomatis per App)
+### Generated App API (Otomatis per App — Next.js Route Handlers)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/api/:slug/:entity` | List entity (paginated) | Bearer + Permission |
-| GET | `/api/:slug/:entity/:id` | Detail entity | Bearer + Permission |
-| POST | `/api/:slug/:entity` | Create entity | Bearer + Permission |
-| PUT | `/api/:slug/:entity/:id` | Update entity | Bearer + Permission |
-| DELETE | `/api/:slug/:entity/:id` | Delete entity | Bearer + Permission |
+| GET | `/api/generated/:slug/:entity` | List entity (paginated) | Bearer + Permission |
+| GET | `/api/generated/:slug/:entity/:id` | Detail entity | Bearer + Permission |
+| POST | `/api/generated/:slug/:entity` | Create entity | Bearer + Permission |
+| PUT | `/api/generated/:slug/:entity/:id` | Update entity | Bearer + Permission |
+| DELETE | `/api/generated/:slug/:entity/:id` | Delete entity | Bearer + Permission |
 
-Contoh: `GET /api/pos-kasir/products?page=1&limit=20&search=kopi`
+via `app/api/generated/[slug]/[entity]/route.ts` + `[id]/route.ts`
+
+Contoh: `GET /api/generated/pos-kasir/products?page=1&limit=20&search=kopi`
 
 ### Auth API (Tetap Ada)
 
@@ -379,32 +381,32 @@ Contoh: `GET /api/pos-kasir/products?page=1&limit=20&search=kopi`
 | PATCH | `/api/auth/profile` | Update profile | Bearer |
 | PATCH | `/api/auth/password` | Change password | Bearer |
 
-### RBAC API (Tetap Ada)
+### RBAC API (Tetap Ada — Next.js Route Handlers)
 
-`GET/POST/PUT/DELETE /api/users`, `/api/roles`, `/api/permissions`, `/api/guards` + `GET /api/activity-logs`, `/api/system-logs`, `/api/settings`, `/api/storage`, `/api/health`
+`GET/POST /api/users` (`app/api/users/route.ts`), `GET/PUT/DELETE /api/users/[id]/route.ts`, serupa `/api/roles`, `/api/permissions`, `/api/guards` + `GET /api/activity-logs`, `/api/system-logs`, `/api/settings`, `/api/storage`, `/api/health`
 
 ---
 
 ## 20. Client Routes
 
-### File-Based Routing (Nuxt Pages)
+### File-Based Routing (Next.js App Router)
 
 | File | Route | Auth | Description |
 |------|-------|------|-------------|
-| `app/pages/login.vue` | `/login` | Guest | Login |
-| `app/pages/register.vue` | `/register` | Guest | Register |
-| `app/pages/dashboard/index.vue` | `/dashboard` | Required | Dashboard platform (stats projects) |
-| `app/pages/builder/index.vue` | `/builder` | Required | Builder prompt bar + library |
-| `app/pages/builder/[slug].vue` | `/builder/:slug` | Required | Project detail + preview + refine |
-| `app/generated/[slug]/pages/...` | `/generated/:slug/*` | Required | Generated app pages (dashboard, list, etc.) |
-| `app/pages/dashboard/users.vue` | `/dashboard/users` | Required | Manajemen user |
-| `app/pages/dashboard/roles.vue` | `/dashboard/roles` | Required | Manajemen role |
-| `app/pages/dashboard/permissions.vue` | `/dashboard/permissions` | Required | Manajemen permission |
-| `app/pages/dashboard/guards.vue` | `/dashboard/guards` | Required | Manajemen guard |
-| `app/pages/dashboard/activity-logs.vue` | `/dashboard/activity-logs` | Required | Activity logs |
-| `app/pages/dashboard/system-logs.vue` | `/dashboard/system-logs` | Required | System logs |
-| `app/pages/dashboard/settings.vue` | `/dashboard/settings` | Required | Settings |
-| `app/pages/dashboard/profile.vue` | `/dashboard/profile` | Required | Profile |
+| `app/(auth)/login/page.tsx` | `/login` | Guest (middleware) | Login |
+| `app/(auth)/register/page.tsx` | `/register` | Guest | Register |
+| `app/(dashboard)/dashboard/page.tsx` | `/dashboard` | Required | Dashboard platform (stats projects) |
+| `app/builder/page.tsx` | `/builder` | Required | Builder prompt bar + library |
+| `app/builder/[slug]/page.tsx` | `/builder/:slug` | Required | Project detail + preview + refine |
+| `app/generated/[slug]/page.tsx` + `app/generated/[slug]/[entity]/page.tsx` | `/generated/:slug/*` | Required | Generated app pages (dashboard, list, etc.) |
+| `app/(dashboard)/users/page.tsx` | `/dashboard/users` | Required | Manajemen user |
+| `app/(dashboard)/roles/page.tsx` | `/dashboard/roles` | Required | Manajemen role |
+| `app/(dashboard)/permissions/page.tsx` | `/dashboard/permissions` | Required | Manajemen permission |
+| `app/(dashboard)/guards/page.tsx` | `/dashboard/guards` | Required | Manajemen guard |
+| `app/(dashboard)/activity-logs/page.tsx` | `/dashboard/activity-logs` | Required | Activity logs |
+| `app/(dashboard)/system-logs/page.tsx` | `/dashboard/system-logs` | Required | System logs |
+| `app/(dashboard)/settings/page.tsx` | `/dashboard/settings` | Required | Settings |
+| `app/(dashboard)/profile/page.tsx` | `/dashboard/profile` | Required | Profile |
 
 ### Sidebar Menu Structure (Baru)
 ```
@@ -453,9 +455,9 @@ Sistem (group)
 
 ## 22. Seed Data Summary
 
-### RBAC Seed (Tetap — sumber kebenaran `server/services/seeder.service.ts`)
+### RBAC Seed (Tetap — sumber kebenaran `lib/db/seed.ts` / `lib/services/seeder.service.ts`)
 
-Sama seperti sebelumnya: 5 users (admin/editor/viewer/manager/guest), 7 roles, 8 guards, 10 permissions + junctions. Lihat `docs/database.md` § Seed Data eksak.
+Sama seperti sebelumnya: 5 users (admin/editor/viewer/manager/guest), 7 roles, 8 guards, 10 permissions + junctions. Lihat `docs/database.md` § Seed Data eksak. Dipanggil di `instrumentation.ts` atau `lib/db/init.ts` (Next.js).
 
 Ditambah seed **Builder Templates** (di `AiProject` / stub):
 | Template | Slug | Prompt Contoh | Entities |
@@ -472,7 +474,7 @@ Template dipakai untuk inference fallback & `GET /api/builder/templates`.
 
 ## 23. Client-Side Authorization
 
-Sama seperti sebelumnya: `$fetch` interceptor 401/403, route middleware, menu visibility via `useAuthorization()`.
+Sama seperti sebelumnya: `fetch` wrapper (`hooks/useApi.ts`) interceptor 401/403, `middleware.ts` guard, menu visibility via `hooks/useAuthorization.ts` (`hasRole`, `hasPermission`, `canAccessUrl`).
 
 Ditambah untuk Builder:
 - `canGenerate` → cek permission `Builder:Generate`
@@ -486,7 +488,7 @@ Ditambah untuk Builder:
 
 1. **Jangan banyak tanya balik.** Infer yang paling umum & bagus, maksimal 1 kalimat konfirmasi opsional lalu generate.
 2. **Selalu hasilkan app lengkap + cantik.** Minimal: Auth (jika butuh) + Dashboard + 2-4 CRUD + search/sort/pagination + validasi + empty/loading/error + responsive + sidebar. Jangan kasih scaffold kosong.
-3. **Design System kanonis wajib.** `#0075de` primary, canvas `#f6f5f4`, hairline `#e6e6e6`, radius 12/8/4, Inter, PageShell + DataTable kanonis, detail-view, NIcon `h()`. Jangan bikin app jelek.
+3. **Design System kanonis wajib.** `#0075de` primary, canvas `#f6f5f4`, hairline `#e6e6e6`, radius 12/8/4, Inter, PageShell + DataTable kanonis, detail-view, `lucide-react` icons. Jangan bikin app jelek.
 4. **Opinionated & production-ready.** Pilih field & relasi masuk akal, seed data contoh, permission/role default, validasi Zod ketat.
 5. **Iterasi via prompt pendek.** Dukung `tambahkan fitur X`, `ganti ...`, `perbaiki ...` tanpa rebuild dari nol.
 6. **Jelaskan singkat setelah generate.** Ringkasan: apa yang jadi, route apa, cara pakai, saran refine 1-2 baris.
@@ -498,6 +500,10 @@ Contoh ideal:
 ---
 
 ## Change Log
+
+### Stack Migration — Next.js + React (2026-09-15)
+
+- **MIGRASI** dari Nuxt 4 + Vue + Nitro + Pinia + Naive UI → **Next.js 15 (App Router) + React 19 + Zustand + TanStack Query + shadcn/ui + lucide-react + Framer Motion**. PRD Tech Stack (§1, §12), Functional Req (§10.1 UI Assembly → hooks + Zustand, Route Handlers), Fitur Builder (§17.1 → shadcn Input/Button), Generated CRUD relations (§17.3 Select/Badge), API Endpoints (§19 generated `/api/generated/:slug`), Client Routes (§20 App Router route groups `(auth)`/`(dashboard)` + `app/generated`), Seed source (`lib/db/seed.ts`), Auth guard (`middleware.ts`), Design System icons (`lucide-react`).
 
 ### AI App Builder — Platform Pivot (2026-09-15)
 

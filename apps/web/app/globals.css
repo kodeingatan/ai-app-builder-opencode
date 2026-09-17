@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --radius: 0.75rem;
+}
+
+:root {
+  /* Notion blue #0075de ~ hsl(209 100% 44%) */
+  --background: 40 20% 97%; /* #f6f5f4 canvas-soft warm */
+  --foreground: 0 0% 0%;
+  --card: 0 0% 100%; /* #ffffff */
+  --card-foreground: 0 0% 0%;
+  --primary: 209 100% 44%; /* #0075de */
+  --primary-foreground: 0 0% 100%;
+  --border: 0 0% 90%; /* #e6e6e6 */
+  --input: 0 0% 90%;
+  --ring: 209 100% 44%;
+  --radius: 0.75rem; /* lg 12px, md 8px uses calc */
+}
+
+html { font-family: Inter, system-ui, -apple-system, sans-serif; background: hsl(var(--background)); }
+
+/* Detail view pattern (shadcn-agnostic) */
+.detail-view { display: flex; flex-direction: column; }
+.detail-field { padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+.detail-field:last-child { border-bottom: none; }
+.detail-label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 4px; }
+.detail-value { display: block; font-size: 14px; font-weight: 500; color: #1e293b; line-height: 1.5; word-break: break-word; }
+.detail-value--text { font-weight: 400; color: #334155; }
+.detail-value--mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.detail-value--code { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

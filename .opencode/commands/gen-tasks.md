@@ -46,8 +46,8 @@ Do NOT generate simple TODO lists.
 
 **Deliverables Design WAJIB (FASE 1)**:
 1. **Wireframe low-fi** — untuk semua halaman & states (desktop/tablet/mobile)
-2. **Mockup hi-fi** — Naive UI 2.44 + Tailwind CSS v4 + token `app/utils/naiveui-theme.ts` (primary `#3B82F6`, Inter, radius 6/4/8, `@vicons/carbon`)
-3. **Prototype interaktif LANGSUNG implementasi pada project** — komponen Vue `app/components/...` + halaman `app/pages/...` + **Storybook stories** `apps/web/stories/{feature}/*.stories.ts` yang dapat dibaca via `npm run storybook` (port 6006) dan `npm run build-storybook` — bukan hanya Figma/PNG eksternal. Storybook adalah sumber kebenaran (single source of truth) untuk review design sebelum FASE 2.
+2. **Mockup hi-fi** — shadcn/ui + Tailwind CSS v4 + lucide-react + token `app/globals.css` (HSL `--primary: 210 100% 44%` ~ `#0075de`, Inter, radius 12/8/4, `lucide-react`)
+3. **Prototype interaktif LANGSUNG implementasi pada project** — komponen React `components/...` + halaman `app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → ...` + **Storybook stories** `apps/web/stories/{feature}/*.stories.tsx` yang dapat dibaca via `npm run storybook` (port 6006) dan `npm run build-storybook` — bukan hanya Figma/PNG eksternal. Storybook adalah sumber kebenaran (single source of truth) untuk review design sebelum FASE 2.
 
 ---
 
@@ -131,7 +131,7 @@ $ARGUMENTS
 Example:
 
 ```text
-/gen-tasks "Platform aplikasi bisnis dinamis dengan Core Concept Global Table → Component → Template → Administration. Administrator dapat mendefinisikan struktur data, membangun component, menyusun template, dan mengelola aplikasi secara dinamis."
+/gen-tasks "Platform aplikasi bisnis dinamis dengan Core Concept Minimal Prompt → Maximal App (prompt pendek → inference → generate dynamic entities/tables per slug). Administrator dapat mendefinisikan struktur data, membangun component, menyusun template, dan mengelola aplikasi secara dinamis."
 ```
 
 The input may contain:
@@ -184,7 +184,7 @@ Represent the Core Concept as a model.
 Example:
 
 ```text
-Global Table
+Dynamic Entity (per prompt, e.g., Product/Category/Transaction)
       │
       ▼
 Component
@@ -435,7 +435,7 @@ TODO | IN_PROGRESS | DONE
 ### In Scope
 
 - Wireframe low-fi untuk semua halaman/state
-- Mockup hi-fi (Naive UI + Tailwind, token `docs/design-system.md`)
+- Mockup hi-fi (shadcn/ui + Tailwind, token `docs/design-system.md`)
 - Prototype interaktif (klik, navigasi, validasi, transisi)
 - Deliverables: file Figma / HTML prototype / Storybook stories
 
@@ -475,9 +475,9 @@ TODO | IN_PROGRESS | DONE
 
 | ID | Skenario | Jalur | Penanganan UI |
 |----|----------|-------|---------------|
-| ALT-01 | Data kosong | List → Empty state | `NEmpty` + CTA |
-| ERR-01 | Validasi gagal | Form → Inline error | `NFormItem` feedback |
-| ERR-02 | 403 Forbidden | Any → Permission denied | `NAlert` + `rbac-denied` |
+| ALT-01 | Data kosong | List → Empty state | `Empty` + CTA |
+| ERR-01 | Validasi gagal | Form → Inline error | `FormItem` feedback |
+| ERR-02 | 403 Forbidden | Any → Permission denied | `Alert` + `rbac-denied (Alert variant=destructive + Portal)` |
 
 ## UI
 
@@ -487,7 +487,7 @@ TODO | IN_PROGRESS | DONE
 
 | Route | Halaman | Akses | Deskripsi | Wireframe Ref |
 |-------|---------|-------|-----------|---------------|
-| `/global-tables` | Global Table List | Admin | Daftar + search + pagination | `wireframe/list.png` |
+| `/global-tables` | Dynamic Entity (per prompt, e.g., Product/Category/Transaction) List | Admin | Daftar + search + pagination | `wireframe/list.png` |
 | `/global-tables/create` | Create | Admin | Form pembuatan | `wireframe/create.png` |
 | `/global-tables/:id` | Detail | Admin | Read-only + actions | `wireframe/detail.png` |
 
@@ -495,23 +495,23 @@ TODO | IN_PROGRESS | DONE
 
 - Navigasi: {sidebar / workspace / breadcrumb}
 - Struktur halaman: {header + filter bar + data table + pagination}
-- Penempatan: {di bawah menu "Master Data" → "Global Table"}
+- Penempatan: {di bawah menu "Master Data" → "Dynamic Entity (per prompt, e.g., Product/Category/Transaction)"}
 - Grid & spacing: ikuti token `docs/design-system.md`
 
 ### Components
 
 | Component | Lokasi (rencana) | Deskripsi | State Variant |
 |-----------|-------------------|-----------|---------------|
-| `GlobalTableDataTable.vue` | `app/components/features/global-table/` | Tabel + search/sort/visibility | loading, empty, error |
-| `GlobalTableForm.vue` | `app/components/features/global-table/` | Form Naive UI | default, validation, disabled |
-| `GlobalTableDetail.vue` | `app/components/features/global-table/` | Detail `.detail-view` | loading, error |
+| `GlobalTableDataTable.react` | `components/features/global-table/` | Tabel + search/sort/visibility | loading, empty, error |
+| `GlobalTableForm.react` | `components/features/global-table/` | Form shadcn/ui | default, validation, disabled |
+| `GlobalTableDetail.react` | `components/features/global-table/` | Detail `.detail-view` | loading, error |
 
 ### Interaction
 
 - Trigger: {klik "Create" → buka editor}
 - Flow: {validate → submit → toast → redirect}
-- Konfirmasi: {hapus → NPopconfirm / NDialog}
-- Transisi/animasi: {Anime.js fadeInUp, hormati prefers-reduced-motion}
+- Konfirmasi: {hapus → AlertDialog / Dialog}
+- Transisi/animasi: {Framer Motion fadeInUp, hormati prefers-reduced-motion}
 - Prototype link: {Figma / HTML prototype URL}
 
 ### Responsive Behavior
@@ -524,20 +524,20 @@ TODO | IN_PROGRESS | DONE
 
 ### States
 
-| State | Tampilan | Komponen Naive UI | Mockup Ref |
+| State | Tampilan | Komponen shadcn/ui | Mockup Ref |
 |-------|----------|-------------------|------------|
-| Loading | Skeleton / NSpin | `NSpin`, `NSkeleton` | `mockup/loading.png` |
-| Empty | Illustration + CTA "Create pertama" | `NEmpty` | `mockup/empty.png` |
-| Error | NAlert + retry | `NAlert` | `mockup/error.png` |
-| Success | NMessage / NNotification | `useMessage()` | `mockup/success.png` |
-| Validation | Inline error di field | `NFormItem` feedback | `mockup/validation.png` |
-| Permission Denied | NAlert 403 + event `rbac-denied` | `NAlert` | `mockup/403.png` |
+| Loading | Skeleton / Spinner (Loader2) | `Spinner (Loader2)`, `Skeleton` | `mockup/loading.png` |
+| Empty | Illustration + CTA "Create pertama" | `Empty` | `mockup/empty.png` |
+| Error | Alert + retry | `Alert` | `mockup/error.png` |
+| Success | NMessage / NNotification | `toast() via sonner` | `mockup/success.png` |
+| Validation | Inline error di field | `FormItem` feedback | `mockup/validation.png` |
+| Permission Denied | Alert 403 + event `rbac-denied (Alert variant=destructive + Portal)` | `Alert` | `mockup/403.png` |
 
 ### Accessibility
 
 - Keyboard: semua aksi via keyboard, focus trap di modal, tab order
 - ARIA: `aria-label` untuk icon-only button
-- Kontras & font: ikuti `docs/design-system.md` (primary #3B82F6, Inter, radius 6/4/8)
+- Kontras & font: ikuti `docs/design-system.md` (primary #0075de, Inter, radius 12/8/4/full)
 - Reduced motion: hormati `prefers-reduced-motion`
 - Screen reader: label & live region untuk feedback
 
@@ -546,20 +546,20 @@ TODO | IN_PROGRESS | DONE
 | Deliverable | Format | Lokasi | Status |
 |-------------|--------|--------|--------|
 | Wireframe low-fi | Figma / PNG | `docs/wireframes/{feature}/` | TODO |
-| Mockup hi-fi | Figma / PNG + **Vue implementasi (Naive UI + Tailwind, token `naiveui-theme.ts`)** | `docs/mockups/{feature}/` + `app/components/...` + `app/pages/...` | TODO |
-| Prototype interaktif | **Storybook stories langsung di project** | `apps/web/stories/{feature}/*.stories.ts` + `app/components/...` (dibaca via `npm run storybook` :6006) | TODO |
+| Mockup hi-fi | Figma / PNG + **React implementasi (shadcn/ui + Tailwind, token `globals.css`)** | `docs/mockups/{feature}/` + `components/...` + `app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → ...` | TODO |
+| Prototype interaktif | **Storybook stories langsung di project** | `apps/web/stories/{feature}/*.stories.tsx` + `components/...` (dibaca via `npm run storybook` :6006) | TODO |
 | Storybook build | Static Storybook | `npm run build-storybook` | TODO |
 
-> **Aturan Storybook (WAJIB FASE 1)**: Prototype interaktif TIDAK cukup berupa Figma link atau PNG. Harus diimplementasikan sebagai komponen Vue nyata (Naive UI direct import, Tailwind utility, token `app/utils/naiveui-theme.ts`) + stories di `apps/web/stories/{feature}/`. Config Storybook di `apps/web/.storybook/main.ts` — stories pattern `../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)` dengan addon `@storybook/addon-a11y` + `@storybook/addon-docs`. Verifikasi: `npm run storybook` (port 6006) tampil tanpa error & `npm run build-storybook` sukses.
+> **Aturan Storybook (WAJIB FASE 1)**: Prototype interaktif TIDAK cukup berupa Figma link atau PNG. Harus diimplementasikan sebagai komponen React nyata (shadcn/ui direct import, Tailwind utility, token `app/globals.css`) + stories di `apps/web/stories/{feature}/`. Config Storybook di `apps/web/.storybook/main.ts` — stories pattern `../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)` dengan addon `@storybook/addon-a11y` + `@storybook/addon-docs`. Verifikasi: `npm run storybook` (port 6006) tampil tanpa error & `npm run build-storybook` sukses.
 
 ### Design Tokens Check
 
-- [ ] Warna mengikuti `app/utils/naiveui-theme.ts` (`themeOverrides` — primary `#3B82F6`, `primaryColorHover` `#2563EB`, error `#EF4444`, radius `6px/4px/8px`, font `Inter`)
+- [ ] Warna mengikuti `app/globals.css` (`globals.css HSL tokens` — primary `#0075de`, `primaryColorHover` `#2563EB`, error `#EF4444`, radius `12px/8px/4px/16px/full`, font `Inter`)
 - [ ] Typography Inter (`fontFamily: 'Inter, ui-sans-serif...'`)
 - [ ] Radius 6/4/8 (`borderRadius: 6px`, `borderRadiusSmall: 4px`, Button/Card overrides)
 - [ ] Spacing Tailwind (`app/assets/css/main.css` + Tailwind v4 `@theme`)
-- [ ] Icon `@vicons/carbon` dengan `h(NIcon, null, { default: () => h(IconName) })`
-- [ ] Storybook stories me-render dengan `NConfigProvider` + `themeOverrides` (lihat `apps/web/.storybook/preview.ts` — import `../assets/css/main.css`)
+- [ ] Icon `lucide-react` dengan `<IconName size={16} />`
+- [ ] Storybook stories me-render dengan `ThemeProvider` + `app/globals.css` HSL tokens (`--primary: 210 100% 44%`) (lihat `apps/web/.storybook/preview.ts` — import `../assets/css/main.css`)
 
 ## Acceptance Criteria (Design)
 
@@ -592,7 +592,7 @@ Then {navigasi sesuai User Flow tanpa dead-end}
 
 ### Mockup
 
-- [ ] Hi-fi mockup dengan Naive UI + Tailwind + design tokens
+- [ ] Hi-fi mockup dengan shadcn/ui + Tailwind + design tokens
 - [ ] Mockup untuk semua breakpoint
 - [ ] Mockup untuk semua states
 
@@ -612,7 +612,7 @@ Then {navigasi sesuai User Flow tanpa dead-end}
 
 ## Verification (Design)
 
-- [ ] Design System verification (token `naiveui-theme.ts`, Naive UI direct import, Tailwind utility — no `NDescriptions`, pakai `.detail-view`)
+- [ ] Design System verification (token `globals.css`, shadcn/ui direct import, Tailwind utility — no `detail-view div`, pakai `.detail-view`)
 - [ ] Responsive verification (desktop/tablet/mobile — wireframe + Storybook viewport)
 - [ ] Accessibility verification (keyboard, ARIA, contrast, `prefers-reduced-motion` — via Storybook `@storybook/addon-a11y`)
 - [ ] User Flow coverage (semua step & alternate flow ada di Storybook prototype — klik tanpa dead-end)
@@ -699,16 +699,16 @@ TODO | IN_PROGRESS | DONE
 
 | ID | Skenario | Jalur | Penanganan |
 |----|----------|-------|------------|
-| ALT-01 | Data kosong | List → Empty | `NEmpty` + CTA |
+| ALT-01 | Data kosong | List → Empty | `Empty` + CTA |
 | ERR-01 | Validasi gagal | Submit → 400 | Inline error |
-| ERR-02 | Forbidden | Any → 403 | `NAlert` + `rbac-denied` |
+| ERR-02 | Forbidden | Any → 403 | `Alert` + `rbac-denied (Alert variant=destructive + Portal)` |
 
 ### Flow → UI Mapping
 
 | Flow Step | Halaman (dari UI-design) | Component | State |
 |-----------|--------------------------|-----------|-------|
-| Step 1 | `/feature` | `FeatureDataTable.vue` | loading → empty/error/success |
-| Step 2 | `/feature/create` | `FeatureForm.vue` | validation |
+| Step 1 | `/feature` | `FeatureDataTable.react` | loading → empty/error/success |
+| Step 2 | `/feature/create` | `FeatureForm.react` | validation |
 
 ### Flow → API Mapping
 
@@ -736,7 +736,7 @@ TODO | IN_PROGRESS | DONE
 
 | ID | Actor | Skenario | Hasil | Flow Step |
 |----|-------|----------|-------|-----------|
-| UC-01 | {Administrator} | {membuat Global Table baru} | {tabel tersimpan & dapat digunakan di Component} | Step 3 |
+| UC-01 | {Administrator} | {membuat Dynamic Entity (per prompt, e.g., Product/Category/Transaction) baru} | {tabel tersimpan & dapat digunakan di Component} | Step 3 |
 | UC-02 | ... | ... | ... | ... |
 
 ### Functional Requirements
@@ -818,8 +818,8 @@ Jika tidak ada state machine, tulis `N/A — stateless CRUD` dan jelaskan.
 
 | # | Server Route | HTTP Method | Auth | Permission | Deskripsi | Flow Step |
 |---|--------------|-------------|------|------------|-----------|-----------|
-| 1 | `/api/global-tables` | GET | JWT | `global-table:list` | List dengan pagination | Step 1 |
-| 2 | `/api/global-tables` | POST | JWT | `global-table:create` | Create baru | Step 3 |
+| 1 | `/api/global-tables` | GET | JWT | `Generated:{Slug}:Read` | List dengan pagination | Step 1 |
+| 2 | `/api/global-tables` | POST | JWT | `Generated:{Slug}:Write` | Create baru | Step 3 |
 | 3 | `/api/global-tables/:id` | GET | JWT | `global-table:read` | Detail | Step 4 |
 | 4 | `/api/global-tables/:id` | PATCH | JWT | `global-table:update` | Update | Step 5 |
 | 5 | `/api/global-tables/:id` | DELETE | JWT | `global-table:delete` | Delete | Step 6 |
@@ -857,36 +857,36 @@ _(Ulangi blok ini untuk Create / Detail / Update / Delete)_
 - Design task: `tasks/NN-feature-ui-design.md`
 - Wireframe: `docs/wireframes/{feature}/`
 - Mockup: `docs/mockups/{feature}/`
-- Prototype: **Storybook** `apps/web/stories/{feature}/*.stories.ts` (dibaca `npm run storybook` :6006) — `docs/prototypes/{feature}/` hanya arsip Figma/PNG bila ada
+- Prototype: **Storybook** `apps/web/stories/{feature}/*.stories.tsx` (dibaca `npm run storybook` :6006) — `docs/prototypes/{feature}/` hanya arsip Figma/PNG bila ada
 
 ### Halaman
 
 | Route | Halaman | Akses | Deskripsi | Status Design | Storybook |
 |-------|---------|-------|-----------|---------------|-----------|
-| `/global-tables` | Global Table List | Admin | Daftar + search + pagination | Approved (task 01) | `stories/global-table/List.stories.ts` |
-| `/global-tables/create` | Global Table Create | Admin | Form pembuatan | Approved (task 01) | `stories/global-table/Form.stories.ts` |
-| `/global-tables/:id` | Global Table Detail | Admin | Read-only + actions | Approved (task 01) | `stories/global-table/Detail.stories.ts` |
+| `/global-tables` | Dynamic Entity (per prompt, e.g., Product/Category/Transaction) List | Admin | Daftar + search + pagination | Approved (task 01) | `stories/global-table/List.stories.ts` |
+| `/global-tables/create` | Dynamic Entity (per prompt, e.g., Product/Category/Transaction) Create | Admin | Form pembuatan | Approved (task 01) | `stories/global-table/Form.stories.ts` |
+| `/global-tables/:id` | Dynamic Entity (per prompt, e.g., Product/Category/Transaction) Detail | Admin | Read-only + actions | Approved (task 01) | `stories/global-table/Detail.stories.ts` |
 
 ### Layout
 
 - Navigasi: {sesuai design task 01 — sidebar / workspace / breadcrumb}
 - Struktur halaman: {header + filter bar + data table + pagination}
-- Penempatan: {di bawah menu "Master Data" → "Global Table"}
+- Penempatan: {di bawah menu "Master Data" → "Dynamic Entity (per prompt, e.g., Product/Category/Transaction)"}
 - Penyesuaian dari design: {catat jika ada deviasi + alasan}
 
 ### Components
 
 | Component | Lokasi | Deskripsi | Mengacu Mockup |
 |-----------|--------|-----------|----------------|
-| `GlobalTableDataTable.vue` | `app/components/features/global-table/` | Tabel dengan search, sort, visibility | `mockup/list.png` |
-| `GlobalTableForm.vue` | `app/components/features/global-table/` | Form create/edit dengan Naive UI | `mockup/form.png` |
-| `GlobalTableDetail.vue` | `app/components/features/global-table/` | Detail view `.detail-view` pattern | `mockup/detail.png` |
+| `GlobalTableDataTable.react` | `components/features/global-table/` | Tabel dengan search, sort, visibility | `mockup/list.png` |
+| `GlobalTableForm.react` | `components/features/global-table/` | Form create/edit dengan shadcn/ui | `mockup/form.png` |
+| `GlobalTableDetail.react` | `components/features/global-table/` | Detail view `.detail-view` pattern | `mockup/detail.png` |
 
 ### Interaction
 
 - Trigger: {klik "Create" → buka editor — sesuai prototype task 01}
 - Flow: {validate → submit → optimistic / redirect → toast}
-- Konfirmasi: {hapus → NPopconfirm / NDialog}
+- Konfirmasi: {hapus → AlertDialog / Dialog}
 - Navigasi balik: {breadcrumbs / back button}
 - Deviasi dari prototype: {jika ada, jelaskan alasan}
 
@@ -900,21 +900,21 @@ _(Ulangi blok ini untuk Create / Detail / Update / Delete)_
 
 ### States
 
-| State | Tampilan | Komponen Naive UI | Mengacu Mockup |
+| State | Tampilan | Komponen shadcn/ui | Mengacu Mockup |
 |-------|----------|-------------------|----------------|
-| Loading | Skeleton / NSpin | `NSpin`, `NSkeleton` | `mockup/loading.png` (task 01) |
-| Empty | Illustration + CTA "Create pertama" | `NEmpty` | `mockup/empty.png` (task 01) |
-| Error | NAlert + retry button | `NAlert` | `mockup/error.png` (task 01) |
-| Success | NMessage / NNotification | `useMessage()` | `mockup/success.png` (task 01) |
-| Validation | Inline error di field | `NFormItem` feedback | `mockup/validation.png` (task 01) |
-| Permission Denied | NAlert 403 + event `rbac-denied` | `NAlert` | `mockup/403.png` (task 01) |
+| Loading | Skeleton / Spinner (Loader2) | `Spinner (Loader2)`, `Skeleton` | `mockup/loading.png` (task 01) |
+| Empty | Illustration + CTA "Create pertama" | `Empty` | `mockup/empty.png` (task 01) |
+| Error | Alert + retry button | `Alert` | `mockup/error.png` (task 01) |
+| Success | NMessage / NNotification | `toast() via sonner` | `mockup/success.png` (task 01) |
+| Validation | Inline error di field | `FormItem` feedback | `mockup/validation.png` (task 01) |
+| Permission Denied | Alert 403 + event `rbac-denied (Alert variant=destructive + Portal)` | `Alert` | `mockup/403.png` (task 01) |
 
 ### Accessibility
 
 - Keyboard: semua aksi via keyboard, focus trap di modal — sesuai design task 01
 - ARIA: `aria-label` untuk icon-only button
-- Kontras & font: ikuti `docs/design-system.md` (primary #3B82F6, Inter, radius 6/4/8)
-- Reduced motion: hormati `prefers-reduced-motion` untuk animasi Anime.js
+- Kontras & font: ikuti `docs/design-system.md` (primary #0075de, Inter, radius 12/8/4/full)
+- Reduced motion: hormati `prefers-reduced-motion` untuk animasi Framer Motion
 
 ## Acceptance Criteria
 
@@ -944,10 +944,10 @@ _(tambahkan AC-003 dst. sesuai kebutuhan)_
 
 ### Backend
 
-- [ ] Entity — `server/entities/{name}.entity.ts` + registrasi di `server/utils/orm-data-source.ts`
-- [ ] DTO — `server/dto/{name}.dto.ts` (Zod: Create/Update/Query)
-- [ ] Service — `server/services/{name}.service.ts` (plain object, bukan class)
-- [ ] API Routes — `server/api/{name}/index.get.ts`, `index.post.ts`, `[id].get.ts`, `[id].patch.ts`, `[id].delete.ts`
+- [ ] Entity — `lib/db/entities/{name}.entity.ts` + registrasi di `lib/db/data-source.ts`
+- [ ] DTO — `lib/dto/{name}.dto.ts` (Zod: Create/Update/Query)
+- [ ] Service — `lib/services/{name}.service.ts` (plain object, bukan class)
+- [ ] API Routes — `app/api/{name}/index.get.ts`, `index.post.ts`, `[id].get.ts`, `[id].patch.ts`, `[id].delete.ts`
 - [ ] Auth & Authorization — middleware + guard/permission check
 - [ ] Validation & Error handling — Zod parse + `createError` h3
 - [ ] Migration/Seed — jika `synchronize: false` / data awal
@@ -956,15 +956,15 @@ _(tambahkan AC-003 dst. sesuai kebutuhan)_
 
 ### Frontend
 
-- [ ] Shared Types — `shared/types/{name}.ts`
-- [ ] API Service / Composable — `app/composables/use{Name}Data.ts`
-- [ ] Store (jika perlu) — `app/stores/{name}.ts`
-- [ ] Pages — `app/pages/{route}/index.vue`, `create.vue`, `[id].vue` (implementasi sesuai mockup task UI-design)
-- [ ] Components — `DataTable.vue`, `Form.vue`, `Detail.vue` (implementasi sesuai mockup task UI-design)
-- [ ] Validation — Naive UI `NForm` + rules sinkron dengan Zod
+- [ ] Shared Types — `lib/types/{name}.ts`
+- [ ] API Service / Composable — `hooks/use{Name}Data.ts`
+- [ ] Store (jika perlu) — `stores/{name}.ts`
+- [ ] Pages — `app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → {route}/index.react`, `create.react`, `[id].react` (implementasi sesuai mockup task UI-design)
+- [ ] Components — `DataTable.react`, `Form.react`, `Detail.react` (implementasi sesuai mockup task UI-design)
+- [ ] Validation — shadcn/ui `NForm` + rules sinkron dengan Zod
 - [ ] States — loading / empty / error / success / permission (sesuai design task UI-design)
 - [ ] Responsive & Accessibility — breakpoint + ARIA + keyboard (sesuai wireframe task UI-design)
-- [ ] Unit tests — `vitest` (`test:unit` / `test:nuxt`)
+- [ ] Unit tests — `vitest` (`test:unit` / `test:next`)
 - [ ] E2E tests — Playwright (`test:e2e`) — skenario mengacu User Flow
 
 ### Cross-Cutting
@@ -973,7 +973,7 @@ _(tambahkan AC-003 dst. sesuai kebutuhan)_
 - [ ] ActivityLog / Audit jika diperlukan
 - [ ] Dokumentasi singkat (`docs/` atau inline)
 - [ ] Storybook stories untuk FASE 1 tetap PASS setelah perubahan FASE 2 (regresi visual)
-- [ ] Verifikasi konsistensi dengan `tasks/NN-feature-ui-design.md` + Storybook (`apps/web/stories/{feature}/*.stories.ts`) — tidak ada deviasi tanpa catatan
+- [ ] Verifikasi konsistensi dengan `tasks/NN-feature-ui-design.md` + Storybook (`apps/web/stories/{feature}/*.stories.tsx`) — tidak ada deviasi tanpa catatan
 
 ### Test Plan (QA — Bertindak sebagai QA Engineer)
 
@@ -983,14 +983,14 @@ _(tambahkan AC-003 dst. sesuai kebutuhan)_
 |----|------------|----------------|-----------|---------------------|
 | UT-01 | Unit — Service/DTO | `tests/unit/{feature}.service.test.ts` | Logic, validation, domain rules, invariants | FR-001, BR-001, INV-01 |
 | UT-02 | Unit — Domain | `tests/unit/{feature}.entity.test.ts` | Entity, relationship, state transition | DR-01, State DRAFT→PUBLISHED |
-| NT-01 | Nuxt — Component | `tests/nuxt/{feature}.form.test.ts` / `app/components/.../*.test.ts` | Component render, interaction, validation, states (loading/empty/error/success) | Step 2, AC-002 |
-| NT-02 | Nuxt — Page | `tests/nuxt/{feature}.page.test.ts` | Layout, responsive, accessibility, permission | Step 1, AC-001 |
+| NT-01 | Next.js — Component | `tests/next/{feature}.form.test.ts` / `components/.../*.test.ts` | Component render, interaction, validation, states (loading/empty/error/success) | Step 2, AC-002 |
+| NT-02 | Next.js — Page | `tests/next/{feature}.page.test.ts` | Layout, responsive, accessibility, permission | Step 1, AC-001 |
 | E2E-01 | E2E — Happy path | `tests/e2e/{feature}.spec.ts` | Full User Flow end-to-end | Step 1→3→success |
 | E2E-02 | E2E — Alternate | `tests/e2e/{feature}.alt.spec.ts` | Empty, error, permission, edge cases | ALT-01, ERR-01, EC-01 |
 
 - [ ] Unit tests — semua service method, DTO validation (Zod), domain rule, invariant — 1 test per FR/BR/DR/INV minimal
-- [ ] Nuxt component tests — render semua state (loading/empty/error/success/validation/permission) dari `## UI > States`
-- [ ] Nuxt page tests — layout, navigation, interaction, responsive, accessibility
+- [ ] Next.js component tests — render semua state (loading/empty/error/success/validation/permission) dari `## UI > States`
+- [ ] Next.js page tests — layout, navigation, interaction, responsive, accessibility
 - [ ] E2E tests — skenario happy path + alternate/error + edge cases + permission (401/403) — MAPPING 1:1 ke `User Flow` + `Acceptance Criteria`
 - [ ] Coverage target: User Flow steps 100%, AC 100%, Business Rules 100%, Edge Cases 100%
 
@@ -1000,9 +1000,9 @@ _(tambahkan AC-003 dst. sesuai kebutuhan)_
 
 ### Automated (wajib lolos sebelum DONE)
 
-- [ ] Typecheck (`vue-tsc` / `nuxt typecheck`) — 0 error
+- [ ] Typecheck (`react-tsc` / `next typecheck`) — 0 error
 - [ ] Unit tests (`npm run test:unit`) — semua UT-01/UT-02 PASS, coverage ≥80% untuk logic baru
-- [ ] Nuxt tests (`npm run test:nuxt`) — semua NT-01/NT-02 PASS, semua state ter-render
+- [ ] Next.js tests (`npm run test:next`) — semua CT-01/CT-02 PASS, semua state ter-render
 - [ ] API/Integration tests — semua endpoint PASS, validation + error + auth/authz PASS
 - [ ] E2E tests (`npm run test:e2e`) — semua E2E-01/E2E-02 PASS, semua User Flow steps + Alternate/Error flows
 - [ ] Storybook build (`npm run build-storybook`) — sukses tanpa error (stories untuk semua halaman/state)
@@ -1017,7 +1017,7 @@ _(tambahkan AC-003 dst. sesuai kebutuhan)_
 - [ ] States verification — loading/empty/error/success/validation/permission (sesuai `## UI > States`) ter-render dan ada test (NT + Storybook story)
 - [ ] Responsive verification — desktop/tablet/mobile sesuai wireframe FASE 1 + Storybook viewport
 - [ ] Accessibility verification — keyboard, ARIA, contrast, reduced-motion (sesuai design FASE 1) + Storybook a11y addon
-- [ ] UI/UX verification — pixel-perfect terhadap mockup `tasks/NN-feature-ui-design.md` + Storybook (`apps/web/stories/{feature}/*.stories.ts`) — Naive UI + Tailwind, token `naiveui-theme.ts`, no `NDescriptions`
+- [ ] UI/UX verification — pixel-perfect terhadap mockup `tasks/NN-feature-ui-design.md` + Storybook (`apps/web/stories/{feature}/*.stories.tsx`) — shadcn/ui + Tailwind, token `globals.css`, no `detail-view div`
 - [ ] Storybook verification — `npm run storybook` (6006) tampil, semua stories ada untuk halaman/state, controls & a11y PASS
 - [ ] User Flow verification — setiap `## User Flow > Steps` + `Alternate & Error Flows` + `Flow→UI/API Mapping` ada AC dan ada E2E yang PASS
 - [ ] Acceptance verification — setiap AC Given/When/Then PASS (traceability AC ↔ User Flow step ↔ Test ID)
@@ -1066,8 +1066,8 @@ Domain       (entity, relationship, state, domain rules, invariant + data model)
 API          (server route, HTTP method, request, response, validation, error, authentication, authorization — sesuai User Flow & UI)
 UI           (halaman, layout, component, interaction, responsive, loading/empty/error/success, accessibility — MEREFERENSIKAN FASE 1, bukan desain ulang)
 Acceptance   (Given / When / Then — kapan feature dianggap benar — mapping ke User Flow)
-Tasks        (daftar pekerjaan implementasi — checkbox — mengacu design FASE 1) + Test Plan (QA: unit/nuxt/e2e mapping ke User Flow & AC)
-Verification (QA — bertindak sebagai QA engineer: unit/nuxt/e2e + states/permission/BR/EC/User Flow/AC traceability — termasuk pixel-perfect terhadap mockup FASE 1)
+Tasks        (daftar pekerjaan implementasi — checkbox — mengacu design FASE 1) + Test Plan (QA: unit/next/e2e mapping ke User Flow & AC)
+Verification (QA — bertindak sebagai QA engineer: unit/next/e2e + states/permission/BR/EC/User Flow/AC traceability — termasuk pixel-perfect terhadap mockup FASE 1)
 ```
 
 Jika salah satu tidak relevan, isi `N/A` dengan alasan di `Assumptions` — jangan hapus headernya.
@@ -1195,13 +1195,13 @@ Cover:
 Example:
 
 ```md
-### AC-001 — Menampilkan editor Global Table
+### AC-001 — Menampilkan editor Dynamic Entity (per prompt, e.g., Product/Category/Transaction)
 
-Given the administrator is on the Global Table page
+Given the administrator is on the Dynamic Entity (per prompt, e.g., Product/Category/Transaction) page
 
 When the administrator clicks Create
 
-Then the Global Table editor is displayed.
+Then the Dynamic Entity (per prompt, e.g., Product/Category/Transaction) editor is displayed.
 ```
 
 Setiap AC harus dapat dipetakan ke:
@@ -1220,7 +1220,7 @@ Define API requirements di `## API` (FASE 2) dengan ke-8 kolom/field wajib:
 
 Harus SESUAI dengan User Flow dan UI yang telah didesain di FASE 1 — setiap endpoint harus dapat dipetakan ke `User Flow > Flow → API Mapping`.
 
-Follow existing project API conventions (`AGENTS.md` — Service pattern, Nitro route, Zod DTO, `createError` dari `h3`, pagination `page/limit/search/sortBy/sortOrder`).
+Follow existing project API conventions (`AGENTS.md` — Service pattern, Nitro route, Zod DTO, `createError` dari `next/server`, pagination `page/limit/search/sortBy/sortOrder`).
 
 Do not invent API patterns that conflict with:
 
@@ -1290,9 +1290,9 @@ Do not generate irrelevant tasks. Untuk production tasks yang memiliki UI (mis. 
 > FASE 1 tidak selesai tanpa Storybook prototype yang runnable di project.
 
 **Aturan**:
-- Prototype WAJIB diimplementasikan sebagai komponen Vue nyata (`app/components/...`, `app/pages/...`) + **Storybook stories** (`apps/web/stories/{feature}/*.stories.ts`), bukan hanya Figma/PNG.
-- Stack prototype: **Naive UI 2.44** (direct import `import { NButton } from 'naive-ui'`), **Tailwind CSS v4** (utility only), token **`app/utils/naiveui-theme.ts`** (`GlobalThemeOverrides` — primary `#3B82F6`, Inter, radius `6/4/8`).
-- Storybook config: `apps/web/.storybook/main.ts` (`stories: ['../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)']`, addons `a11y` + `docs`, framework `vue3-vite`), `apps/web/.storybook/preview.ts` (import `../assets/css/main.css` + `parameters.a11y`).
+- Prototype WAJIB diimplementasikan sebagai komponen React nyata (`components/...`, `app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → ...`) + **Storybook stories** (`apps/web/stories/{feature}/*.stories.tsx`), bukan hanya Figma/PNG.
+- Stack prototype: **shadcn/ui** (direct import `import { Button } from 'naive-ui'`), **Tailwind CSS v4** (utility only), token **`app/globals.css`** (`HSL tokens` — primary `#0075de`, Inter, radius `6/4/8`).
+- Storybook config: `apps/web/.storybook/main.ts` (`stories: ['../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)']`, addons `a11y` + `docs`, framework `react + next`), `apps/web/.storybook/preview.ts` (import `../assets/css/main.css` + `parameters.a11y`).
 - Per story minimal: `default` render, state variants (loading/empty/error/success/validation/permission), responsive viewport, a11y check via `@storybook/addon-a11y`.
 - Verifikasi: `npm run storybook` (port 6006) tampil tanpa error; `npm run build-storybook` sukses; peer review via Storybook URL.
 - FASE 2 WAJIB mereferensikan stories FASE 1 di `## UI > Referensi Design` (contoh: `stories/global-table/List.stories.ts — ListStory, EmptyStory, ErrorStory`). Deviasi dari Storybook harus dicatat di `Penyesuaian dari design`.
@@ -1309,18 +1309,18 @@ apps/web/stories/global-table/
 
 # 18B. QA Perspective — Bertindak sebagai QA Engineer / Tester
 
-> Saat mengisi `## Tasks > Test Plan` dan `## Verification`, bertindak SEOLAH-OLAH sebagai QA engineer independen yang akan membuat file test `unit`, `nuxt`, `e2e` dan memastikan semua User Flow berjalan benar + semua logika benar. Test ini dipakai oleh `/verify` dan `/review`.
+> Saat mengisi `## Tasks > Test Plan` dan `## Verification`, bertindak SEOLAH-OLAH sebagai QA engineer independen yang akan membuat file test `unit`, `next`, `e2e` dan memastikan semua User Flow berjalan benar + semua logika benar. Test ini dipakai oleh `/verify` dan `/review`.
 
 Aturan WAJIB:
 
 - Setiap **User Flow step** (happy + alternate + error) HARUS memiliki minimal 1 test E2E. Mapping: `User Flow Step → E2E test case`.
-- Setiap **Acceptance Criteria Given/When/Then** HARUS memiliki test (unit/nuxt/e2e). Mapping: `AC-XXX → Test ID`.
+- Setiap **Acceptance Criteria Given/When/Then** HARUS memiliki test (unit/next/e2e). Mapping: `AC-XXX → Test ID`.
 - Setiap **Functional Requirement / Business Rule / Domain Rule / Invariant** HARUS memiliki unit test. Mapping: `FR/BR/DR/INV → UT-XXX`.
-- Setiap **UI State** (loading/empty/error/success/validation/permission) HARUS memiliki nuxt/component test + E2E. Mapping: `State → NT-XXX + E2E-XXX`.
+- Setiap **UI State** (loading/empty/error/success/validation/permission) HARUS memiliki next/component test + E2E. Mapping: `State → NT-XXX + E2E-XXX`.
 - Setiap **API endpoint** HARUS memiliki unit/DTO test + integration test untuk request/response/validation/error/auth/authz. Mapping: `Endpoint → UT + Integration`.
 - Setiap **Edge Case** HARUS memiliki test (unit atau e2e).
-- Tulis rencana file test eksplisit: `tests/unit/{feature}/*.test.ts`, `tests/nuxt/{feature}/*.test.ts` atau `app/components/**/ *.test.ts`, `tests/e2e/{feature}.spec.ts`. Jangan tulis "tulis test" generik.
-- Definisikan ekspektasi GIVEN/WHEN/THEN untuk setiap test case di `## Tasks > Test Plan` — agar `/verify` dapat menjalankan `npm run test:unit`, `npm run test:nuxt`, `npm run test:e2e` dan memverifikasi 1:1 dengan User Flow.
+- Tulis rencana file test eksplisit: `tests/unit/{feature}/*.test.ts`, `tests/next/{feature}/*.test.ts` atau `components/**/ *.test.ts`, `tests/e2e/{feature}.spec.ts`. Jangan tulis "tulis test" generik.
+- Definisikan ekspektasi GIVEN/WHEN/THEN untuk setiap test case di `## Tasks > Test Plan` — agar `/verify` dapat menjalankan `npm run test:unit`, `npm run test:next`, `npm run test:e2e` dan memverifikasi 1:1 dengan User Flow.
 - Jika task tidak memiliki UI, tetap butuh unit + API tests untuk logic.
 
 Contoh mapping QA (untuk `## Tasks > Test Plan`):
@@ -1330,7 +1330,7 @@ Contoh mapping QA (untuk `## Tasks > Test Plan`):
 | Step 1: Buka list | AC-001 | FR-001 | E2E-01 | e2e | List render, pagination, search work |
 | Step 3: Submit valid | AC-003 | BR-001, FR-002 | E2E-01, UT-01 | e2e + unit | 201 created, validasi lolos |
 | Step ERR-01: Validasi gagal | AC-004 | BR-002 | E2E-02, UT-01 | e2e + unit | 400 + inline error |
-| State empty | AC-005 | — | NT-01, E2E-02 | nuxt + e2e | NEmpty + CTA muncul |
+| State empty | AC-005 | — | NT-01, E2E-02 | next + e2e | Empty + CTA muncul |
 
 `/verify` akan berperan sebagai QA yang menjalankan ketiga suite dan memverifikasi traceability `User Flow ↔ AC ↔ Test`. `/review` akan menilai kualitas dan coverage test.
 
@@ -1403,8 +1403,8 @@ Before finishing, verify bahwa:
 ### Design (FASE 1 — Deliverables Langsung di Project + Storybook)
 
 * [ ] Wireframe low-fi untuk semua halaman & states (`docs/wireframes/{feature}/`)
-* [ ] Mockup hi-fi dengan Naive UI + Tailwind + token `app/utils/naiveui-theme.ts` (implementasi Vue `app/components/...` + `app/pages/...`)
-* [ ] Prototype interaktif **langsung implementasi di project** — Storybook stories `apps/web/stories/{feature}/*.stories.ts` (dibaca `npm run storybook` :6006, build `npm run build-storybook` PASS)
+* [ ] Mockup hi-fi dengan shadcn/ui + Tailwind + token `app/globals.css` (implementasi React `components/...` + `app/(dashboard)/ | app/builder/ | app/generated/[slug]/ → ...`)
+* [ ] Prototype interaktif **langsung implementasi di project** — Storybook stories `apps/web/stories/{feature}/*.stories.tsx` (dibaca `npm run storybook` :6006, build `npm run build-storybook` PASS)
 * [ ] Responsive (desktop/tablet/mobile) — wireframe + Storybook viewport
 * [ ] Accessibility — a11y addon Storybook + keyboard/ARIA
 
@@ -1420,7 +1420,7 @@ Before finishing, verify bahwa:
 ### Frontend (FASE 2 — mengacu FASE 1 + Storybook)
 
 * [ ] Halaman + Layout (sesuai mockup + Storybook FASE 1)
-* [ ] Components (sesuai mockup + stories FASE 1 — `apps/web/stories/{feature}/*.stories.ts`)
+* [ ] Components (sesuai mockup + stories FASE 1 — `apps/web/stories/{feature}/*.stories.tsx`)
 * [ ] Interaction (sesuai Storybook prototype FASE 1)
 * [ ] States (loading/empty/error/success/permission/validation — sesuai design + stories FASE 1)
 * [ ] Responsive behavior (sesuai wireframe + Storybook viewport FASE 1)
@@ -1432,7 +1432,7 @@ Before finishing, verify bahwa:
 * [ ] Acceptance (Given/When/Then — kapan feature dianggap benar — mapping ke User Flow & Test)
 * [ ] Tasks (daftar pekerjaan implementasi — FASE 1: design, FASE 2: code) + Test Plan QA (UT/NT/E2E mapping)
 * [ ] Unit tests (`tests/unit/` — service, DTO, entity, domain rules, invariants) — 1 test per FR/BR/DR/INV
-* [ ] Nuxt tests (`tests/nuxt/` / `app/components/**/ *.test.ts` — render semua state, interaction, responsive, accessibility)
+* [ ] Next.js tests (`tests/next/` / `components/**/ *.test.ts` — render semua state, interaction, responsive, accessibility)
 * [ ] Integration/API tests (endpoint + validation + error + auth/authz)
 * [ ] E2E tests (`tests/e2e/` — happy + alternate/error + edge + permission — 100% User Flow steps, 100% AC)
 * [ ] Traceability: setiap User Flow step ↔ AC ↔ Test ID terdokumentasi di `## Tasks > Test Plan`

@@ -18,7 +18,7 @@ Perform a thorough code review of the implementation — **bertindak sebagai QA 
 
 The goal is to answer:
 
-> "Is the implementation high quality? Does it follow best practices? Are ALL user flows berjalan benar dan semua logika benar? Are tests (unit/nuxt/e2e) ada, berkualitas, dan traceable ke User Flow + AC Given/When/Then? Are there improvements needed?"
+> "Is the implementation high quality? Does it follow best practices? Are ALL user flows berjalan benar dan semua logika benar? Are tests (unit/next/e2e) ada, berkualitas, dan traceable ke User Flow + AC Given/When/Then? Are there improvements needed?"
 
 The output is a review report with actionable feedback, termasuk **penilaian kualitas test (UT/NT/E2E) dan traceability User Flow ↔ AC ↔ Test**. Hasil review menentukan apakah task dapat `APPROVED` (DONE) atau perlu `CHANGES REQUESTED` / `REVISION NEEDED`.
 
@@ -30,8 +30,8 @@ Determine which task to review.
 
 If `$ARGUMENTS` is:
 
-- a file path (e.g., `tasks/01-migrate-admin-panel-to-nuxt.md`) → use that file
-- a folder path (e.g., `tasks/01-migrate-admin-panel-to-nuxt/`) → use `README.md` inside it (folder mode, opsi B)
+- a file path (e.g., `tasks/01-migrate-admin-panel-to-next.md`) → use that file
+- a folder path (e.g., `tasks/01-migrate-admin-panel-to-next/`) → use `README.md` inside it (folder mode, opsi B)
 - a task number (e.g., `01`) → find matching task in `tasks/`
 - a task name (e.g., `authentication`) → find matching task in `tasks/`
 - empty → list available tasks and ask the user to choose
@@ -115,7 +115,7 @@ Review the implementation against these criteria, dengan penekanan pada **User F
 | Authorization | Is RBAC properly enforced? (Guard + Permission) | API > authz, AC permission |
 | Input validation | Is all input validated? (Zod DTO sync FR/BR/EC) | BR/EC → UT |
 | SQL injection | Are queries safe? (TypeORM, no raw) | — |
-| XSS | Is output properly escaped? (Vue, Naive UI) | — |
+| XSS | Is output properly escaped? (React, shadcn/ui) | — |
 | Secrets | Are secrets not hardcoded? | — |
 | Permission matrix | 401/403 ter-test E2E? | E2E-02 |
 
@@ -126,18 +126,18 @@ Review the implementation against these criteria, dengan penekanan pada **User F
 | N+1 queries | Are queries optimized? |
 | Pagination | Is pagination implemented? (`page/limit/search/sortBy/sortOrder`) |
 | Caching | Is caching considered? |
-| Bundle size | Are imports optimized? (Naive UI direct import) |
+| Bundle size | Are imports optimized? (shadcn/ui direct import) |
 
 ### 5.5 Maintainability & Testability (QA Core)
 
 | Criterion | Check | QA |
 |-----------|-------|-----|
-| Testability | Is the code testable? Unit/nuxt/e2e mudah ditulis? | — |
+| Testability | Is the code testable? Unit/next/e2e mudah ditulis? | — |
 | Tests exist | Apakah `## Tasks > Test Plan` (UT/NT/E2E) benar-benar ada sebagai file runnable? | Must |
 | Tests quality | Apakah test assert Given/When/Then benar-benar memverifikasi AC? Bukan test dummy? | Must |
 | Traceability | Apakah setiap User Flow step + AC ↔ Test ID terdokumentasi dan valid? | Must |
 | Coverage | User Flow 100%, AC 100%, BR/EC 100%, UI States 100%? | Must |
-| Error handling | Are errors handled properly? (`createError`, NAlert) | Logic |
+| Error handling | Are errors handled properly? (`createError`, Alert) | Logic |
 | Logging | Is logging appropriate? | — |
 | Documentation | Is the code self-documenting? + `## UI > Penyesuaian dari design` jika deviasi | FASE 1↔FASE 2 |
 
@@ -148,10 +148,10 @@ Review the implementation against these criteria, dengan penekanan pada **User F
 | Pattern consistency | Does it follow existing patterns? (EntitySchema, plain object Service, Nitro route, Storybook stories pattern `stories/**/*.stories.*`) |
 | Naming consistency | Does it use existing naming conventions? |
 | Structure consistency | Does it follow existing file structure? (`server/`, `app/`, `shared/`, `tests/`, `stories/`, `.storybook/`) |
-| Import consistency | Does it use correct import aliases `~/`, `@/`, `~~/` + Naive UI direct import? |
-| UI consistency | Pixel-perfect vs mockup + **Storybook stories** `tasks/NN-ui-design.md`? (FASE 2) — token `app/utils/naiveui-theme.ts` |
-| Storybook consistency | Stories di `apps/web/stories/{feature}/` dengan `themeOverrides` + `NConfigProvider`, a11y addon, docs? |
-| Test consistency | Test file naming & location konsisten (`tests/unit/`, `tests/nuxt/`, `tests/e2e/`) + stories di `stories/`? |
+| Import consistency | Does it use correct import aliases `~/`, `@/`, `~~/` + shadcn/ui direct import? |
+| UI consistency | Pixel-perfect vs mockup + **Storybook stories** `tasks/NN-ui-design.md`? (FASE 2) — token `app/globals.css` |
+| Storybook consistency | Stories di `apps/web/stories/{feature}/` dengan `globals.css HSL tokens` + `ThemeProvider`, a11y addon, docs? |
+| Test consistency | Test file naming & location konsisten (`tests/unit/`, `tests/next/`, `tests/e2e/`) + stories di `stories/`? |
 
 ### 5.7 QA — User Flow & Logic Correctness (BERTINDAK SEBAGAI QA TESTER)
 
@@ -177,25 +177,25 @@ Jika salah satu baris di atas FAIL atau Test ID kosong / test dummy / tidak runn
 ### 6.1 Identify Fase
 
 - Baca `## Status` dan filename: `*-ui-design.md` = FASE 1 (design), `*.md` lainnya = FASE 2 (implementation).
-- Untuk FASE 1: fokus review adalah design deliverables (wireframe low-fi + mockup hi-fi Naive UI+Tailwind+`naiveui-theme.ts` + **Storybook prototype di project** `apps/web/stories/{feature}/*.stories.ts`) + User Flow + UI 10 sub-bagian — bukan code UT/NT/E2E (tetapi tetap cek traceability User Flow ↔ AC design + cek `npm run build-storybook` PASS & a11y addon).
+- Untuk FASE 1: fokus review adalah design deliverables (wireframe low-fi + mockup hi-fi shadcn/ui+Tailwind+`globals.css` + **Storybook prototype di project** `apps/web/stories/{feature}/*.stories.tsx`) + User Flow + UI 10 sub-bagian — bukan code UT/NT/E2E (tetapi tetap cek traceability User Flow ↔ AC design + cek `npm run build-storybook` PASS & a11y addon).
 
 ### 6.2 Read All Changed Files (Termasuk Test Files & Storybook)
 
-Read every file that was created or modified — **termasuk file test + Storybook** (`tests/unit/**/*.test.ts`, `tests/nuxt/**/*.test.ts`, `tests/e2e/**/*.spec.ts`, `apps/web/stories/**/*.stories.ts`, `app/components/...`):
+Read every file that was created or modified — **termasuk file test + Storybook** (`tests/unit/**/*.test.ts`, `tests/next/**/*.test.ts`, `tests/e2e/**/*.spec.ts`, `apps/web/stories/**/*.stories.ts`, `components/...`):
 
 - Apakah file test ada, runnable, dan bukan dummy?
-- Apakah Storybook stories ada untuk semua halaman/state (loading/empty/error/success/validation/permission) dengan token `naiveui-theme.ts` + a11y?
+- Apakah Storybook stories ada untuk semua halaman/state (loading/empty/error/success/validation/permission) dengan token `globals.css` + a11y?
 - Apakah test benar-benar meng-assert Given/When/Then dari AC?
 - Apakah E2E benar-benar menjalankan User Flow steps (bukan hanya visit tanpa assertion)?
 
 ### 6.3 Compare with Existing Code & Design FASE 1 + Storybook
 
-Compare the new code with existing similar code + mockup + **Storybook stories** FASE 1 (`apps/web/stories/{feature}/*.stories.ts`):
+Compare the new code with existing similar code + mockup + **Storybook stories** FASE 1 (`apps/web/stories/{feature}/*.stories.tsx`):
 
-- Are patterns consistent? (Naive UI direct import, Tailwind utility, token `naiveui-theme.ts`, `.detail-view` no `NDescriptions`)
+- Are patterns consistent? (shadcn/ui direct import, Tailwind utility, token `globals.css`, `.detail-view` no `detail-view div`)
 - Are conventions followed?
 - Is the quality comparable?
-- Untuk FASE 1: apakah stories render dengan token `naiveui-theme.ts`, semua state ada, a11y PASS, `npm run build-storybook` sukses?
+- Untuk FASE 1: apakah stories render dengan token `globals.css`, semua state ada, a11y PASS, `npm run build-storybook` sukses?
 - Untuk FASE 2: apakah pixel-perfect vs mockup + stories `tasks/NN-ui-design.md`? Jika deviasi, apakah ada catatan di `## UI > Penyesuaian dari design`? Apakah `npm run build-storybook` tetap PASS (regresi)?
 
 ### 6.4 Check Task Compliance — Traceability QA
@@ -258,8 +258,8 @@ Generate a review report **sebagai QA tester + code reviewer** — harus menilai
 | Module boundaries | OK/ISSUE | {notes} |
 | API consistency (8 field) | OK/ISSUE | {notes} |
 | User Flow FASE 1↔FASE 2 konsisten | OK/ISSUE | {notes} |
-| UI pixel-perfect vs mockup + Storybook FASE 1 | OK/ISSUE | {notes — token `naiveui-theme.ts`, `apps/web/stories/{feature}/*.stories.ts`} |
-| Storybook prototype (FASE 1 — Naive UI+Tailwind+`naiveui-theme.ts`) | OK/ISSUE | {stories ada untuk semua halaman/state, a11y PASS, `build-storybook` sukses} |
+| UI pixel-perfect vs mockup + Storybook FASE 1 | OK/ISSUE | {notes — token `globals.css`, `apps/web/stories/{feature}/*.stories.tsx`} |
+| Storybook prototype (FASE 1 — shadcn/ui+Tailwind+`globals.css`) | OK/ISSUE | {stories ada untuk semua halaman/state, a11y PASS, `build-storybook` sukses} |
 
 ## Code Quality Review
 
@@ -295,10 +295,10 @@ Generate a review report **sebagai QA tester + code reviewer** — harus menilai
 | Criterion | Rating | Notes |
 |-----------|--------|-------|
 | Unit tests exist & runnable (UT-01/UT-02) | OK/ISSUE | {file, pass/total, FR/BR/DR/INV coverage} |
-| Nuxt tests exist & runnable (NT-01/NT-02) | OK/ISSUE | {file, semua state loading/empty/error/success/validation/permission} |
+| Next.js tests exist & runnable (CT-01/CT-02) | OK/ISSUE | {file, semua state loading/empty/error/success/validation/permission} |
 | E2E happy path (E2E-01) | OK/ISSUE | {User Flow steps ter-cover, assertions bermakna?} |
 | E2E alternate/error/edge (E2E-02) | OK/ISSUE | {ALT/ERR/EC + permission 401/403} |
-| Storybook stories exist & build PASS | OK/ISSUE | {`apps/web/stories/{feature}/*.stories.ts` — semua halaman/state, token `naiveui-theme.ts`, a11y PASS, `npm run build-storybook` sukses} |
+| Storybook stories exist & build PASS | OK/ISSUE | {`apps/web/stories/{feature}/*.stories.tsx` — semua halaman/state, token `globals.css`, a11y PASS, `npm run build-storybook` sukses} |
 | Tests bukan dummy | OK/ISSUE | {assertion bermakna atau hanya `expect(true).toBe(true)`?} |
 | Traceability User Flow ↔ AC ↔ Test ID (termasuk stories) | OK/ISSUE | {setiap AC memiliki Test ID + story variant dan PASS?} |
 | Coverage 100% User Flow / AC / BR / EC | OK/ISSUE | {X/Y} |
@@ -373,7 +373,7 @@ Code quality could be better.
 GOOD:
 
 ```text
-The `createUser` function in `server/services/users.service.ts:45` is 120 lines long.
+The `createUser` function in `lib/services/users.service.ts:45` is 120 lines long.
 Consider extracting the password validation logic into a separate function.
 ```
 
@@ -438,13 +438,13 @@ The implementation can be APPROVED when (QA verdict — semua harus terpenuhi):
 - [ ] Semua logika benar — FR/BR/DR/INV/EC ada UT dan PASS, validation + error + auth/authz benar
 - [ ] Semua AC Given/When/Then PASS dan traceable ke Test ID (UT/NT/E2E) + story variant di `## Tasks > Test Plan`
 - [ ] Semua UI States (loading/empty/error/success/validation/permission) ter-render + ada NT/E2E + **Storybook story variant** PASS
-- [ ] Pixel-perfect vs mockup + **Storybook stories** `tasks/NN-ui-design.md` (FASE 2) — token `app/utils/naiveui-theme.ts` — atau mockup + stories approved (FASE 1)
-- [ ] Tests bukan dummy — assertion bermakna, runnable via `npm run test:unit`, `npm run test:nuxt`, `npm run test:e2e`, coverage User Flow/AC/BR/EC 100%
-- [ ] Storybook — `apps/web/stories/{feature}/*.stories.ts` ada untuk semua halaman/state, a11y addon PASS, `npm run build-storybook` sukses (FASE 1 & FASE 2 regresi)
+- [ ] Pixel-perfect vs mockup + **Storybook stories** `tasks/NN-ui-design.md` (FASE 2) — token `app/globals.css` — atau mockup + stories approved (FASE 1)
+- [ ] Tests bukan dummy — assertion bermakna, runnable via `npm run test:unit`, `npm run test:next`, `npm run test:e2e`, coverage User Flow/AC/BR/EC 100%
+- [ ] Storybook — `apps/web/stories/{feature}/*.stories.tsx` ada untuk semua halaman/state, a11y addon PASS, `npm run build-storybook` sukses (FASE 1 & FASE 2 regresi)
 - [ ] No security vulnerabilities — 401/403 E2E PASS, validation Zod sync
 - [ ] No breaking changes — `npm run test` + `npm run build-storybook` regression PASS
-- [ ] Code follows project conventions (AGENTS.md) + Design System (`naiveui-theme.ts`, Naive UI direct import, Tailwind utility)
-- [ ] `npm run build` + `npm run build-storybook` + `vue-tsc` PASS
+- [ ] Code follows project conventions (AGENTS.md) + Design System (`globals.css`, shadcn/ui direct import, Tailwind utility)
+- [ ] `npm run build` + `npm run build-storybook` + `react-tsc` PASS
 - [ ] Untuk FASE 1: wireframe/mockup/**Storybook prototype di project** lengkap untuk semua halaman/state/breakpoint + User Flow coverage + peer review via `npm run storybook` (:6006)
 
 ---

@@ -1,42 +1,64 @@
-# apps/web — AI App Builder Platform
+# apps/web — AI App Builder Platform (Next.js)
 
-> `Minimal Prompt → Maximal App`
+> `Minimal Prompt → Maximal App` — Next.js 15 (App Router) + React 19 + shadcn/ui
 
 ## Quick Start (dari `apps/web/`)
 
 ```bash
-npm install          # install deps (butuh rebuild better-sqlite3 & bcrypt jika native)
-npm run dev          # dev server http://localhost:3000
-npm run build        # production build
-npm run preview      # preview production build
-npm run test         # all tests
-npm run test:e2e     # e2e (Playwright, auto-start dev server)
+npm install          # butuh rebuild better-sqlite3 & bcrypt jika native
+npm run dev          # Next.js dev --turbopack http://localhost:3000
+npm run build        # next build
+npm run start        # next start
+npm run lint         # next lint
+npm run test         # vitest
+npm run test:e2e     # playwright
 ```
 
 ## AI App Builder
 
+Ketik di `/builder` atau chat:
+
+```
+buatkan aplikasi kasir
+```
+
 ```bash
 npm run builder:generate -- "buatkan aplikasi kasir"
-npm run builder:preview
 npm run builder:list
 ```
 
-Lihat `AGENTS.md` § AI App Builder — Behaviour Contract (Wajib):
+AI akan infer (domain, 3-5 entities, 4-7 pages, 2-3 roles) → generate Next.js:
 
-- Ketik `buatkan aplikasi X` → AI langsung infer (domain, 3-5 entities, 4-7 pages, 2-3 roles) → langsung generate aplikasi lengkap + cantik (Dashboard + CRUD + search/sort/pagination + validasi + seed 5-10 rows realistis)
-- Design System kanonis: `#0075de` primary pill, `#f6f5f4` canvas, `#e6e6e6` hairline, radius 12/8/4, Inter, PageShell + DataTable, detail-view
-- Iterate: `tambahkan barcode scanner` atau `tambahkan laporan harian` → patch tanpa rebuild nol
+- `lib/db/entities/generated/{slug}/` (EntitySchema)
+- `lib/dto/{slug}/`, `lib/services/{slug}/`, `app/api/generated/[slug]/[entity]/route.ts`
+- `app/generated/[slug]/` (`page.tsx`, `components/`, `hooks/` TanStack Query)
 
-## Struktur Penting
+Design tokens: `app/globals.css` HSL `--primary: 210 100% 44%` (~ `#0075de`), canvas `#f6f5f4`, hairline `#e6e6e6`, shadcn `components/ui` (Button pill `rounded-full`, Input tight `rounded-[4px]`, Card `rounded-xl`, Dialog, Table), lucide-react icons.
 
-- `app/components/builder/` — AiPromptBar, InferencePreview, GenerationProgress, ProjectCard
-- `app/generated/{slug}/` — generated apps terisolasi (jangan edit manual, refine via builder)
-- `server/api/builder/` — `generate.post.ts`, `refine.post.ts`, `projects.get.ts`, etc.
-- `server/services/ai-builder/` — inference, spec, planner, codegen, integration
-- `server/entities/` — RBAC 9 + Builder 8 schemas (total 17/~23 tabel), canonical `server/utils/orm-data-source.ts`
+Lihat `AGENTS.md` § Behaviour Contract (Wajib): *Infer don't ask, Beautiful by default, Minimal Prompt → Maximal App*.
+
+## Struktur Next.js
+
+```
+app/
+  layout.tsx, globals.css, page.tsx
+  (auth)/login/page.tsx, (auth)/register/page.tsx
+  (dashboard)/dashboard/page.tsx, users/page.tsx, ...
+  builder/page.tsx, builder/[slug]/page.tsx
+  generated/[slug]/page.tsx, generated/[slug]/[entity]/page.tsx
+  api/auth/login/route.ts, api/users/route.ts, api/builder/generate/route.ts, api/generated/[slug]/[entity]/route.ts
+components/
+  ui/ (Button, Input, Card, Dialog, Table, etc.)
+  common/DataTable/  layout/PageShell  builder/AiPromptBar.tsx
+hooks/ (useApi, useAiBuilder, useDataTable, useAuthorization)
+lib/
+  db/data-source.ts, db/seed.ts, db/entities/, db/migrations/
+  dto/, services/, services/ai-builder/, auth/jwt.ts, utils/
+middleware.ts, instrumentation.ts, next.config.ts
+```
 
 ## Tech Stack
 
-Nuxt 4 + Vue 3.5 + TypeScript + Naive UI 2.44 + Tailwind v4 + Pinia + TypeORM 1.1 EntitySchema + SQLite better-sqlite3 + Zod + JWT 24h + Anime.js
+Next.js 15 + React 19 + TypeScript strict + Tailwind v4 + shadcn/ui + lucide-react + Framer Motion + Zustand + TanStack Query + TypeORM 1.1 EntitySchema + SQLite better-sqlite3 + Zod + JWT httpOnly cookie + middleware.ts
 
-Docs: `docs/PRD.md` | `docs/architecture.md` | `docs/database.md` | `docs/design-system.md`
+Docs: `docs/PRD.md` | `docs/architecture.md` | `docs/database.md` | `docs/design-system.md` (Next.js + shadcn)
