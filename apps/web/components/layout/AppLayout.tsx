@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, FileText, Database, Component, Files, Users, Palette, Eye, Sparkles, ChevronRight, Menu, X } from "lucide-react"
+import { LayoutDashboard, FileText, Database, Component, Files, Users, Palette, Eye, Sparkles, ChevronRight, Menu, X, Table, Layers, FileStack, ClipboardList, Boxes, Settings } from "lucide-react"
 import { useState } from "react"
 
 const navGroups = [
@@ -14,12 +14,28 @@ const navGroups = [
     ],
   },
   {
-    label: "Manajemen",
+    label: "Global Tabel",
     items: [
-      { label: "Templates", href: "/templates", icon: FileText },
-      { label: "Documents", href: "/documents", icon: Files },
+      { label: "Global Tables", href: "/global-tables", icon: Table },
+      { label: "Browse Data", href: "/dyn", icon: Database },
+    ],
+  },
+  {
+    label: "Persuratan",
+    items: [
+      { label: "Components", href: "/components-persuratan", icon: Boxes },
+      { label: "Templates", href: "/templates-persuratan", icon: FileStack },
+      { label: "Administrasi", href: "/administrasi-persuratan", icon: ClipboardList },
+      { label: "Hasil Surat", href: "/hasil-persuratan", icon: Files },
+    ],
+  },
+  {
+    label: "Manajemen Lama",
+    items: [
+      { label: "Templates (old)", href: "/templates", icon: FileText },
+      { label: "Documents (old)", href: "/documents", icon: Files },
       { label: "Data Sources", href: "/data-sources", icon: Database },
-      { label: "Components", href: "/components", icon: Component },
+      { label: "Components (old)", href: "/components", icon: Component },
       { label: "Employees", href: "/employees", icon: Users },
     ],
   },
@@ -35,6 +51,12 @@ const aliasToCanonical: Record<string, string> = {
   "/data-sources": "/generated/surat-platform/data-sources",
   "/components": "/generated/surat-platform/components",
   "/employees": "/generated/surat-platform/employees",
+  "/global-tables": "/global-tables",
+  "/dyn": "/dyn",
+  "/components-persuratan": "/components-persuratan",
+  "/templates-persuratan": "/templates-persuratan",
+  "/administrasi-persuratan": "/administrasi-persuratan",
+  "/hasil-persuratan": "/hasil-persuratan",
 }
 const canonicalToAlias: Record<string, string> = Object.fromEntries(
   Object.entries(aliasToCanonical).map(([k, v]) => [v, k])

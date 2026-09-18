@@ -295,6 +295,134 @@ model AiDeployment {
   @@map("ai_deployments")
 }
 
+// ── Generated Global Tabel — Meta + Dynamic (additive, GUI-driven) ──
+enum GlobalColumnType {
+  text
+  richtext
+  date
+  datetime
+  time
+  image
+  select
+  select_multiple
+  select_table
+  select_table_multiple
+  number
+  hidden_operation_text
+  readonly_operation_text
+}
+
+model GlobalTable {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // slug snake_case, e.g. "pegawai"
+  displayName String   // label UI
+  description String?
+  status      String   @default("active") // active | archived
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  columns GlobalColumn[]
+
+  @@map("global_tables")
+}
+
+model GlobalColumn {
+  id           Int               @id @default(autoincrement())
+  tableId      Int
+  name         String            // slug column, e.g. "nama_pegawai"
+  displayName  String
+  type         GlobalColumnType
+  optionsJson  String?           // JSON: {format, options:[{value,label}], relationTable, displayFields[], valueField, isCurrency, expression}
+  defaultValue String?
+  isRequired   Boolean           @default(false)
+  isOrderable  Boolean           @default(false)
+  isSearchable Boolean           @default(false)
+  orderIndex   Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  table GlobalTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@unique([tableId, name])
+  @@index([tableId, orderIndex])
+  @@map("global_columns")
+}
+
+// ── Component Persuratan ──
+model PersuratanComponent {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  isLooping   Boolean  @default(false)
+  contentHtml String   // richtext with binding placeholders like {{data.nama}}
+  bindingsJson String? // JSON: [{name, type: text|image|component, componentId?, width?, height?}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("persuratan_components")
+}
+
+model PersuratanTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  contentHtml String   // richtext with component placeholders
+  // componentsJson: [{componentId, dataMapping: {bindingName: {source: "administrasi"|"tabel"|"manual", value: "..."}}, loopConfig?: {table, selectedRowIds[]}}]
+  componentsJson String? 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  steps PersuratanStep[]
+
+  @@map("persuratan_templates")
+}
+
+model PersuratanAdministration {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // nama administrasi persuratan
+  description String?
+  // fieldsJson: [{name, type: text|richtext}] — will be prefixed as stepName_fieldName in actual usage
+  fieldsJson  String? 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  steps PersuratanStep[]
+  datas PersuratanData[]
+
+  @@map("persuratan_administrations")
+}
+
+model PersuratanStep {
+  id               Int      @id @default(autoincrement())
+  administrationId Int
+  stepOrder        Int
+  templateId       Int
+  // dataMapping: {bindingName: {source, value}} — per step instance template data
+  dataMappingJson  String?
+  createdAt        DateTime @default(now())
+
+  administration PersuratanAdministration @relation(fields: [administrationId], references: [id], onDelete: Cascade)
+  template       PersuratanTemplate      @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  @@unique([administrationId, stepOrder])
+  @@map("persuratan_steps")
+}
+
+model PersuratanData {
+  id               Int      @id @default(autoincrement())
+  administrationId Int
+  name             String   // sesuai nama persuratan (menu item baru)
+  // values: {step1_fieldA: "...", step1_fieldB: "..."} + steps data
+  valuesJson       String? 
+  stepsDataJson    String?  // JSON array of steps filled data
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  administration PersuratanAdministration @relation(fields: [administrationId], references: [id], onDelete: Cascade)
+
+  @@index([administrationId])
+  @@map("persuratan_datas")
+}
+
 // ── Platform: ActivityLog & Setting ──
 model ActivityLog {
   id          Int            @id @default(autoincrement())
