@@ -219,6 +219,10 @@ Modifiers: `.detail-value--text` (400 #334155), `.detail-value--mono` (mono 13px
 
 ---
 
+## Table (Kanonis — Wajib untuk Semua Tabel: RBAC + Generated + Global Tables)
+
+> **Update 2026-09-18:** `app/dyn/[table]` pakai `DataTable` kanonis dengan **searching** (hanya kolom isSearchable), **options** (kolom tampil), **orders** (hanya isOrderable) + per-type input (select_table modal, number IDR, operation hidden/readonly).
+
 ## Table (Kanonis — Wajib untuk Semua Tabel: RBAC + Generated)
 
 ### Dimensions

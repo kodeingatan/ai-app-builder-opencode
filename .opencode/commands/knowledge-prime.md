@@ -6,7 +6,7 @@ description: Prime sesi baru dengan pengetahuan apps/web dari apps/web/docs/* + 
 
 Load pengetahuan **real** `apps/web` agar sesi/model baru langsung paham dan bisa lanjutkan project tanpa tanya ulang.
 
-> **Nama command:** `/knowledge:prime` (alias `/prime`, `/pahami`, `/onboard` — `/understand` global tetap untuk knowledge-graph `.ua/`)
+> **Nama command:** `/knowledge:prime` (alias `/prime`, `/app-prime`, `/onboard` — `/understand` global remains for knowledge-graph `.ua/`)
 > **Sumber:** `apps/web/AGENTS.md` + `apps/web/docs/*`
 > **Efek:** read-only, tidak tulis file, hanya inject context ke sesi
 

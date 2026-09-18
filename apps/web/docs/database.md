@@ -7,8 +7,8 @@
 ## Overview
 
 - **Database Engine**: SQLite (via Prisma + `@prisma/adapter-libsql`)
-- **ORM**: Prisma 7.10 (`prisma/schema.prisma` — 18 models platform, client di `app/generated/prisma`)
-- **Platform Tables (static)**: **18 Prisma models / 18 physical tables** — RBAC 6 core + 3 junctions + Builder META 8 + Platform (`activity_logs`, `settings`) — di-migrate via Prisma Migrate. **Tidak ada tabel bisnis hardcode.**
+- **ORM**: Prisma 7.10 (`prisma/schema.prisma` — 25 models platform (RBAC 18 + Global Tables 2 + Persuratan 5 + dyn_*), client di `app/generated/prisma`)
+- **Platform Tables (static)**: **25 Prisma models / 25+ physical tables (18 platform + 7 new + N dyn_*)** — RBAC 6 core + 3 junctions + Builder META 8 + Platform (`activity_logs`, `settings`) — di-migrate via Prisma Migrate. **Tidak ada tabel bisnis hardcode.**
 - **Dynamic App Tables**: `N` tabel fisik `{slug}_{entity}` dibuat **runtime per prompt** (`buatkan aplikasi kasir` → `pos_kasir_products`, `pos_kasir_categories`, dll). Tidak dihitung di baseline, tidak ada default. Lihat § Dynamic App Tables.
 - **Database File**: `apps/web/dev.db` (DATABASE_URL="file:./dev.db", schema `prisma/schema.prisma`, config `prisma7.config.ts`), single file. Dynamic tables hidup di file yang sama.
 - **Migrations**: Prisma Migrate — `prisma/schema.prisma` + `prisma/migrations/*` + `prisma7.config.ts`. Dev: `npx prisma migrate dev --name init`, Prod: `npx prisma migrate deploy`. Client generate: `npx prisma generate` → `app/generated/prisma`. BR-001: never edit applied migration. **Dynamic tables TIDAK via migration file** — via `prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')` di `lib/services/ai-builder/codegen.service.ts`.
@@ -26,6 +26,22 @@
 > **Prinsip AI App Builder DB:** `Platform tables = fixed & minimal. Business tables = 100% dynamic per prompt.` Jangan hardcode entity bisnis di baseline.
 
 ---
+
+
+### Global Tables & Persuratan (Baru — 7 models)
+
+**Global Tables (2):**
+- `global_tables` (id, name unique, displayName, description, status) — meta tabel
+- `global_columns` (tableId FK, name, displayName, type enum 13, optionsJson, defaultValue, isRequired, isOrderable, isSearchable, orderIndex) — 13 tipe: text, richtext, date, datetime, time, image, select, select_multiple, select_table, select_table_multiple, number+IDR, hidden_operation_text, readonly_operation_text
+
+**Persuratan (5):**
+- `persuratan_components` (name unique, isLooping, contentHtml, bindingsJson [{name,type,componentId,width,height}])
+- `persuratan_templates` (name, description, contentHtml, componentsJson [{componentId, dataMapping, loopConfig}])
+- `persuratan_administrations` (name, description, fieldsJson [{name,type}])
+- `persuratan_steps` (administrationId FK, stepOrder, templateId FK, dataMappingJson)
+- `persuratan_datas` (administrationId FK, name, valuesJson, stepsDataJson)
+
+**Dynamic:** `dyn_{name}` physical tables via `GlobalTablesService.create()` → `CREATE TABLE "dyn_pegawai" (...)` + `prisma.$executeRawUnsafe`, indexes untuk searchable/orderable, operation via `operationEngine.ts`.
 
 ## Entity Relationship Diagram — Platform (Static)
 

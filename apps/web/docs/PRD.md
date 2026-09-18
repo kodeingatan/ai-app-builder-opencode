@@ -6,6 +6,8 @@
 
 ## 1. Product Overview
 
+> **Update 2026-09-18 (apps/web):** Tambahan **Generated Global Tabel** (13 tipe kolom, dyn_*) dan **Persuratan** (Component → Template → Administrasi → Hasil) — semua GUI, tanpa JSON manual. Lihat `docs/core-concept.md`.
+
 **Nama Project**: AI App Builder (AAB) — Platform pembuat aplikasi otomatis berbasis AI
 
 **Tagline**: `Minimal Prompt → Maximal App. Ketik sedikit, jadi aplikasi.`
