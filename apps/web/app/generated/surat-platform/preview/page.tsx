@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { useEffect, useState } from "react"
-import { Eye, Printer, Copy, Sparkles, FileText, Files } from "lucide-react"
+import { Eye, Printer, Copy, Sparkles, FileText, Files, Download, Barcode, Filter, Database } from "lucide-react"
 
 export default function PreviewPage() {
   const [templates, setTemplates] = useState<any[]>([])
@@ -18,10 +18,15 @@ export default function PreviewPage() {
   const [html, setHtml] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [schemaPreview, setSchemaPreview] = useState<string>("")
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [deptFilter, setDeptFilter] = useState<string>("")
+  const [dataSourceId, setDataSourceId] = useState<string>("")
 
   useEffect(() => {
     fetch("/api/generated/surat-platform/templates?limit=100").then(r=>r.json()).then(j=>{ setTemplates(j.data??[]); if(j.data?.[0]) { setSelectedTemplate(String(j.data[0].id)); setSchemaPreview(j.data[0].schema_json); }})
     fetch("/api/generated/surat-platform/documents?limit=100").then(r=>r.json()).then(j=>{ setDocuments(j.data??[]); if(j.data?.[0]) { setSelectedDoc(String(j.data[0].id)); setDataJson(j.data[0].data_json); }})
+    // load first custom_query data source for demo
+    fetch("/api/generated/surat-platform/data-sources?limit=100").then(r=>r.json()).then(j=>{ const first = (j.data||[]).find((d:any)=>d.type==="custom_query" || d.type==="entity"); if(first) setDataSourceId(String(first.id)) })
   }, [])
 
   const loadDocData = (id: string) => {
@@ -38,7 +43,14 @@ export default function PreviewPage() {
   const handleRender = async () => {
     setLoading(true)
     try {
-      const data = JSON.parse(dataJson || "{}")
+      let data = JSON.parse(dataJson || "{}")
+      // additive: filter departemen via DataSource Custom Query (jika dipilih)
+      if (deptFilter) {
+        // filter employees array client-side to simulate custom_query WHERE department = ?
+        if (Array.isArray(data.employees)) {
+          data = { ...data, employees: data.employees.filter((e:any) => String(e.department) === deptFilter) }
+        }
+      }
       const res = await fetch("/api/generated/surat-platform/render", { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ templateId: selectedTemplate ? Number(selectedTemplate) : undefined, schema: selectedTemplate ? undefined : JSON.parse(schemaPreview || "{}"), data }) })
       const json = await res.json()
       if (json.html) setHtml(json.html)
@@ -47,14 +59,60 @@ export default function PreviewPage() {
     setLoading(false)
   }
 
+  const handleExportPdf = async () => {
+    setPdfLoading(true)
+    try {
+      let data = JSON.parse(dataJson || "{}")
+      if (deptFilter && Array.isArray(data.employees)) data = { ...data, employees: data.employees.filter((e:any)=>String(e.department)===deptFilter) }
+      const payload: any = { data }
+      if (selectedTemplate) payload.templateId = Number(selectedTemplate)
+      else payload.schema = JSON.parse(schemaPreview || "{}")
+      const res = await fetch("/api/generated/surat-platform/export-pdf", { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(payload) })
+      if (res.headers.get("content-type")?.includes("application/pdf")) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `document-${Date.now()}.pdf`
+        a.click()
+        URL.revokeObjectURL(url)
+      } else {
+        const json = await res.json()
+        // fallback html -> open window for print (additive)
+        if (json.html) {
+          const w = window.open("", "_blank")
+          if (w) { w.document.write(json.html); w.document.close(); w.print() }
+        } else alert(json.message || "PDF failed, coba cetak manual")
+      }
+    } catch (e:any) { alert("PDF error: "+e.message) }
+    setPdfLoading(false)
+  }
+
+  const handleTestDataSource = async () => {
+    if (!dataSourceId) { alert("Belum ada DataSource"); return }
+    const url = `/api/generated/surat-platform/data-sources/${dataSourceId}/resolve?department=${encodeURIComponent(deptFilter || "Bidang TI")}`
+    const res = await fetch(url)
+    const json = await res.json()
+    if (json.data) {
+      // inject into dataJson employees for demo
+      try {
+        const cur = JSON.parse(dataJson || "{}")
+        const next = { ...cur, employees: json.data }
+        setDataJson(JSON.stringify(next, null, 2))
+        setTimeout(handleRender, 100)
+      } catch {}
+    }
+    alert(`Resolve ${json.total ?? json.data?.length ?? 0} rows via ${json.resolvedVia} — sql: ${json.sql || "-"}`)
+  }
+
   useEffect(()=>{ if(selectedTemplate && dataJson) handleRender() }, [selectedTemplate, dataJson])
 
   return (
     <PageShell
       title="Preview & Render"
-      description="Engine preview — pilih Template + Data JSON → Render Engine eksekusi Loop/Condition/Nested → hasil HTML yang siap cetak/PDF. Mirip arsitektur di diagram: Template Engine → Data Source → Rules → Render."
+      description="Engine preview — pilih Template + Data JSON → Render Engine eksekusi Loop/Condition/Nested + Barcode + Custom Query filter → hasil HTML yang siap cetak/PDF server-side."
       breadcrumbs={[{ label:"Surat Platform", href:"/"},{ label:"Preview"}]}
-      actions={<div className="flex items-center gap-2"><Button variant="outline" onClick={handleRender} disabled={loading}><Eye size={16}/> {loading?"Rendering...":"Render"}</Button><Button onClick={()=>{ const w=window.open("","_blank"); if(w){ w.document.write(`<html><head><title>Print</title><style>body{font-family:Inter, sans-serif;}</style></head><body>${html}</body></html>`); w.document.close(); w.print()}}}><Printer size={16}/> Cetak / PDF</Button></div>}
+      actions={<div className="flex items-center gap-2"><Button variant="outline" onClick={handleRender} disabled={loading}><Eye size={16}/> {loading?"Rendering...":"Render"}</Button><Button variant="outline" onClick={handleExportPdf} disabled={pdfLoading}><Download size={16}/> {pdfLoading?"Exporting...":"Export PDF (server)"}</Button><Button onClick={()=>{ const w=window.open("","_blank"); if(w){ w.document.write(`<html><head><title>Print</title><style>body{font-family:Inter, sans-serif;}</style></head><body>${html}</body></html>`); w.document.close(); w.print()}}}><Printer size={16}/> Cetak</Button></div>}
     >
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="space-y-4">
@@ -87,6 +145,25 @@ export default function PreviewPage() {
                 <Textarea className="font-mono text-[11px] min-h-[260px]" value={dataJson} onChange={e=>setDataJson(e.target.value)} placeholder='{"employees":[{"name":"Afdal","nip":"123"}]}' />
                 <div className="text-[11px] text-[#6b7280] mt-1 leading-relaxed">
                   Coba edit: tambahkan employee baru, ubah <code className="bg-white px-1 rounded border">status</code> jadi <code className="bg-white px-1 rounded border">inactive</code> untuk lihat Condition filter, atau tambah nested <code className="bg-white px-1 rounded border">trips</code> untuk test Repeater bersarang.
+                </div>
+                {/* Additive: Barcode + Dept filter demo */}
+                <div className="rounded-[8px] border border-[#e6e6e6] bg-[#fafafa] p-3 space-y-2">
+                  <div className="text-[11px] font-semibold flex items-center gap-1.5"><Barcode size={12} className="text-[#0075de]"/> Barcode + Filter Departemen (additive, tanpa rebuild)</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label className="text-[11px]">Filter Departemen (Custom Query)</Label><Select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}><option value="">Semua</option><option value="Bidang TI">Bidang TI</option><option value="Hukum">Hukum</option><option value="Sekretariat">Sekretariat</option><option value="Keuangan">Keuangan</option><option value="Umum">Umum</option></Select></div>
+                    <div className="flex items-end gap-2">
+                      <Button size="sm" variant="outline" onClick={handleTestDataSource}><Database size={12}/> Test Custom Query</Button>
+                      <Button size="sm" onClick={handleRender}><Filter size={12}/> Terapkan Filter</Button>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-[#6b7280]">Filter akan memotong <code className="bg-white px-1 rounded border">employees[]</code> client-side (simulasi <code className="bg-white px-1 rounded border">WHERE department = ?</code> via DataSource <code className="bg-white px-1 rounded border">/resolve?department=...</code>) — engine additive. Barcode dirender dari <code className="bg-white px-1 rounded border">{"{{letter.number}}"}</code> / NIP.</div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" onClick={()=>{
+                      const demo = { letter: { number: "800/001/SK/2026", title: "SURAT BER-BARCODE", consideration: "demo barcode" }, office: { name: "PEMERINTAH PROVINSI ACEH", address: "Jl. T. Nyak Arief No.219" }, signer: { name: "Drs. H. Ahmad Yani, M.Si", position: "Kepala Dinas", nip: "196501011990031001" }, employees: [{ name: "Afdal", nip: "199001012015031001", position: "Programmer", department: "Bidang TI", status: "active" }, { name: "Budi", nip: "198512122010011002", position: "Analis", department: "Hukum", status: "active" }], current_date: new Date().toLocaleDateString("id-ID", { day:"2-digit", month:"long", year:"numeric"}) }
+                      setDataJson(JSON.stringify(demo, null, 2))
+                    }}>Load Demo Barcode</Button>
+                    <Button size="sm" variant="outline" onClick={handleExportPdf}><Download size={12}/> Export PDF Server</Button>
+                  </div>
                 </div>
               </div>
 

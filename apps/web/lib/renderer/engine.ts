@@ -171,6 +171,52 @@ export function renderNodeToHtml(node: TreeNode, data: any, context: any = {}): 
           <div style="font-size:7px; color:#6b7280; margin-top:4px; max-width:${size}px; word-break:break-all;">${escapeHtml(val).slice(0,60)}</div>
         </div>`
       }
+    case "barcode":
+      {
+        const val = String(props.value || props.content || props.text || "").trim() || "123456789012"
+        const format = props.format || "CODE128"
+        const width = Number(props.width) || 220
+        const height = Number(props.height) || 56
+        const displayValue = props.displayValue !== false && props.displayValue !== "false"
+        const align = props.align || "center"
+        const lineColor = props.lineColor || "#111"
+        const background = props.background || "#fff"
+        const textSize = Number(props.fontSize) || 10
+        // Generate pseudo-barcode SVG deterministically from value hash
+        // Each char → 7 bars pattern based on charCode bits
+        const chars = val.split("")
+        const totalBars = Math.max(chars.length * 7, 24)
+        const barUnit = width / totalBars
+        let x = 0
+        let bars = ""
+        // start guard
+        bars += `<rect x="${x}" y="0" width="${barUnit*1.2}" height="${height}" fill="${lineColor}" />`
+        x += barUnit*1.2 + barUnit*0.6
+        for (let i = 0; i < chars.length; i++) {
+          const code = chars[i].charCodeAt(0)
+          for (let b = 0; b < 7; b++) {
+            const bit = (code >> (b % 4)) & 1
+            const w = bit ? barUnit*1.3 : barUnit*0.6
+            const isBar = (code + b) % 3 !== 0 // ~2/3 bars
+            if (isBar) bars += `<rect x="${x.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${height}" fill="${lineColor}" />`
+            x += w + barUnit*0.3
+            if (x > width - 6) break
+          }
+          if (x > width - 6) break
+          // inter-char gap
+          x += barUnit*0.7
+        }
+        // end guard
+        if (x < width - 2) bars += `<rect x="${(width - barUnit*1.2).toFixed(2)}" y="0" width="${barUnit*1.2}" height="${height}" fill="${lineColor}" />`
+        const svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="background:${background}; display:inline-block;"><rect width="${width}" height="${height}" fill="${background}" />${bars}</svg>`
+        return `<div style="text-align:${align}; margin:12px 0;">
+          <div style="display:inline-block; border:1px solid #e5e7eb; padding:8px 10px; background:${background}; border-radius:6px;">
+            ${svg}
+            ${displayValue ? `<div style="font-family:monospace; font-size:${textSize}px; letter-spacing:${format==='CODE39' ? '3px' : '1px'}; text-align:center; margin-top:6px; color:#111; font-weight:600;">*${escapeHtml(val)}*</div>` : ""}
+            ${format ? `<div style="font-size:7px; color:#6b7280; text-align:center; margin-top:2px; text-transform:uppercase; letter-spacing:0.06em;">${escapeHtml(format)}</div>` : ""}
+          </div>
+        </div>`
+      }
     case "table":
       {
         const source = props.source

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { useEffect, useState } from "react"
-import { Save, Eye, Plus, Trash2, Copy, ChevronUp, ChevronDown, Sparkles, Type, Heading1, Pilcrow, Image as ImageIcon, Table, PenTool, Minus, QrCode, Calendar, Repeat, GitBranch, Building2 } from "lucide-react"
+import { Save, Eye, Plus, Trash2, Copy, ChevronUp, ChevronDown, Sparkles, Type, Heading1, Pilcrow, Image as ImageIcon, Table, PenTool, Minus, QrCode, Calendar, Repeat, GitBranch, Building2, Barcode, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, Ruler, ZoomIn, ZoomOut, FileText, Maximize2, Layers, EyeOff, Code } from "lucide-react"
 
 type TreeNode = { type: string; props?: Record<string, any>; children?: TreeNode[] }
 
@@ -21,6 +21,7 @@ const componentPalette = [
   { type: "signature", label: "Signature", icon: PenTool, category: "branding", defaultProps: { name: "{{signer.name}}", position: "{{signer.position}}", nip: "{{signer.nip}}" } },
   { type: "divider", label: "Divider", icon: Minus, category: "layout", defaultProps: { height: 1, color: "#e5e7eb" } },
   { type: "qrcode", label: "QR Code", icon: QrCode, category: "dynamic", defaultProps: { value: "{{document.qr}}", size: 60 } },
+  { type: "barcode", label: "Barcode", icon: Barcode, category: "dynamic", defaultProps: { value: "{{letter.number}}", format: "CODE128", width: 220, height: 56, displayValue: true } },
   { type: "date", label: "Date", icon: Calendar, category: "dynamic", defaultProps: { source: "letter.date", format: "DD MMMM YYYY" } },
   { type: "repeater", label: "Repeater / Loop", icon: Repeat, category: "dynamic", defaultProps: { source: "employees", item: "employee" } },
   { type: "condition", label: "Condition / IF", icon: GitBranch, category: "dynamic", defaultProps: { field: "employee.status", operator: "equals", value: "active" } },
@@ -48,6 +49,7 @@ const initialTree: TreeNode = {
       ]},
       { type: "divider", props: { height: 1, color: "#e5e7eb", margin: 8 } }
     ]},
+    { type: "barcode", props: { value: "{{letter.number}}", format: "CODE128", width: 220, height: 56, displayValue: true, align: "center" } },
     { type: "signature", props: { name: "{{signer.name}}", position: "{{signer.position}}", nip: "{{signer.nip}}", align: "right" } },
     { type: "footer", children: [
       { type: "text", props: { content: "Dicetak pada {{current_date}} | {{office.name}}", fontSize: 8, align: "center", color: "#999" } },
@@ -84,6 +86,10 @@ export default function BuilderPage() {
   const [previewHtml, setPreviewHtml] = useState<string>("")
   const [previewData, setPreviewData] = useState<string>(JSON.stringify({ letter: { number: "800/001/SK/VI/2026", title: "SURAT KEPUTUSAN", consideration: "perlu diangkat tim baru" }, office: { name: "PEMERINTAH PROVINSI ACEH", address: "Jl. T. Nyak Arief No.219 Banda Aceh", logo: "" }, signer: { name: "Drs. H. Ahmad Yani, M.Si", position: "Kepala Dinas", nip: "196501011990031001" }, employees: [{ name: "Afdal", nip: "199001012015031001", position: "Programmer", department: "Bidang TI", status: "active" }, { name: "Budi Santoso", nip: "198512122010011002", position: "Analis", department: "Hukum", status: "inactive" }, { name: "Citra Dewi", nip: "199205152018022001", position: "Staff", department: "Sekretariat", status: "active" }], current_date: new Date().toLocaleDateString("id-ID", { day:"2-digit", month:"long", year:"numeric"}) }, null, 2))
   const [saving, setSaving] = useState(false)
+  const [officeMode, setOfficeMode] = useState<'office'|'structure'|'json'>('office')
+  const [zoom, setZoom] = useState(90)
+  const [showRuler, setShowRuler] = useState(true)
+  const [pageSize, setPageSize] = useState<'A4'|'Letter'>('A4')
 
   useEffect(() => {
     fetch("/api/generated/surat-platform/templates?limit=100").then(r=>r.json()).then(j=>setTemplates(j.data??[]))
@@ -252,7 +258,7 @@ export default function BuilderPage() {
   return (
     <PageShell
       title="Template Builder"
-      description="Visual builder 3-panel: Components (kiri) → Document Canvas (tengah, JSON Tree) → Properties (kanan). Mendukung Repeater, Condition, Binding."
+      description="Visual builder 3-panel: Components (kiri) → Document Editor Office Doc (tengah, klik elemen untuk edit) → Properties (kanan). Mendukung Repeater, Condition, Binding, Barcode."
       breadcrumbs={[{ label: "Surat Platform", href: "/" }, { label: "Builder" }]}
       actions={
         <div className="flex items-center gap-2">
@@ -294,47 +300,307 @@ export default function BuilderPage() {
           </CardContent>
         </Card>
 
-        {/* Center: Document */}
+        {/* Center: Document - Office Doc Editor */}
         <div className="col-span-12 lg:col-span-6 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center justify-between">
-                <span>Document Canvas</span>
-                <Badge variant="secondary" className="text-[11px]">JSON Tree • {JSON.stringify(tree).length} chars</Badge>
-              </CardTitle>
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3 border-b bg-white">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FileText size={16} className="text-[#0075de]" /> Document Editor
+                  <span className="hidden sm:inline text-[11px] font-normal text-[#6b7280]">— Simple Office Doc</span>
+                </CardTitle>
+                <Badge variant="secondary" className="text-[11px] hidden sm:flex">{pageSize} • {zoom}% • {JSON.stringify(tree).length} chars</Badge>
+              </div>
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div><Label className="text-[11px]">Nama Template</Label><Input value={templateMeta.name} onChange={e=>setTemplateMeta({...templateMeta, name:e.target.value})} className="h-8 text-xs" /></div>
                 <div><Label className="text-[11px]">Kode</Label><Input value={templateMeta.code} onChange={e=>setTemplateMeta({...templateMeta, code:e.target.value})} className="h-8 text-xs" /></div>
               </div>
+              {/* Mode Tabs */}
+              <div className="mt-3 flex items-center gap-1 bg-[#f6f5f4] p-1 rounded-[10px] w-fit">
+                {(["office","structure","json"] as const).map(m => (
+                  <button key={m} onClick={()=>setOfficeMode(m)} className={`px-3 py-1.5 rounded-[8px] text-xs font-medium transition-colors flex items-center gap-1.5 ${officeMode===m ? "bg-white shadow text-[#111] border border-[#e6e6e6]" : "text-[#6b7280] hover:text-[#111]"}`}>
+                    {m==="office" && <FileText size={12}/>}
+                    {m==="structure" && <Layers size={12}/>}
+                    {m==="json" && <Code size={12} className="hidden"/>}{m==="json" ? "{}" : null}
+                    {m==="office" ? "Office Doc" : m==="structure" ? "Structure" : "Raw JSON"}
+                  </button>
+                ))}
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-[12px] border-2 border-dashed border-[#e6e6e6] bg-[#fafafa] p-3 min-h-[380px]">
-                <div className="text-[11px] font-semibold tracking-widest uppercase text-[#9ca3af] mb-3 flex items-center justify-between">
-                  <span>Tree Structure — klik node untuk edit di kanan</span>
-                  <span className="text-[11px] lowercase font-normal normal-case tracking-normal">Header → Content → Footer</span>
-                </div>
-                <div className="space-y-1">
-                  {tree.children?.map((child, idx) => renderTreeNode(child, [idx], 0))}
-                  {(!tree.children || tree.children.length===0) && <div className="py-12 text-center text-xs text-[#9ca3af]">Canvas kosong — tambah component dari kiri</div>}
-                </div>
-              </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={()=>{ setTree(initialTree); handlePreview(initialTree, previewData)}}>Reset ke Contoh</Button>
-                <Button variant="ghost" size="sm" onClick={()=>{
-                  const str = JSON.stringify(tree, null, 2)
-                  navigator.clipboard.writeText(str)
-                  alert("Tree JSON disalin!")
-                }}><Copy size={14}/> Copy JSON</Button>
-              </div>
+            {officeMode === "office" && (
+              <>
+                {/* Office Toolbar - Word-like */}
+                <div className="bg-[#f9fafb] border-b border-[#e6e6e6] px-3 py-2 flex flex-wrap items-center gap-1.5">
+                  <div className="flex items-center gap-1 bg-white border border-[#e6e6e6] rounded-[8px] p-1">
+                    <Select value={pageSize} onChange={e=>setPageSize(e.target.value as any)} className="h-7 text-xs border-0 bg-transparent">
+                      <option value="A4">A4</option>
+                      <option value="Letter">Letter</option>
+                    </Select>
+                    <span className="w-px h-4 bg-[#e6e6e6] mx-1" />
+                    <button title="Bold" onClick={()=>{ if(selectedNode?.props) updateSelectedProps("fontWeight", selectedNode.props.fontWeight==="bold"?"normal":"bold")}} className={`w-7 h-7 rounded flex items-center justify-center hover:bg-[#f6f5f4] ${selectedNode?.props?.fontWeight==="bold"?"bg-[#0075de] text-white":"text-[#374151]"}`}><Bold size={13}/></button>
+                    <button title="Italic" className="w-7 h-7 rounded flex items-center justify-center hover:bg-[#f6f5f4] text-[#374151]"><Italic size={13}/></button>
+                    <button title="Underline" className="w-7 h-7 rounded flex items-center justify-center hover:bg-[#f6f5f4] text-[#374151]"><Underline size={13}/></button>
+                    <span className="w-px h-4 bg-[#e6e6e6] mx-1" />
+                    <button title="Align Left" onClick={()=>updateSelectedProps("align","left")} className={`w-7 h-7 rounded flex items-center justify-center ${selectedNode?.props?.align==="left"?"bg-[#0075de] text-white":"hover:bg-[#f6f5f4] text-[#374151]"}`}><AlignLeft size={13}/></button>
+                    <button title="Align Center" onClick={()=>updateSelectedProps("align","center")} className={`w-7 h-7 rounded flex items-center justify-center ${selectedNode?.props?.align==="center"?"bg-[#0075de] text-white":"hover:bg-[#f6f5f4] text-[#374151]"}`}><AlignCenter size={13}/></button>
+                    <button title="Align Right" onClick={()=>updateSelectedProps("align","right")} className={`w-7 h-7 rounded flex items-center justify-center ${selectedNode?.props?.align==="right"?"bg-[#0075de] text-white":"hover:bg-[#f6f5f4] text-[#374151]"}`}><AlignRight size={13}/></button>
+                    <button title="Justify" onClick={()=>updateSelectedProps("align","justify")} className={`w-7 h-7 rounded flex items-center justify-center ${selectedNode?.props?.align==="justify"?"bg-[#0075de] text-white":"hover:bg-[#f6f5f4] text-[#374151]"}`}><AlignJustify size={13}/></button>
+                  </div>
+                  <div className="flex items-center gap-1 bg-white border border-[#e6e6e6] rounded-[8px] p-1 ml-auto">
+                    <button onClick={()=>setShowRuler(!showRuler)} className={`px-2 h-7 rounded text-xs flex items-center gap-1 ${showRuler?"bg-[#0075de] text-white":"hover:bg-[#f6f5f4] text-[#6b7280]"}`}><Ruler size={12}/> Ruler</button>
+                    <span className="w-px h-4 bg-[#e6e6e6]" />
+                    <button onClick={()=>setZoom(Math.max(60, zoom-10))} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><ZoomOut size={12}/></button>
+                    <span className="text-xs font-mono w-10 text-center">{zoom}%</span>
+                    <button onClick={()=>setZoom(Math.min(140, zoom+10))} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><ZoomIn size={12}/></button>
+                    <button onClick={()=>setZoom(90)} className="px-1.5 h-7 rounded hover:bg-[#f6f5f4] text-[11px] text-[#6b7280]"><Maximize2 size={12}/></button>
+                  </div>
+                </div>
 
-              <div className="mt-4">
-                <Label className="text-[11px]">Raw JSON Tree (edit langsung)</Label>
-                <Textarea className="font-mono text-[11px] min-h-[160px]" value={JSON.stringify(tree, null, 2)} onChange={e=>{
+                {showRuler && (
+                  <div className="bg-[#f3f4f6] border-b border-[#e6e6e6] h-6 flex items-center px-4 overflow-hidden select-none">
+                    <div className="flex-1 flex items-end h-full max-w-[794px] mx-auto relative">
+                      {Array.from({length: 20}).map((_,i)=>(
+                        <div key={i} className="flex-1 flex flex-col items-center">
+                          <span className="text-[7px] text-[#9ca3af] font-mono">{i}</span>
+                          <div className="w-px h-2 bg-[#d1d5db] mt-0.5" />
+                          <div className="flex gap-px mt-0.5">
+                            {Array.from({length: 4}).map((__,j)=><div key={j} className={`w-px ${j===2?"h-1.5 bg-[#9ca3af]":"h-1 bg-[#e5e7eb]"}`} />)}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="absolute left-0 right-0 top-0 h-px bg-[#0075de]/30" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-[#e8ecef] p-4 md:p-6 flex justify-center overflow-auto" style={{minHeight: 520}}>
+                  <div 
+                    className="bg-white shadow-[0_2px_16px_rgba(0,0,0,0.12),0_1px_4px_rgba(0,0,0,0.08)] transition-all duration-200 flex flex-col"
+                    style={{
+                      width: pageSize==="A4" ? 794 : 816,
+                      minHeight: pageSize==="A4" ? 520 : 480,
+                      transform: `scale(${zoom/100})`,
+                      transformOrigin: "top center",
+                      marginBottom: zoom<100 ? -((100-zoom)*2) : 0,
+                    }}
+                  >
+                    {/* Paper Header Info */}
+                    <div className="h-7 bg-white border-b border-[#e6e6e6] flex items-center justify-between px-4 text-[10px] text-[#9ca3af] font-mono">
+                      <span className="flex items-center gap-2"><FileText size={10}/> {templateMeta.code} — {templateMeta.name}</span>
+                      <span className="hidden sm:flex items-center gap-2"><Eye size={10}/> Office Doc • {pageSize} • Klik elemen untuk edit</span>
+                    </div>
+
+                    {/* Office Paper Content - interactive */}
+                    <div className="flex-1 p-0 flex flex-col">
+                      {(() => {
+                        const dataObj = (()=>{ try{return JSON.parse(previewData)}catch{return {}}})()
+                        const interpolate = (str:string, ctx:any={})=>{
+                          if(typeof str!=="string") return str
+                          return str.replace(/\{\{\s*([^}]+)\s*\}\}/g,(_,p)=>{
+                            const path=p.trim()
+                            if(path==="current_date") return new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"})
+                            if(path==="index" && ctx.index) return String(ctx.index)
+                            const tryGet=(o:any,pp:string)=>pp.split(".").reduce((a,c)=>a?.[c],o)
+                            let v=tryGet(ctx,path)
+                            if(v!==undefined) return String(v)
+                            v=tryGet(dataObj,path)
+                            if(v!==undefined) return String(v)
+                            if(path.startsWith("item.")){ const sub=path.slice(5); v=tryGet(ctx.item ?? ctx[ctx.__itemName] ?? {}, sub); if(v!==undefined) return String(v)}
+                            if(path.startsWith("employee.")){ v=tryGet(ctx.employee ?? {}, path.slice(9)); if(v!==undefined) return String(v)}
+                            return ""
+                          })
+                        }
+                        const isSelected = (path:number[])=> selectedPath && selectedPath.length===path.length && selectedPath.every((v,i)=>v===path[i])
+                        const renderOfficeNode = (node:TreeNode, path:number[], ctx:any={}): React.ReactNode => {
+                          const selected = isSelected(path)
+                          const baseCls = `relative group transition-all ${selected ? "ring-2 ring-[#0075de] ring-offset-1 bg-[#0075de]/[0.02]" : "hover:ring-1 hover:ring-[#0075de]/30 hover:bg-[#f8fafc]"}`
+                          const onSelect = (e:React.MouseEvent)=>{ e.stopPropagation(); setSelectedPath(path) }
+                          const p = node.props || {}
+                          switch(node.type){
+                            case "header":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} border-b-2 border-[#111] pb-3 mb-4 pt-6 px-8 ${selected?"rounded-[4px]": ""}`}>
+                                {selected && <span className="absolute -top-2 left-2 bg-[#0075de] text-white text-[10px] px-1.5 py-0.5 rounded font-mono">HEADER</span>}
+                                <div className="space-y-1">{(node.children||[]).map((c,i)=>renderOfficeNode(c,[...path,i],ctx))}</div>
+                              </div>
+                            case "footer":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} border-t border-[#e6e6e6] mt-6 pt-3 pb-4 px-8 bg-[#fafafa]/50`}>
+                                {selected && <span className="absolute -top-2 left-2 bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">FOOTER</span>}
+                                <div className="space-y-1 opacity-80">{(node.children||[]).map((c,i)=>renderOfficeNode(c,[...path,i],ctx))}</div>
+                              </div>
+                            case "heading":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-1 ${selected?"rounded":""}`}>
+                                {selected && <span className="absolute -top-2 left-2 bg-[#111] text-white text-[10px] px-1.5 py-0.5 rounded">HEADING</span>}
+                                <h2 style={{fontSize: (p.fontSize||14), fontWeight: p.fontWeight||"bold", textAlign: p.align||"left", color: p.color||"#111", textTransform: p.transform==="uppercase"?"uppercase":"none", letterSpacing: "0.02em"}} className="my-2 leading-tight">{interpolate(p.content||"")}</h2>
+                              </div>
+                            case "text":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-0.5 ${selected?"rounded":""}`}>
+                                <div style={{fontSize: p.fontSize||11, fontWeight: p.fontWeight||"normal", textAlign: p.align||"left", color: p.color||"#1f2937", marginLeft: p.indent||0}} className="my-1 leading-relaxed whitespace-pre-wrap">{interpolate(p.content||"")}</div>
+                              </div>
+                            case "paragraph":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-1 ${selected?"rounded":""}`}>
+                                <p style={{fontSize: p.fontSize||11, textAlign: p.align||"justify", lineHeight: 1.6}} className="my-2 text-[#1f2937] whitespace-pre-wrap">{interpolate(p.content||"")}</p>
+                              </div>
+                            case "image":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-2 flex ${p.align==="center"?"justify-center":p.align==="right"?"justify-end":"justify-start"} ${selected?"rounded":""}`}>
+                                {p.src && !String(p.src).includes("{{") ? <img src={p.src} alt="img" style={{width: p.width||60, height: p.height||60, objectFit:"contain"}}/> : <div style={{width: p.width||60, height: p.height||60}} className="bg-[#f3f4f6] border border-dashed border-[#d1d5db] flex items-center justify-center text-[8px] text-[#9ca3af]">LOGO</div>}
+                              </div>
+                            case "divider":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-1 ${selected?"rounded":""}`}>
+                                <hr style={{borderTop: `${p.height||1}px solid ${p.color||"#e5e7eb"}`, margin: `${p.margin||8}px 0`}}/>
+                              </div>
+                            case "signature":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-4 ${selected?"rounded":""}`}>
+                                {selected && <span className="absolute -top-2 left-2 bg-violet-600 text-white text-[10px] px-1.5 py-0.5 rounded">SIGNATURE</span>}
+                                <div style={{textAlign: p.align||"right", fontSize: 11, lineHeight:1.5}}>
+                                  <div>Hormat kami,</div>
+                                  <div style={{height: 48}} />
+                                  <div style={{fontWeight:700, textDecoration:"underline"}}>{interpolate(p.name||"")}</div>
+                                  {p.position && <div className="text-[#4b5563]">{interpolate(p.position)}</div>}
+                                  {p.nip && <div className="text-[10px] text-[#6b7280]">NIP. {interpolate(p.nip)}</div>}
+                                </div>
+                              </div>
+                            case "qrcode":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-2 ${selected?"rounded":""}`}>
+                                <div style={{textAlign: p.align||"right"}}>
+                                  <div style={{display:"inline-block", width: p.size||60, height: p.size||60, border: "1px solid #111", background:"repeating-linear-gradient(45deg,#f3f4f6 0 4px, white 4px 8px)", position:"relative"}}>
+                                    <div style={{position:"absolute", inset:4, border:"2px solid #111", display:"flex", alignItems:"center", justifyContent:"center", fontSize:7, fontWeight:700}}>QR</div>
+                                  </div>
+                                  <div className="text-[7px] text-[#6b7280] mt-1 max-w-[120px] ml-auto break-all">{interpolate(p.value||"")}</div>
+                                </div>
+                              </div>
+                            case "barcode":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-2 ${selected?"rounded":""}`}>
+                                <div style={{textAlign: p.align||"center"}}>
+                                  <div className="inline-block border border-[#e5e7eb] rounded-[6px] px-3 py-2 bg-white">
+                                    <div className="h-10 w-[220px] bg-[repeating-linear-gradient(90deg,#111_0_2px,transparent_2px_4px)] rounded-sm" />
+                                    <div className="font-mono text-[10px] font-semibold tracking-widest text-center mt-1">*{interpolate(p.value||p.content||"")}*</div>
+                                    <div className="text-[7px] text-[#6b7280] text-center uppercase tracking-widest">{p.format||"CODE128"}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            case "date":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-1 text-[10px] text-[#374151] ${selected?"rounded":""}`}>{(()=>{ const v=p.source ? interpolate(`{{${p.source}}}`) : new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}); const d=new Date(v); return isNaN(d.getTime())?v:d.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"})})()}</div>
+                            case "kop_surat":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} text-center border-b-[3px] border-double border-[#111] pb-3 mb-4 mx-8 pt-2 ${selected?"rounded":""}`}>
+                                <div className="text-[14px] font-extrabold tracking-widest">{interpolate(p.office||p.content||"KOP SURAT")}</div>
+                                <div className="text-[10px] text-[#4b5563]">{interpolate(p.address||"")}</div>
+                              </div>
+                            case "table":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-2 ${selected?"rounded":""}`}>
+                                {selected && <span className="absolute -top-2 left-2 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded">TABLE: {p.source}</span>}
+                                <div className="border border-[#d1d5db] rounded-[6px] overflow-hidden">
+                                  <div className="bg-[#f9fafb] grid text-[10px] font-bold border-b border-[#d1d5db]" style={{gridTemplateColumns:`repeat(${p.columns?.length||3},1fr)`}}>{(p.columns||[]).map((c:string)=><div key={c} className="px-2 py-1.5 border-r last:border-0 border-[#d1d5db]">{c}</div>)}</div>
+                                  {(dataObj[p.source||""]||[]).slice(0,3).map((row:any,ri:number)=><div key={ri} className="grid text-[10px] border-b last:border-0 border-[#e5e7eb]" style={{gridTemplateColumns:`repeat(${p.columns?.length||3},1fr)`}}>{(p.columns||[]).map((c:string)=><div key={c} className="px-2 py-1 border-r last:border-0 border-[#e5e7eb]">{c==="no"?ri+1: (row[c]??row[c.toLowerCase()]??"-")}</div>)}</div>)}
+                                  {(!dataObj[p.source||""] || dataObj[p.source||""]?.length===0) && <div className="p-3 text-center text-xs text-[#9ca3af]">No data — {p.source}</div>}
+                                </div>
+                              </div>
+                            case "repeater":
+                              {
+                                const src=p.source||"employees"
+                                const arr = (()=>{ const v = ctx[src] ?? dataObj[src] ?? (src.includes(".") ? (()=>{ const parts=src.split("."); let cur:any=ctx; for(const pp of parts){cur=cur?.[pp]}; if(cur) return cur; cur=dataObj; for(const pp of parts){cur=cur?.[pp]}; return cur })() : undefined); return Array.isArray(v)?v:[] })()
+                                const sample = arr.length ? arr : [{name:"Afdal",nip:"199xxx",position:"Programmer",department:"Bidang TI",status:"active"}, {name:"Budi",nip:"198xxx",position:"Analis",department:"Hukum",status:"active"}]
+                                return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} mx-4 my-2 border-2 border-dashed ${selected?"border-[#0075de] bg-[#eff6ff]":"border-amber-300 bg-amber-50/50"} rounded-[8px] p-3`}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${selected?"bg-[#0075de] text-white":"bg-amber-500 text-white"}`}><Repeat size={10}/> REPEATER: {src} ({sample.length} items)</span>
+                                    <span className="text-[11px] font-mono text-amber-800">for {p.item||"item"} in {src}</span>
+                                    {selected && <span className="ml-auto text-[10px] bg-white border px-1.5 py-0.5 rounded">klik + di kiri untuk tambah child</span>}
+                                  </div>
+                                  <div className="space-y-2">
+                                    {sample.slice(0,3).map((item:any,idx:number)=>{
+                                      const childCtx={...ctx, [p.item||"item"]:item, item, employee:item, index: idx+1, __itemName: p.item||"item"}
+                                      return <div key={idx} className="bg-white border border-[#e6e6e6] rounded-[6px] p-2 shadow-sm">
+                                        <div className="text-[10px] font-mono text-[#6b7280] mb-1">#{idx+1} • {item.name} — {item.nip}</div>
+                                        <div className="space-y-1">{(node.children||[]).map((c,i)=>renderOfficeNode(c,[...path,i],childCtx))}</div>
+                                      </div>
+                                    })}
+                                    {sample.length>3 && <div className="text-center text-[11px] text-[#6b7280]">+ {sample.length-3} more items…</div>}
+                                  </div>
+                                </div>
+                              }
+                            case "condition":
+                              {
+                                const field=p.field||""
+                                const op=p.operator||"equals"
+                                const val=p.value||""
+                                // simple eval for preview (first employee)
+                                const sampleEmp = (dataObj.employees||[])[0] || {status:"active"}
+                                const ctxTest={...ctx, employee: sampleEmp, item: sampleEmp}
+                                const tryGet=(o:any,pp:string)=>pp.split(".").reduce((a,c)=>a?.[c],o)
+                                const actual = tryGet(ctxTest,field) ?? tryGet(dataObj,field) ?? ""
+                                const pass = op==="equals" ? String(actual)===String(val) : op==="not_equals" ? String(actual)!==String(val) : String(actual).includes(String(val))
+                                return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} mx-4 my-2 border-2 border-dashed ${selected?"border-violet-500 bg-violet-50":"border-violet-300 bg-violet-50/40"} rounded-[8px] p-3`}>
+                                  <div className={`flex items-center gap-2 text-[10px] font-bold px-2 py-1 rounded-full w-fit ${pass?"bg-emerald-500 text-white":"bg-violet-500 text-white"}`}><GitBranch size={10}/> IF {field} {op} "{val}" → {pass?"TRUE":"FALSE"}</div>
+                                  <div className={`mt-2 space-y-1 ${!pass?"opacity-40":""}`}>{(node.children||[]).map((c,i)=>renderOfficeNode(c,[...path,i],ctx))}</div>
+                                  {!pass && <div className="text-[10px] text-violet-700 mt-1 italic">↳ hidden di preview karena kondisi FALSE (ganti value di kanan untuk test)</div>}
+                                </div>
+                              }
+                            case "section":
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-2 py-2 my-2 border border-dashed border-[#d1d5db] rounded-[6px] mx-4`}>{(node.children||[]).map((c,i)=>renderOfficeNode(c,[...path,i],ctx))}</div>
+                            case "document":
+                              return <div key={path.join("-")} className="space-y-0">{(node.children||[]).map((c,i)=>renderOfficeNode(c,[...path,i],ctx))}</div>
+                            default:
+                              return <div key={path.join("-")} onClick={onSelect} className={`${baseCls} px-8 py-2 ${selected?"rounded":""}`}>
+                                {p.content ? <div className="text-[11px]">{interpolate(p.content)}</div> : <div className="text-[10px] text-[#9ca3af] font-mono">{node.type}</div>}
+                                {(node.children||[]).map((c,i)=>renderOfficeNode(c,[...path,i],ctx))}
+                              </div>
+                          }
+                        }
+                        if(!tree.children || tree.children.length===0) return <div className="flex-1 flex flex-col items-center justify-center p-12 text-center"><div className="w-16 h-16 rounded-[12px] bg-[#f3f4f6] flex items-center justify-center text-[#9ca3af] mb-3"><FileText size={24}/></div><div className="text-sm font-medium text-[#6b7280]">Dokumen kosong</div><div className="text-xs text-[#9ca3af] mt-1">Klik component di kiri untuk menambah ke halaman</div></div>
+                        return <div className="flex-1 py-2">{tree.children.map((c,i)=>renderOfficeNode(c,[i], {}))}</div>
+                      })()}
+                    </div>
+
+                    {/* Page Footer - Office style */}
+                    <div className="h-8 bg-[#f9fafb] border-t border-[#e6e6e6] flex items-center justify-between px-4 text-[10px] text-[#9ca3af] font-mono">
+                      <span>Halaman 1 dari 1</span>
+                      <span className="hidden sm:inline">Ketik langsung di canvas — klik elemen untuk edit di panel kanan • Drag & drop dari kiri</span>
+                      <span>{pageSize} • {zoom}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-4 pb-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#6b7280]">
+                  <span className="flex items-center gap-1.5"><EyeOff size={12}/> Klik garis putus-putus untuk edit Repeater/Condition • Ubah <code className="bg-white px-1 rounded border">source</code> di kanan</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={()=>{ setTree(initialTree); handlePreview(initialTree, previewData)}}>Reset ke Contoh</Button>
+                    <Button variant="ghost" size="sm" onClick={()=>{ navigator.clipboard.writeText(JSON.stringify(tree,null,2)); alert("Tree JSON disalin!")}}><Copy size={14}/> Copy JSON</Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {officeMode === "structure" && (
+              <CardContent>
+                <div className="rounded-[12px] border-2 border-dashed border-[#e6e6e6] bg-[#fafafa] p-3 min-h-[380px]">
+                  <div className="text-[11px] font-semibold tracking-widest uppercase text-[#9ca3af] mb-3 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><Layers size={12}/> Tree Structure — klik node untuk edit</span>
+                    <span className="text-[11px] lowercase font-normal normal-case tracking-normal">Header → Content → Footer</span>
+                  </div>
+                  <div className="space-y-1">
+                    {tree.children?.map((child, idx) => renderTreeNode(child, [idx], 0))}
+                    {(!tree.children || tree.children.length===0) && <div className="py-12 text-center text-xs text-[#9ca3af]">Canvas kosong — tambah component dari kiri</div>}
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={()=>{ setTree(initialTree); handlePreview(initialTree, previewData)}}>Reset ke Contoh</Button>
+                  <Button variant="ghost" size="sm" onClick={()=>{ navigator.clipboard.writeText(JSON.stringify(tree,null,2)); alert("Tree JSON disalin!")}}><Copy size={14}/> Copy JSON</Button>
+                </div>
+              </CardContent>
+            )}
+
+            {officeMode === "json" && (
+              <CardContent>
+                <Label className="text-[11px]">Raw JSON Tree (edit langsung — additive)</Label>
+                <Textarea className="font-mono text-[11px] min-h-[420px]" value={JSON.stringify(tree, null, 2)} onChange={e=>{
                   try { const parsed = JSON.parse(e.target.value); setTree(parsed); handlePreview(parsed, previewData) } catch {}
                 }} />
-              </div>
-            </CardContent>
+                <div className="mt-3 flex gap-2">
+                  <Button variant="outline" size="sm" onClick={()=>{ setTree(initialTree); handlePreview(initialTree, previewData)}}>Reset</Button>
+                  <Button variant="ghost" size="sm" onClick={()=>{ navigator.clipboard.writeText(JSON.stringify(tree,null,2)); alert("Disalin!")}}><Copy size={14}/> Copy</Button>
+                </div>
+              </CardContent>
+            )}
           </Card>
 
           <Card>
@@ -347,13 +613,32 @@ export default function BuilderPage() {
                 </div>
                 <div className="p-4 max-h-[520px] overflow-auto" dangerouslySetInnerHTML={{ __html: previewHtml || "<div style='padding:24px; text-align:center; color:#9ca3af;'>Preview kosong</div>" }} />
               </div>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={()=>{
                   const w = window.open("", "_blank")
                   if (w) { w.document.write(`<html><head><title>Print</title></head><body>${previewHtml}</body></html>`); w.document.close(); w.print() }
-                }}>Cetak / Simpan PDF</Button>
+                }}>Cetak (browser)</Button>
+                <Button size="sm" onClick={async()=>{
+                  try {
+                    const data = JSON.parse(previewData)
+                    const res = await fetch("/api/generated/surat-platform/export-pdf", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ schema: tree, data }) })
+                    if (res.headers.get("content-type")?.includes("application/pdf")) {
+                      const blob = await res.blob()
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement("a")
+                      a.href = url; a.download = `${templateMeta.code || "document"}.pdf`; a.click(); URL.revokeObjectURL(url)
+                    } else {
+                      const j = await res.json()
+                      if (j.html) {
+                        const w = window.open("", "_blank")
+                        if (w) { w.document.write(j.html); w.document.close(); w.print() }
+                      } else alert(j.message)
+                    }
+                  } catch(e:any){ alert("PDF error: "+e.message) }
+                }}>Export PDF (server)</Button>
                 <Button size="sm" variant="ghost" onClick={()=>handlePreview(tree, previewData)}>Refresh</Button>
               </div>
+              <div className="text-[11px] text-[#6b7280] mt-2">Server PDF via <code className="bg-[#f6f5f4] px-1 rounded border">POST /api/.../export-pdf</code> (puppeteer-core + chrome) — additive, tanpa rebuild. Barcode ikut ter-render di PDF.</div>
             </CardContent>
           </Card>
         </div>
@@ -398,7 +683,27 @@ export default function BuilderPage() {
                       <div className="text-[11px] text-[#6b7280]">Jika kondisi TRUE → children dirender, else hidden.</div>
                     </>
                   )}
-                  {selectedNode.props && Object.keys(selectedNode.props).filter(k=>!["source","item","field","operator","value"].includes(k)).map(key=>(
+                  {selectedNode.type === "barcode" && (
+                    <>
+                      <div><Label className="text-[11px]">Value (binding)</Label><Input value={selectedNode.props?.value || ""} onChange={e=>updateSelectedProps("value", e.target.value)} placeholder="{{letter.number}} atau {{employee.nip}}" className="h-8 text-xs font-mono" /><div className="text-[11px] text-[#6b7280] mt-1">Bisa pakai {"{{letter.number}}"}, {"{{document.qrValue}}"}, NIP, dsb</div></div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><Label className="text-[11px]">Format</Label><Select value={selectedNode.props?.format || "CODE128"} onChange={e=>updateSelectedProps("format", e.target.value)}><option value="CODE128">CODE128</option><option value="CODE39">CODE39</option><option value="EAN13">EAN13</option><option value="EAN8">EAN8</option><option value="ITF">ITF</option></Select></div>
+                        <div><Label className="text-[11px]">Align</Label><Select value={selectedNode.props?.align || "center"} onChange={e=>updateSelectedProps("align", e.target.value)}><option value="left">left</option><option value="center">center</option><option value="right">right</option></Select></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><Label className="text-[11px]">Width</Label><Input type="number" value={selectedNode.props?.width || 220} onChange={e=>updateSelectedProps("width", Number(e.target.value))} className="h-8 text-xs" /></div>
+                        <div><Label className="text-[11px]">Height</Label><Input type="number" value={selectedNode.props?.height || 56} onChange={e=>updateSelectedProps("height", Number(e.target.value))} className="h-8 text-xs" /></div>
+                      </div>
+                      <div><Label className="text-[11px]">Display Value</Label><Select value={String(selectedNode.props?.displayValue ?? true)} onChange={e=>updateSelectedProps("displayValue", e.target.value==="true")}><option value="true">true — tampilkan teks</option><option value="false">false — hanya garis</option></Select></div>
+                    </>
+                  )}
+                  {/* generic props (exclude barcode/repeater/condition specifics to avoid dupe) */}
+                  {selectedNode.props && Object.keys(selectedNode.props).filter(k=>!["source","item","field","operator","value","format","width","height","displayValue","align"].includes(k) || (selectedNode.type!=="barcode" && selectedNode.type!=="repeater" && selectedNode.type!=="condition")).filter(k => {
+                    if (selectedNode.type==="barcode" && ["value","format","width","height","displayValue","align"].includes(k)) return false
+                    if (selectedNode.type==="repeater" && ["source","item"].includes(k)) return false
+                    if (selectedNode.type==="condition" && ["field","operator","value"].includes(k)) return false
+                    return true
+                  }).map(key=>(
                     <div key={key}>
                       <Label className="text-[11px] capitalize">{key}</Label>
                       {key === "content" ? (

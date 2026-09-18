@@ -19,20 +19,35 @@ export default function EmployeesPage() {
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name:"", nip:"", position:"", department:"", status:"active", email:"", phone:"" })
   const [detail, setDetail] = useState<any>(null)
+  const [departmentFilter, setDepartmentFilter] = useState<string>("")
+  const [statusFilter, setStatusFilter] = useState<string>("")
+  const [departments, setDepartments] = useState<string[]>([])
 
-  const load = async (p=page,s=search)=>{
+  const load = async (p=page,s=search, dept=departmentFilter, stat=statusFilter)=>{
     setLoading(true)
     const params=new URLSearchParams({ page:String(p), limit:"10", sortBy:"id", sortOrder:"desc" })
     if(s) params.set("search",s)
+    if(dept) params.set("department",dept)
+    if(stat) params.set("status",stat)
     const res=await fetch(`/api/generated/surat-platform/employees?${params}`)
     const json=await res.json()
     setData(json.data??[])
     setTotal(json.total??0)
     setLoading(false)
+    // derive departments list from all employees (once)
+    if (departments.length===0) {
+      try {
+        const allRes = await fetch(`/api/generated/surat-platform/employees?limit=100`)
+        const allJson = await allRes.json()
+        const uniq = Array.from(new Set((allJson.data||[]).map((r:any)=>r.department).filter(Boolean))) as string[]
+        if (uniq.length) setDepartments(uniq)
+        else setDepartments(["Bidang TI","Hukum","Sekretariat","Keuangan","Umum"])
+      } catch {}
+    }
   }
   useEffect(()=>{ load(1,"") },[])
-  const handlePage=(p:number)=>{ setPage(p); load(p, search)}
-  const handleSearch=(s:string)=>{ setSearch(s); setPage(1); load(1,s)}
+  const handlePage=(p:number)=>{ setPage(p); load(p, search, departmentFilter, statusFilter)}
+  const handleSearch=(s:string)=>{ setSearch(s); setPage(1); load(1,s, departmentFilter, statusFilter)}
 
   const openCreate=()=>{ setEditing(null); setForm({ name:"", nip:"", position:"", department:"", status:"active", email:"", phone:""}); setShowModal(true)}
   const openEdit=(row:any)=>{ setEditing(row); setForm({ name:row.name, nip:row.nip, position:row.position, department:row.department||"", status:row.status, email:row.email||"", phone:row.phone||""}); setShowModal(true)}
@@ -40,14 +55,38 @@ export default function EmployeesPage() {
     const url=editing?`/api/generated/surat-platform/employees/${editing.id}`:`/api/generated/surat-platform/employees`
     const method=editing?"PUT":"POST"
     const res=await fetch(url,{method, headers:{"Content-Type":"application/json"}, body:JSON.stringify(form)})
-    if(res.ok){ setShowModal(false); load(page, search)} else alert((await res.json()).message)
+    if(res.ok){ setShowModal(false); load(page, search, departmentFilter, statusFilter)} else alert((await res.json()).message)
   }
-  const handleDelete=async(id:number)=>{ if(!confirm("Hapus?")) return; await fetch(`/api/generated/surat-platform/employees/${id}`,{method:"DELETE"}); load(page, search)}
+  const handleDelete=async(id:number)=>{ if(!confirm("Hapus?")) return; await fetch(`/api/generated/surat-platform/employees/${id}`,{method:"DELETE"}); load(page, search, departmentFilter, statusFilter)}
 
   return (
     <PageShell title="Employees" description="Dataset pegawai untuk demo Repeater & Condition — bisa di-binding via {{employee.name}}, {{employee.nip}}, {{employee.position}}. Field department & status mendukung nested loop & IF." breadcrumbs={[{ label:"Surat Platform", href:"/"},{ label:"Employees"}]} actions={<Button onClick={openCreate}><Plus size={16}/> Tambah Pegawai</Button>}>
       <div className="rounded-[12px] bg-amber-50 border border-amber-200 p-3 text-xs leading-relaxed">
         <span className="font-semibold text-amber-800">Demo Engine:</span> <span className="text-amber-700">Data ini yang di-loop di Repeater <code className="bg-white px-1 rounded border">source: "employees"</code> — tiap item punya <code className="bg-white px-1 rounded border">{"{{employee.name}}"}</code> <code className="bg-white px-1 rounded border">{"{{employee.nip}}"}</code> <code className="bg-white px-1 rounded border">{"{{employee.position}}"}</code> + Condition <code className="bg-white px-1 rounded border">field: "employee.status" operator: "equals" value: "active"</code></span>
+      </div>
+
+      <div className="flex flex-wrap gap-3 items-end bg-white border border-[#e6e6e6] rounded-[12px] p-4">
+        <div className="flex-1 min-w-[180px]">
+          <Label className="text-[11px]">Filter Departemen (Custom Query demo)</Label>
+          <Select value={departmentFilter} onChange={e=>{ setDepartmentFilter(e.target.value); setPage(1); load(1, search, e.target.value, statusFilter) }}>
+            <option value="">Semua Departemen</option>
+            {departments.map(d=> <option key={d} value={d}>{d}</option>)}
+          </Select>
+          <div className="text-[11px] text-[#6b7280] mt-1">Filter via <code className="bg-[#f6f5f4] px-1 rounded border">?department=Bidang TI</code> — dipakai juga di DataSource Custom Query</div>
+        </div>
+        <div className="min-w-[160px]">
+          <Label className="text-[11px]">Filter Status</Label>
+          <Select value={statusFilter} onChange={e=>{ setStatusFilter(e.target.value); setPage(1); load(1, search, departmentFilter, e.target.value)}}>
+            <option value="">Semua Status</option>
+            <option value="active">active</option>
+            <option value="inactive">inactive</option>
+            <option value="leave">leave</option>
+          </Select>
+        </div>
+        <Button variant="outline" size="sm" onClick={()=>{ setDepartmentFilter(""); setStatusFilter(""); setSearch(""); load(1,"","","") }}>Reset Filter</Button>
+        <div className="ml-auto text-xs text-[#6b7280] hidden md:block">
+          <div className="font-mono">Repeater filter: <code className="bg-[#f6f5f4] px-2 py-1 rounded border text-[11px]">{`employees WHERE department = "{{departmentFilter || 'all'}}"`}</code></div>
+        </div>
       </div>
 
       <DataTable
