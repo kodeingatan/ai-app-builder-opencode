@@ -12,20 +12,6 @@ datasource db {
 }
 
 // ── Enums ──
-enum AiProjectStatus {
-  drafting
-  generating
-  ready
-  failed
-}
-
-enum AiGenerationStatus {
-  queued
-  running
-  success
-  failed
-}
-
 enum GuardUrlType {
   allow
   deny
@@ -50,7 +36,6 @@ model User {
 
   userRoles    UserRole[]
   activityLogs ActivityLog[]
-  aiProjects   AiProject[] @relation("UserAiProjects")
 
   @@map("users")
 }
@@ -161,138 +146,6 @@ model PermissionUrl {
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@map("permission_urls")
-}
-
-// ── Builder META (8 schemas) ──
-model AiProject {
-  id            Int               @id @default(autoincrement())
-  name          String           
-  slug          String            @unique
-  initialPrompt String           
-  status        AiProjectStatus   @default(drafting)
-  previewUrl    String?          
-  ownerId       Int?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-
-  owner       User?         @relation("UserAiProjects", fields: [ownerId], references: [id], onDelete: SetNull)
-  prompts     AiPrompt[]
-  generations AiGeneration[]
-  deployments AiDeployment[]
-
-  @@index([ownerId])
-  @@index([status])
-  @@map("ai_projects")
-}
-
-model AiPrompt {
-  id             Int      @id @default(autoincrement())
-  projectId      Int
-  promptText     String  
-  inferredIntent String?  // JSON stringified InferredIntent
-  version        Int      @default(1)
-  createdAt      DateTime @default(now())
-
-  project     AiProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  generations AiGeneration[]
-
-  @@unique([projectId, version])
-  @@map("ai_prompts")
-}
-
-model AiGeneration {
-  id         Int                 @id @default(autoincrement())
-  projectId  Int
-  promptId   Int?
-  status     AiGenerationStatus  @default(queued)
-  spec       String?             // JSON stringified AiAppSchema snapshot
-  error      String?            
-  durationMs Int?
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-
-  project  AiProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  prompt   AiPrompt?   @relation(fields: [promptId], references: [id], onDelete: SetNull)
-  appSchema AiAppSchema?
-
-  @@index([status])
-  @@map("ai_generations")
-}
-
-model AiAppSchema {
-  id           Int      @id @default(autoincrement())
-  generationId Int      @unique
-  entities     String   // JSON array EntityDef
-  pages        String   // JSON array PageDef
-  roles        String   // JSON array RoleDef
-  flows        String?  // JSON Business flows
-  apiContract  String?  // JSON ApiContract
-  createdAt    DateTime @default(now())
-
-  generation     AiGeneration      @relation(fields: [generationId], references: [id], onDelete: Cascade)
-  dataModels     AiDataModel[]
-  pagesList      AiPage[]
-  componentSpecs AiComponentSpec[]
-
-  @@map("ai_app_schemas")
-}
-
-model AiDataModel {
-  id        Int      @id @default(autoincrement())
-  schemaId  Int
-  name      String   // PascalCase e.g. Product
-  slug      String   // snake plural e.g. products -> becomes table suffix
-  fields    String   // JSON FieldDef[] [{name:"price", type:"decimal", required:true,...}]
-  relations String?  // JSON RelationDef[]
-  indexes   String?  // JSON string[] search/index fields
-  createdAt DateTime @default(now())
-
-  schema AiAppSchema @relation(fields: [schemaId], references: [id], onDelete: Cascade)
-
-  @@unique([schemaId, slug])
-  @@map("ai_data_models")
-}
-
-model AiPage {
-  id            Int      @id @default(autoincrement())
-  schemaId      Int
-  route         String  
-  title         String  
-  type          String   // dashboard|list|detail|form|report
-  componentTree String   // JSON {root:"PageShell", children:["DataTable"...]}
-  createdAt     DateTime @default(now())
-
-  schema AiAppSchema @relation(fields: [schemaId], references: [id], onDelete: Cascade)
-
-  @@index([route])
-  @@map("ai_pages")
-}
-
-model AiComponentSpec {
-  id        Int      @id @default(autoincrement())
-  schemaId  Int
-  name      String   // e.g. ProductTable
-  type      String    // DataTable|FormModal|DetailDrawer|StatCard|FilterBar
-  props     String   // JSON props spec
-  tokens    String?  // JSON design tokens override
-  createdAt DateTime @default(now())
-
-  schema AiAppSchema @relation(fields: [schemaId], references: [id], onDelete: Cascade)
-
-  @@map("ai_component_specs")
-}
-
-model AiDeployment {
-  id        Int      @id @default(autoincrement())
-  projectId Int
-  env       String   // preview|production
-  url       String  
-  builtAt   DateTime
-  createdAt DateTime @default(now())
-
-  project AiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("ai_deployments")
 }
 
 // ── Generated Global Tabel — Meta + Dynamic (additive, GUI-driven) ──

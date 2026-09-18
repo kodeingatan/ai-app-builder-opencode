@@ -1,6 +1,8 @@
 import "dotenv/config"
 import { PrismaLibSql } from "@prisma/adapter-libsql"
 import { PrismaClient } from "../app/generated/prisma/client"
+import fs from "fs"
+import path from "path"
 
 const url = process.env.DATABASE_URL || "file:./dev.db"
 const adapter = new PrismaLibSql({ url })
@@ -15,12 +17,14 @@ async function main() {
   const projectName = "Surat Platform - Document Builder"
   const promptText = `Targetnya adalah membuat sistem yang bisa menghasilkan berbagai jenis surat tanpa developer harus membuat template satu per satu. Konsep Document Template → Layout → Component → Data Source → Repeat/Loop → Condition dengan JSON Tree, Repeater, Condition, Binding {{}}`
 
-  console.log("🚀 Setting up Surat Platform project...")
+  console.log("🚀 Setting up Surat Platform project (file storage mode)...")
 
-  // Clean existing if exists
-  const existing = await prisma.aiProject.findUnique({ where: { slug } })
-  if (existing) {
-    console.log(`Found existing project ${slug} id=${existing.id}, cleaning...`)
+  // Clean existing file if exists
+  const fileDir = path.join(process.cwd(), "docs", "ai-builder", "projects")
+  const filePath = path.join(fileDir, `${slug}.json`)
+  const specPath = path.join(fileDir, `${slug}.spec.json`)
+  if (fs.existsSync(filePath)) {
+    console.log(`Found existing file ${filePath}, cleaning...`)
     // Drop dynamic tables
     const tables = [
       toTable(slug, "templates"),
@@ -37,22 +41,21 @@ async function main() {
         console.warn(`⚠️ Drop ${t} failed`, e)
       }
     }
-    // Delete project cascade will handle prompts/generations/schemas
-    await prisma.aiProject.delete({ where: { id: existing.id } })
-    console.log(`🗑️ Deleted existing project`)
+    try { fs.unlinkSync(filePath); console.log(`🗑️ Deleted file ${filePath}`) } catch {}
+    try { if (fs.existsSync(specPath)) fs.unlinkSync(specPath) } catch {}
+  } else {
+    // also drop just in case tables exist without file
+    const tables = [
+      toTable(slug, "templates"),
+      toTable(slug, "data_sources"),
+      toTable(slug, "components"),
+      toTable(slug, "documents"),
+      toTable(slug, "employees"),
+    ]
+    for (const t of tables) {
+      try { await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${t}"`) } catch {}
+    }
   }
-
-  // Create project
-  const project = await prisma.aiProject.create({
-    data: {
-      name: projectName,
-      slug,
-      initialPrompt: promptText,
-      status: "generating",
-      previewUrl: `/generated/${slug}`,
-    },
-  })
-  console.log(`✅ Created project ${project.slug} id=${project.id}`)
 
   const inferredIntent = {
     domain: "document_platform",
@@ -82,38 +85,28 @@ async function main() {
     flows: ["Template Builder Drag&Drop", "Binding Data {{}}", "Repeater Loop", "Condition IF/ELSE", "Render Engine → HTML/PDF"],
   }
 
-  const prompt = await prisma.aiPrompt.create({
-    data: {
-      projectId: project.id,
-      promptText,
-      inferredIntent: JSON.stringify(inferredIntent),
-      version: 1,
-    },
-  })
-  console.log(`✅ Created prompt v${prompt.version}`)
+  // Save to file instead of DB
+  const now = new Date().toISOString()
+  const projectFile = {
+    name: projectName,
+    slug,
+    initialPrompt: promptText,
+    status: "ready" as const,
+    previewUrl: `/generated/${slug}`,
+    ownerId: null,
+    createdAt: now,
+    updatedAt: now,
+    prompts: [{ promptText, inferredIntent: JSON.stringify(inferredIntent), version: 1, createdAt: now }],
+    generations: [{ status: "success", spec: JSON.stringify(inferredIntent), durationMs: 3200, createdAt: now, updatedAt: now }],
+    deployments: [{ env: "preview", url: `/generated/${slug}`, builtAt: now, createdAt: now }],
+    spec: inferredIntent,
+  }
+  if (!fs.existsSync(fileDir)) fs.mkdirSync(fileDir, { recursive: true })
+  fs.writeFileSync(filePath, JSON.stringify(projectFile, null, 2), "utf-8")
+  fs.writeFileSync(specPath, JSON.stringify(inferredIntent, null, 2), "utf-8")
+  console.log(`✅ Created file ${filePath}`)
 
-  const generation = await prisma.aiGeneration.create({
-    data: {
-      projectId: project.id,
-      promptId: prompt.id,
-      status: "running",
-      spec: JSON.stringify(inferredIntent),
-    },
-  })
-  console.log(`✅ Created generation id=${generation.id} running`)
-
-  // Create schema
-  const schema = await prisma.aiAppSchema.create({
-    data: {
-      generationId: generation.id,
-      entities: JSON.stringify(inferredIntent.entities),
-      pages: JSON.stringify(inferredIntent.pages),
-      roles: JSON.stringify(inferredIntent.roles),
-      flows: JSON.stringify(inferredIntent.flows),
-    },
-  })
-
-  // DataModels
+  // DataModels — now just logged, not DB
   const dataModels = [
     {
       name: "Template",
@@ -194,23 +187,13 @@ async function main() {
   ]
 
   for (const dm of dataModels) {
-    await prisma.aiDataModel.create({ data: { schemaId: schema.id, ...dm } })
-    console.log(`✅ Created data model ${dm.slug}`)
+    console.log(`✅ Prepared data model ${dm.slug} (file mode)`)
   }
 
-  // Pages
+  // Pages — logged
   for (const p of inferredIntent.pages) {
-    await prisma.aiPage.create({
-      data: {
-        schemaId: schema.id,
-        route: p.route,
-        title: p.title,
-        type: p.type,
-        componentTree: JSON.stringify({ root: "PageShell", children: ["DataTable"] }),
-      },
-    })
+    console.log(`✅ Prepared page ${p.route}`)
   }
-  console.log(`✅ Created ${inferredIntent.pages.length} pages`)
 
   // ComponentSpecs
   const specs = [
@@ -220,7 +203,7 @@ async function main() {
     { name: "RendererEngine", type: "Renderer", props: JSON.stringify({ supports: ["loop","condition","binding","nested"] }) },
   ]
   for (const s of specs) {
-    await prisma.aiComponentSpec.create({ data: { schemaId: schema.id, ...s } })
+    console.log(`✅ Prepared spec ${s.name} (file mode)`)
   }
 
   console.log("---- Creating dynamic tables ----")
@@ -465,18 +448,16 @@ async function main() {
     console.log(`✅ Seeded ${docs.length} documents`)
   }
 
-  // Update generation to success and project to ready
-  await prisma.aiGeneration.update({ where: { id: generation.id }, data: { status: "success", durationMs: 3200 } })
-  await prisma.aiProject.update({ where: { id: project.id }, data: { status: "ready" } })
-  await prisma.aiDeployment.create({
-    data: {
-      projectId: project.id,
-      env: "preview",
-      url: `/generated/${slug}`,
-      builtAt: new Date(),
-    },
-  })
-  console.log(`✅ Project ${slug} ready at /generated/${slug}`)
+  // Update file to ready (ai_* tables sudah dihapus, pakai file)
+  try {
+    const f = JSON.parse(fs.readFileSync(filePath, "utf-8"))
+    f.status = "ready"
+    f.updatedAt = new Date().toISOString()
+    if (f.generations && f.generations[0]) { f.generations[0].status = "success"; f.generations[0].durationMs = 3200 }
+    if (f.deployments) f.deployments[0].builtAt = new Date().toISOString()
+    fs.writeFileSync(filePath, JSON.stringify(f, null, 2), "utf-8")
+  } catch {}
+  console.log(`✅ Project ${slug} ready at /generated/${slug} (file)`)
 
   await prisma.$disconnect()
 }

@@ -1,4 +1,6 @@
 import prisma from "@/lib/prisma"
+import fs from "fs"
+import path from "path"
 
 // Server Component — langsung query SQLite via Prisma tanpa API Route
 export default async function PrismaDemoPage() {
@@ -8,11 +10,18 @@ export default async function PrismaDemoPage() {
     orderBy: { id: "asc" },
   })
 
+  // File-based builder projects (ai_* tables sudah dihapus, ganti file di docs/ai-builder/projects/)
+  let projects = 0
+  try {
+    const dir = path.join(process.cwd(), "docs", "ai-builder", "projects")
+    if (fs.existsSync(dir)) projects = fs.readdirSync(dir).filter((f) => f.endsWith(".json") && !f.endsWith(".spec.json") && !f.endsWith(".meta.json")).length
+  } catch {}
+
   const stats = {
     users: await prisma.user.count(),
     roles: await prisma.role.count(),
     permissions: await prisma.permission.count(),
-    projects: await prisma.aiProject.count(),
+    projects,
   }
 
   return (
@@ -38,7 +47,7 @@ export default async function PrismaDemoPage() {
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">{stats.projects}</div>
-          <div className="text-xs text-muted-foreground">AiProjects</div>
+          <div className="text-xs text-muted-foreground">Projects (file)</div>
         </div>
       </div>
 
