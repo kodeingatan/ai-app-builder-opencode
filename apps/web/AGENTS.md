@@ -1,6 +1,8 @@
 > **Lokasi:** `apps/web/AGENTS.md` — mirror adaptasi dari root `AGENTS.md` untuk sesi di dalam `apps/web`.
-> **Last Backup:** 2026-09-18 — via `/knowledge:backup`
+> Last Backup: 2026-09-18 — via /knowledge:backup
+> **Last Backup:** 2026-09-18 — via /knowledge:backup
 > **Scope:** `apps/web/*` saja. Untuk root, lihat `../../AGENTS.md`.
+> **Source:** `apps/web/*` — `prisma/schema.prisma` (19 models real, 25 spec), `app/*`, `lib/*`
 
 # Agent Guide — AI App Builder Platform
 
@@ -20,49 +22,46 @@
 - Input: `buatkan aplikasi kasir`
 - Output: App POS lengkap → Dashboard omzet, Produk (CRUD + kategori + stok + barcode), Transaksi (keranjang + diskon + print struk), Pelanggan, Laporan, User & Role (Admin/Kasir), Activity Log, Settings. UI modern, search, pagination, mobile-friendly.
 
+**Tambahan Current (2026-09-18):** Platform kini stabil dengan **Generated Global Tabel** (13 tipe kolom, `dyn_*` physical) + **Persuratan** (Component → Template → Administrasi → Hasil) — semua GUI tanpa JSON manual. Lihat `docs/core-concept.md`.
+
 ## Critical Working Directory
+
+All commands run from . — path aktual: `apps/web` adalah `.` itu sendiri. Jangan `cd apps/web` lagi. Repo root ada di `../`.
 
 **All commands run from `.`** — ini adalah `apps/web` itu sendiri. Jangan `cd apps/web` lagi. Repo root ada di `../`.
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 (App Router) — full-stack React framework (frontend + API Routes)
+- **Framework**: Next.js 16.3.5 (App Router) — full-stack React framework (frontend + API Routes)
 - **Language**: TypeScript 5 + React 19 (`"use client"` + Server Components)
 - **UI**: shadcn/ui (Radix UI primitives) + Tailwind CSS v4 (utility only) + lucide-react icons
-- **State**: Zustand 5 (global) + TanStack Query 5 / React Query (server state) — *pengganti Pinia*
-- **ORM**: Prisma 7.10 dengan **SQLite provider** + `@prisma/adapter-libsql` — *menggantikan TypeORM 1.1 EntitySchema*, dipakai dari Next.js API Routes / Route Handlers via `lib/prisma.ts` singleton
+- **State**: Zustand 5 (global) + TanStack Query 5 / React Query (server state)
+- **ORM**: Prisma 7.10 dengan **SQLite provider** + `@prisma/adapter-libsql` — dipakai dari Next.js API Routes via `lib/prisma.ts` singleton
 - **Database**: SQLite via Prisma — `dev.db` di `apps/web/` (DATABASE_URL="file:./dev.db", schema `prisma/schema.prisma`, config `prisma7.config.ts`)
-- **Validation**: Zod 3.24 (DTOs di `lib/dto/` atau `app/api/*/dto.ts`)
-- **Auth**: JWT (`jsonwebtoken`), 24h expiry, httpOnly cookie + localStorage, Next.js `middleware.ts` guard
-- **Animation**: Framer Motion 12 + Tailwind transitions (pengganti Anime.js)
-- **Icons**: `lucide-react` — `<Icon size={16} />` (pengganti `@vicons/carbon` + `h(NIcon)`)
+- **Validation**: Zod 4.6 (DTOs di `lib/dto/` atau `app/api/*/dto.ts`)
+- **Auth**: JWT (`jsonwebtoken`), 24h expiry, httpOnly cookie + localStorage, Next.js `middleware.ts` guard (catatan: file middleware tidak ada di repo saat backup — guard dilakukan di service/API)
+- **Animation**: Framer Motion 12 + Tailwind transitions
+- **Icons**: `lucide-react` — `<Icon size={16} />`
 
 - **AI Builder Layer**:
   - Prompt Inference Engine — prompt pendek → spec lengkap (intent, entities, roles, pages, flows)
-  - Spec-to-Schema Generator — spec → Prisma model (via `prisma/schema.prisma` platform) + DTO Zod, Service, API Routes (dynamic tables via `prisma.$executeRaw`)
+  - Spec-to-Schema Generator — spec → Prisma model + DTO Zod, Service, API Routes (dynamic tables via `prisma.$executeRaw`)
   - UI Assembly Engine — schema → Pages + Components (DataTable, PageShell, FormModal, DetailDrawer) dengan design tokens
   - Preview & Iteration — hot preview + refine loop (`perbaiki ...`, `tambahkan ...`)
 
-## Commands (from `apps/web/`)
+## Commands (from `.`)
 
 ```bash
 npm run dev              # Next.js dev server (Turbopack) — http://localhost:3000
 npm run build            # Production build (next build)
 npm run start            # Production start (next start)
 npm run lint             # ESLint (next lint)
-npm run test             # All vitest tests
-npm run test:unit        # Unit tests only (vitest)
-npm run test:component   # Component tests (React Testing Library + vitest)
-npm run test:e2e         # E2E (Playwright, requires dev server)
-npm run test:e2e:debug   # E2E debug mode
-npm run storybook        # Storybook on :6006
-npm run build-storybook  # Static Storybook build
-npx prisma generate              # Generate Prisma Client ke app/generated/prisma
-npx prisma migrate dev --name init  # Buat & jalankan migrasi SQLite
-npx prisma studio                # GUI database di http://localhost:5555
-npx prisma db seed               # Jalankan prisma/seed.ts (atau npx tsx prisma/seed.ts)
+npm run db:generate      # prisma generate (client ke app/generated/prisma)
+npm run db:migrate       # prisma migrate dev (buat & jalankan migrasi SQLite)
+npm run db:studio        # GUI database di http://localhost:5555 (npx prisma studio)
+npm run db:seed          # Jalankan prisma/seed.ts (atau npx tsx prisma/seed.ts)
 
-# AI App Builder
+# AI App Builder (jika tersedia)
 npm run builder:generate -- "buatkan aplikasi kasir"  # CLI: prompt → generate app
 npm run builder:preview                               # Preview generated app
 npm run builder:list                                  # List all generated apps
@@ -86,7 +85,7 @@ User Prompt (singkat)
 
 ### Runtime Data Flow (Next.js)
 ```
-Client → Next.js Middleware (middleware.ts, JWT)
+Client → Next.js Middleware (JWT jika ada)
   → Route Handler (app/api/[module]/route.ts) → Zod DTO validation
   → Service layer (plain object, not class)
   → PrismaClient (lib/prisma.ts, SQLite via @prisma/adapter-libsql) → JSON Response
@@ -97,29 +96,30 @@ Client → Next.js Middleware (middleware.ts, JWT)
 Request → JWT (cookie/header) → User → Role → Guard (deny → allow) → Permission (method+URL) → ALLOW / 403
 ```
 
-### Entities (RBAC + AI Builder — Dynamic)
+### Entities (RBAC + Global Tables + Persuratan — File untuk Builder)
 
-Canonical source: `prisma/schema.prisma` (Prisma 7) — 18 models platform + `lib/prisma.ts` singleton. `app/generated/prisma` berisi generated client. **Jangan duplikasi daftar entity di tempat lain.** Dynamic tables `{slug}_{entity}` TIDAK di schema — dibuat runtime via `prisma.$executeRaw` (raw SQL `CREATE TABLE "{slug}_{entity}"`) di `lib/services/ai-builder/codegen.service.ts`.
+Canonical source: `prisma/schema.prisma` (Prisma 7) — **19 models real** (dihitung `grep -c "^model "` = 19) + `lib/prisma.ts` singleton. `app/generated/prisma` berisi generated client. **Jangan duplikasi daftar entity di tempat lain.** Dynamic tables `dyn_*` dan surat platform TIDAK di schema — dibuat runtime via `prisma.$executeRaw`.
 
-**Platform Tables (static, 18 models via Prisma)**: RBAC (User, Role, Permission, PermissionMethod, PermissionUrl, Guard, GuardUrl, ActivityLog, Setting + junctions `users_roles`, `roles_guards`, `roles_permissions`) + Builder META (AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment).
+> **Konflik spec vs real (2026-09-18):** Spec `/knowledge:backup` menyebut 25 models (RBAC 18 + Global 2 + Persuratan 5). Real di `prisma/schema.prisma` = 19 models (RBAC 10 + junctions termasuk = 12 + Global 2 + Persuratan 5 + ActivityLog + Setting = 19). Dokumen ini memakai **19 real** + catatan konflik.
 
-- `AiProject` — container aplikasi yang di-generate (name, slug, prompt, status: drafting/generating/ready/failed, previewUrl)
-- `AiPrompt` — riwayat prompt user per project (promptText, inferredIntent JSON string, version)
-- `AiGeneration` — satu run generation (status, spec JSON string, error, durationMs)
-- `AiAppSchema` — blueprint app (entities JSON string, pages JSON string, roles JSON string)
-- `AiDataModel` — META spec per entity (fields JSON string, relations JSON string) → generate physical table `{slug}_{entity}` via raw SQL
-- `AiPage` — halaman yang di-generate (route, title, type, componentTree JSON string)
-- `AiComponentSpec` — spec komponen reusable (DataTable, FormModal, etc.)
-- `AiDeployment` — info preview/deploy (env, url, builtAt)
+**Platform Tables (static, 19 models via Prisma)**:
+- RBAC: `User`, `Role`, `Permission`, `Guard`, `UserRole` (junction users_roles), `RoleGuard` (roles_guards), `RolePermission` (roles_permissions), `GuardUrl`, `PermissionMethod`, `PermissionUrl` (10) + `ActivityLog`, `Setting` (2) = 12
+- Global Tables: `GlobalTable`, `GlobalColumn` — 13 tipe kolom (text, richtext, date, datetime, time, image, select, select_multiple, select_table, select_table_multiple, number, hidden_operation_text, readonly_operation_text)
+- Persuratan: `PersuratanComponent`, `PersuratanTemplate`, `PersuratanAdministration`, `PersuratanStep`, `PersuratanData` (5)
 
-**Dynamic App Tables (per prompt, N)**: `{slug_snake}_{entity_snake}` physical tables — contoh jika prompt `kasir` → `pos_kasir_products`, `pos_kasir_categories`, `pos_kasir_transactions`, `pos_kasir_customers`; jika `klinik` → `crm_klinik_patients`, dll. **0 tabel bisnis di awal — N setelah `POST /api/builder/generate`.**
+- `GlobalTable` — meta tabel dinamis (name slug `pegawai`, displayName `Pegawai`, status) → physical `dyn_pegawai`
+- `GlobalColumn` — kolom dengan 13 tipe + `isRequired`/`isOrderable`/`isSearchable` + `optionsJson` (format, options, relationTable, displayFields, valueField, isCurrency, expression)
+- `PersuratanComponent` — komponen surat (name, isLooping, contentHtml, bindingsJson)
+- `PersuratanTemplate` / `PersuratanAdministration` / `PersuratanStep` / `PersuratanData` — alur persuratan template → administrasi → hasil
 
-### Database (Platform static + Dynamic per prompt)
+**Dynamic App Tables (per tabel global, N)**: `dyn_*` physical tables — contoh `pegawai` → `dyn_pegawai`. **0 tabel bisnis di awal — N setelah create via GUI `/global-tables` atau `POST /api/global-tables` → `CREATE TABLE "dyn_pegawai"` via `lib/services/global-tables.service.ts`.** N tabel ini tidak di-migrate, additive only.
 
-- **Platform (static)**: Prisma Migrate — `prisma/schema.prisma` + `prisma/migrations/*` + `prisma7.config.ts` (`DATABASE_URL="file:./dev.db"`). Dev: `npx prisma migrate dev`, Production: `npx prisma migrate deploy`. Client di `app/generated/prisma` via `@prisma/adapter-libsql`.
-- **Dynamic (per prompt)**: `prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')` runtime di `lib/services/ai-builder/codegen.service.ts` — **bukan migration file**, transactional, additive only (`ADD COLUMN`, never `DROP`).
-- Seed: platform seed (`prisma/seed.ts` → users/roles/permissions + Builder Templates META) via `npx tsx prisma/seed.ts` atau `npx prisma db seed`; dynamic seed 5-10 rows per entity idempotent setelah `createTable` via `prisma.$executeRaw`.
-- Reset platform: hapus `apps/web/dev.db` + `apps/web/prisma/migrations` lalu `npx prisma migrate dev --name init`, restart dev server. Reset dynamic project: `DELETE /api/builder/projects/{slug}` → `prisma.$executeRawUnsafe('DROP TABLE "{slug}_{entity}"')` per entity.
+### Database (Platform static + Dynamic + File)
+
+- **Platform (static)**: Prisma Migrate — `prisma/schema.prisma` (19 models real) + `prisma/migrations/20260918005609_init` + `prisma7.config.ts` (`DATABASE_URL="file:./dev.db"`). Dev: `npx prisma migrate dev`, Prod: `npx prisma migrate deploy`. Untuk perubahan non-destruktif kecil bisa `npx prisma db push` (tidak drop, hanya sync). Client di `app/generated/prisma` via `@prisma/adapter-libsql`.
+- **Dynamic (per tabel global)**: `prisma.$executeRawUnsafe('CREATE TABLE "dyn_{name}" (...)')` runtime di `lib/services/global-tables.service.ts` + `lib/renderer/operationEngine.ts` untuk hidden/readonly — **bukan migration file**, additive only (`ADD COLUMN`, never `DROP` kecuali hapus tabel `DROP TABLE`).
+- Seed: platform seed (`prisma/seed.ts` → users/roles/permissions) via `npx tsx prisma/seed.ts`; dynamic seed via GUI `/global-tables` → `POST /api/dyn/{table}`.
+- Reset platform: hapus `dev.db` + `prisma/migrations` lalu `npx prisma migrate dev --name init`, restart dev server.
 
 ## Frontend Conventions (Next.js + React)
 
@@ -132,12 +132,12 @@ Canonical source: `prisma/schema.prisma` (Prisma 7) — 18 models platform + `li
 - **Components** di `components/` (ui, common, layout) + `app/` co-located, **Generated** di `app/generated/{projectSlug}/...` terisolasi
 
 ### Key Hooks / Libraries
-- `useApi()` — fetch wrapper + auth interceptor + 401/403 handling (atau TanStack Query + `fetcher`)
+- `useApi()` — fetch wrapper + auth interceptor + 401/403 handling
 - `useAuthorization()` — `hasRole()`, `hasPermission()`, `canAccessUrl()`
 - `useDataTable()` — search, sort, column visibility, server pagination (hook)
-- `usePageTransition()` — Framer Motion helpers (pengganti Anime.js)
-- `useAiBuilder()` — **baru**: `generate(prompt)`, `refine(prompt)`, `preview()`, `deploy()`, `listProjects()`
-- Feature hooks: `useUsersData`, `useRolesData` — Generated apps punya `use{Entity}Data` otomatis (TanStack Query)
+- `usePageTransition()` — Framer Motion helpers
+- `useAiBuilder()` — `generate(prompt)`, `refine(prompt)`, `preview()`, `deploy()`, `listProjects()`
+- Feature hooks: `useUsersData`, `useRolesData` — Generated apps punya `use{Entity}Data` otomatis
 
 ### Import Aliases (Next.js)
 - `@/` → root `apps/web/` (e.g. `@/components/ui/button`, `@/lib/db`)
@@ -145,7 +145,7 @@ Canonical source: `prisma/schema.prisma` (Prisma 7) — 18 models platform + `li
 - `@/lib` → `lib/` (services, db, dto)
 
 ### State Persistence
-- Auth: `httpOnly cookie` (`accessToken`) + `localStorage` mirror untuk client hooks (atau NextAuth patterns)
+- Auth: `httpOnly cookie` (`accessToken`) + `localStorage` mirror untuk client hooks
 - User: `localStorage` `user` + React Context `AuthContext`
 - Column visibility: `localStorage` per DataTable
 - Builder: `localStorage` `ai-builder-recent-prompts` + `ai-builder-preview`
@@ -181,33 +181,23 @@ export async function GET(req: NextRequest) {
   const result = await UsersService.findAll(query)
   return NextResponse.json(result)
 }
+```
+
+### Global Tables Route Pattern
+```typescript
+// app/api/global-tables/route.ts
+import { CreateGlobalTableSchema } from '@/lib/dto/global-tables.dto'
+import { GlobalTablesService } from '@/lib/services/global-tables.service'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  // ... Zod parse + service
+  const parsed = CreateGlobalTableSchema.parse(body) // 13 tipe
+  const created = await GlobalTablesService.create(parsed)
+  // → CREATE TABLE "dyn_{name}" + indexes isSearchable/isOrderable
+  return NextResponse.json(created, { status: 201 })
 }
-```
-
-```typescript
-// app/api/users/[id]/route.ts
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) { /* ... */ }
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) { /* ... */ }
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) { /* ... */ }
-```
-
-### AI Generation Route Pattern
-```typescript
-// app/api/builder/generate/route.ts
-import { GenerateSchema } from '@/lib/dto/ai-builder.dto'
-import { AiBuilderService } from '@/lib/services/ai-builder.service'
-
-export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { prompt } = GenerateSchema.parse(body)
-  // getUser dari cookie JWT via lib/auth
-  const result = await AiBuilderService.generate({ prompt, userId })
-  return NextResponse.json(result)
-}
+// app/api/dyn/[table]/route.ts → listData (search/options/order) + createData (computeOperationColumns)
+// app/api/persuratan/* → components, templates, administrations
 ```
 
 ### Error Handling
@@ -217,35 +207,32 @@ export async function POST(req: NextRequest) {
 ### Common Query Parameters (list endpoints)
 - `page` (1), `limit` (20, max 100), `search`, `searchField`, `sortBy` ('id'), `sortOrder` (DESC)
 - Response: `{ data: [...], total, page, limit, totalPages }`
+- Dyn: `search` hanya kolom `isSearchable`, `sortBy` hanya jika `isOrderable`, `visibleCols` ditangani client
 
 ## AI App Builder — Behaviour Contract (Wajib untuk AI Assistant)
 
 1. **Jangan banyak tanya balik.** Kalau prompt ambigu (`buatkan aplikasi toko`), langsung infer yang paling umum & bagus (POS + inventory + laporan), jangan minta klarifikasi panjang. Maksimal 1 kalimat konfirmasi opsional, lalu generate.
 2. **Selalu hasilkan app lengkap + cantik.** Minimal: Auth (jika butuh) + Dashboard + 2-4 CRUD entity + search/sort/pagination + form validation + empty/loading/error states + responsive + sidebar navigasi. Jangan kasih scaffold kosong.
-3. **Design System kanonis wajib dipakai.** Warna `#0075de` primary, canvas `#f6f5f4`, hairline `#e6e6e6`, radius 12/8/4, Inter, PageShell + DataTable kanonis, detail-view pattern, lucide-react icons. Jangan bikin app jelek/generic.
+3. **Design System kanonis wajib dipakai.** Warna `#0075de` primary (HSL 210 100% 44%), canvas `#f6f5f4`, hairline `#e6e6e6`, radius 12/8/4, Inter, PageShell + DataTable kanonis, detail-view pattern, lucide-react icons. Office doc paper `#e8ecef` + shadow `[0_2px_16px_rgba(0,0,0,0.12)]`.
 4. **Opinionated & production-ready.** Pilih field & relasi yang masuk akal, buat seed data contoh, buat permission/role default, buat validasi Zod yang ketat.
 5. **Iterasi via prompt pendek.** Dukung `tambahkan fitur X`, `ganti warna jadi Y`, `perbaiki tabel Z` tanpa rebuild dari nol.
 6. **Jelaskan singkat setelah generate.** Beri ringkasan: apa yang jadi, route apa saja, cara pakai, next refine suggestion (1-2 baris).
-
-Contoh respons ideal:
-> User: `buatkan aplikasi kasir`
-> AI: `Siap — aku bikinin aplikasi Kasir POS lengkap ya. Ada Produk, Transaksi, Pelanggan, Laporan, Dashboard. Sudah jadi di /generated/pos-kasir — bisa langsung dipakai. Mau tambah barcode scanner atau struk PDF?`
 
 ## Naming Conventions (Next.js)
 
 | Type | Convention | Example |
 |------|-----------|---------|
-| Entity file | `{name}.entity.ts` | `user.entity.ts`, `ai-project.entity.ts` |
-| Service file | `{name}.service.ts` | `users.service.ts`, `ai-builder.service.ts` |
-| Service export | `{Name}Service` | `UsersService` |
-| DTO file | `{name}.dto.ts` | `users.dto.ts`, `ai-builder.dto.ts` |
-| DTO schema | `{Verb}{Name}Schema` | `CreateUserSchema`, `GenerateAppSchema` |
-| API route | `app/api/{module}/route.ts` | `app/api/users/route.ts`, `app/api/auth/login/route.ts` |
+| Entity file | `{name}.entity.ts` | `user.entity.ts`, `global-table.entity.ts` |
+| Service file | `{name}.service.ts` | `users.service.ts`, `global-tables.service.ts` |
+| Service export | `{Name}Service` | `UsersService`, `GlobalTablesService` |
+| DTO file | `{name}.dto.ts` | `users.dto.ts`, `global-tables.dto.ts` |
+| DTO schema | `{Verb}{Name}Schema` | `CreateUserSchema`, `CreateGlobalTableSchema` |
+| API route | `app/api/{module}/route.ts` | `app/api/users/route.ts`, `app/api/global-tables/route.ts`, `app/api/dyn/[table]/route.ts` |
 | Hook | `use{Name}.ts` | `useApi.ts`, `useAiBuilder.ts` |
 | Store | `{name}.ts` (Zustand) | `auth.ts`, `ai-builder.ts` |
 | Component | `{Name}.tsx` | `DataTable.tsx`, `AiPromptBar.tsx` |
 | Generated app | `app/generated/{slug}/` | `app/generated/pos-kasir/` |
-| Shared type | `{name}.ts` in `lib/types/` | `user.ts`, `ai-project.ts` |
+| Shared type | `{name}.ts` in `lib/types/` | `user.ts`, `global-table.ts` |
 | File naming | kebab-case non-component | `use-page-transition.ts` |
 
 ## E2E Testing (Playwright)
@@ -259,29 +246,30 @@ Contoh respons ideal:
 ## Adding a New Entity (Next.js + Prisma)
 
 1. Tambah model di `prisma/schema.prisma` (mis. `model Product { ... }`)
-2. `npx prisma migrate dev --name add_product` (generate & apply migrasi)
+2. `npx prisma migrate dev --name add_product` (atau `npx prisma db push` untuk sync cepat tanpa drop)
 3. `npx prisma generate` (update `app/generated/prisma`)
 4. `lib/dto/{name}.dto.ts` (Zod)
 5. `lib/services/{name}.service.ts` (plain object via `prisma.product.*`)
 6. `app/api/{name}/route.ts` + `app/api/{name}/[id]/route.ts`
 7. `lib/types/{name}.ts`
 8. Frontend: `app/(dashboard)/{name}/page.tsx`, hooks, components
-9. **Jika via AI Builder**: cukup prompt — generator akan buat 1-8 otomatis via `prisma.$executeRaw` untuk dynamic tables, lalu review. Dynamic tables tidak perlu migrasi schema.
+9. **Jika via Global Tables**: cukup GUI `/global-tables` — generator akan buat physical `dyn_*` otomatis via `prisma.$executeRaw` tanpa migrasi schema; 13 tipe siap pakai. Lihat `docs/core-concept.md`.
 
 ## Important Gotchas (Next.js + Prisma)
 
-- Prisma 7 butuh `DATABASE_URL` di `.env` (`file:./dev.db`) + `prisma7.config.ts` + adapter `@prisma/adapter-libsql` (tanpa native compile issue). Client di `app/generated/prisma` — import via `import prisma from "@/lib/prisma"` (singleton `lib/prisma.ts` cegah hot-reload duplicate client).
+- Prisma 7 butuh `DATABASE_URL` di `.env` (`file:./dev.db`) + `prisma7.config.ts` + adapter `@prisma/adapter-libsql`. Client di `app/generated/prisma` — import via `import prisma from "@/lib/prisma"` (singleton `lib/prisma.ts` cegah hot-reload duplicate client).
 - `JWT_SECRET` wajib di production (default `default-secret-change-me`)
 - Password selalu bcrypt (`bcryptjs`), jangan return di API
 - shadcn/ui theming di `components/ui/*` + `app/globals.css` (`:root` HSL tokens), primary `hsl(210 100% 44%)` ~ `#0075de`
 - Primary `#0075de`, font Inter, radius 6/4/8/12 — jangan pakai `--radius: 0.625rem` generic
 - `prefers-reduced-motion` wajib dihormati (Framer Motion `shouldReduceMotion`)
 - 403 → `<Alert>` + `rbac-denied` custom event (single floating)
-- DB: Platform 18 models (RBAC+Builder META) + N dynamic `{slug}_{entity}` per prompt (0 di awal) — cek `prisma/schema.prisma`; `docs/database.md` § Dynamic App Tables; dynamic via `prisma.$executeRawUnsafe('CREATE TABLE ...')` bukan migration
+- DB: Platform 19 models real (RBAC + Global Tables + Persuratan) + N dynamic `dyn_*` (0 di awal) — cek `prisma/schema.prisma`; `docs/database.md` § Dynamic App Tables; dynamic via `prisma.$executeRawUnsafe('CREATE TABLE "dyn_*" (...)')` bukan migration; operation `hidden_operation_text`/`readonly_operation_text` via `lib/renderer/operationEngine.ts` (`++` concat, `""` literal, `* / + -` arithmetic).
 - Generated code di `app/generated/*` jangan di-edit manual kecuali refine via builder
 - Next.js 15: `params` adalah `Promise` di beberapa context — gunakan `await params` jika tipe menuntut
 - Server Components tidak bisa pakai hooks — pakai `"use client"` untuk interaktif
 - Prisma Studio: `npx prisma studio` → http://localhost:5555 untuk GUI SQLite
+- Sidebar 4 grup di `components/layout/AppLayout.tsx`: Platform, Global Tabel (`/global-tables`, `/dyn`), Persuratan (`/components-persuratan`, `/templates-persuratan`, `/administrasi-persuratan`, `/hasil-persuratan`), Manajemen Lama. Rewrites di `next.config.ts` (`/builder`, `/preview` → `/generated/surat-platform/*`).
 
 ## Permissions
 
@@ -289,11 +277,11 @@ Contoh respons ideal:
 
 ## Documentation
 
-- `docs/PRD.md` — Product requirements (AI App Builder) — lokal apps/web
-- `docs/architecture.md` — System architecture + Generation pipeline (Next.js + Prisma) — lokal
-- `docs/database.md` — Entity schema (RBAC + Builder + Global Tables + Persuratan) — Prisma 25 models — lokal
-- `docs/design-system.md` — Design tokens + Generated UI rules (shadcn/ui) — lokal
-- `docs/core-concept.md` — Global Tables 13 tipe + Persuratan (Component/Template/Administrasi/Hasil) — lokal
+- `docs/PRD.md` — Product requirements (Global Tables 13 tipe + Persuratan 4 tahap) — lokal apps/web
+- `docs/architecture.md` — System architecture + Generation pipeline (Next.js + Prisma) — lokal, sebut `app/global-tables`, `app/dyn/[table]`, `lib/services/global-tables.service.ts`
+- `docs/database.md` — Entity schema — 19 models real + `dyn_*` + 13 tipe — lokal, sebut `global_tables` + `global_columns` + `persuratan_*`
+- `docs/design-system.md` — Design tokens + Generated UI rules (shadcn/ui) — lokal, `#0075de` HSL 210 100% 44% + `#f6f5f4` + `#e6e6e6` + Office Doc `#e8ecef`
+- `docs/core-concept.md` — Global Tables 13 tipe + Persuratan (Component/Template/Administrasi/Hasil) + operation `++` — lokal
 - `docs/production-runbook.md` — Deploy & ops — lokal
 - `docs/README.md` — Index docs
 - `tasks/` — Implementation tasks

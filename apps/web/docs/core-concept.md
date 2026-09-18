@@ -1,6 +1,6 @@
-> **Last Backup:** 2026-09-18 — via `/knowledge:backup`
-> **Source:** `apps/web/*` — `prisma/schema.prisma` (25 models), `app/*`, `lib/*`, `components/*`
-> **Scope:** `apps/web` — untuk root lihat `../../docs/`
+> Last Backup: 2026-09-18 — via /knowledge:backup
+> Source: apps/web/* — prisma/schema.prisma (25 models), app/*, lib/*
+> Scope: apps/web — untuk root lihat ../../docs/
 
 # Core Concept — Generated Global Tabel & Persuratan Platform
 

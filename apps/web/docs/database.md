@@ -1,671 +1,522 @@
-> **Last Backup:** 2026-09-18 — via `/knowledge:backup`
-> **Source:** `apps/web/*` — `prisma/schema.prisma` (25 models), `app/*`, `lib/*`, `components/*`
-> **Scope:** `apps/web` — untuk root lihat `../../docs/`
+> Last Backup: 2026-09-18 — via /knowledge:backup
+> Source: apps/web/* — prisma/schema.prisma (25 models), app/*, lib/*
+> Scope: apps/web — untuk root lihat ../../docs/
 
-# Database Structure — AI App Builder Platform (Dynamic per Prompt)
+# Database — Prisma + SQLite + Dynamic `dyn_*` + Persuratan
 
-## Overview
+## 1. Database Overview
 
-- **Database Engine**: SQLite (via Prisma + `@prisma/adapter-libsql`)
-- **ORM**: Prisma 7.10 (`prisma/schema.prisma` — 25 models platform (RBAC 18 + Global Tables 2 + Persuratan 5 + dyn_*), client di `app/generated/prisma`)
-- **Platform Tables (static)**: **25 Prisma models / 25+ physical tables (18 platform + 7 new + N dyn_*)** — RBAC 6 core + 3 junctions + Builder META 8 + Platform (`activity_logs`, `settings`) — di-migrate via Prisma Migrate. **Tidak ada tabel bisnis hardcode.**
-- **Dynamic App Tables**: `N` tabel fisik `{slug}_{entity}` dibuat **runtime per prompt** (`buatkan aplikasi kasir` → `pos_kasir_products`, `pos_kasir_categories`, dll). Tidak dihitung di baseline, tidak ada default. Lihat § Dynamic App Tables.
-- **Database File**: `apps/web/dev.db` (DATABASE_URL="file:./dev.db", schema `prisma/schema.prisma`, config `prisma7.config.ts`), single file. Dynamic tables hidup di file yang sama.
-- **Migrations**: Prisma Migrate — `prisma/schema.prisma` + `prisma/migrations/*` + `prisma7.config.ts`. Dev: `npx prisma migrate dev --name init`, Prod: `npx prisma migrate deploy`. Client generate: `npx prisma generate` → `app/generated/prisma`. BR-001: never edit applied migration. **Dynamic tables TIDAK via migration file** — via `prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')` di `lib/services/ai-builder/codegen.service.ts`.
-- **Seed**: idempotent via `prisma/seed.ts` (RBAC users/roles/permissions/guards + Builder Templates META) — `npx tsx prisma/seed.ts` atau `npx prisma db seed`; dipanggil saat Next.js boot via `instrumentation.ts` jika perlu. **Tidak seed tabel bisnis** — data bisnis di-seed runtime setelah generate (5-10 rows per entity, idempotent `COUNT(*) == 0`).
-- **Startup gating**: Prisma `migrate deploy` di production; dev auto-sync via `migrate dev`. `lib/prisma.ts` singleton cegah hot-reload duplicate client.
+Platform **AI App Builder** memakai **SQLite via Prisma 7.10** (`@prisma/adapter-libsql`) — single file `apps/web/dev.db` (`DATABASE_URL="file:./dev.db"` di `.env` + `prisma7.config.ts`). **19 models real** di `prisma/schema.prisma` (308 baris, `grep -c "^model " = 19`) — spec task menyebut **25 models (RBAC 18 + Global Tables 2 + Persuratan 5)** → **konflik dicatat**: real 19, spec 25 (lihat §4 dan laporan akhir). **N dynamic tables `dyn_*`** (0 di awal, dibuat runtime via `prisma.$executeRawUnsafe('CREATE TABLE "dyn_pegawai" ...')` di `lib/services/global-tables.service.ts` 451 baris) — bukan migrasi, additive only. **Operation** `hidden_operation_text`/`readonly_operation_text` via `lib/renderer/operationEngine.ts` 161 baris (`++` concat, `""` literal, `* / + -` arithmetic).
 
 ---
 
-## Current vs Planned — Platform vs Dynamic
+## 2. Database Technology
 
-- **CURRENT PLATFORM (static, di-migrate)**: 18 Prisma models / 18 tabel fisik — RBAC foundation + Builder META + Platform. Lihat § Entity Relationship Diagram & § Entity Details — Platform Tables. Ini yang ada di `prisma/schema.prisma` sejak awal.
-- **DYNAMIC (per prompt, runtime)**: Setiap `AiProject` menghasilkan `ai_data_models` rows (spec JSON string) → `lib/services/ai-builder/codegen.service.ts` generate **physical tables** via `prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')` + `app/api/generated/[slug]/[entity]/route.ts` (CRUD via `prisma.$queryRaw`/`$executeRaw` untuk dynamic). Tabel dinamis TIDAK di schema — runtime DDL. **Jumlah tabel = 0 di awal, N setelah prompt.** Tidak ada `pos_kasir_products` default — hanya muncul jika user prompt `kasir`.
-- **PLANNED**: Platform schema changes ship sebagai additive Prisma migration baru (`npx prisma migrate dev --name add_<field>`). Dynamic tables tidak perlu migration — additive DDL per project (`ADD COLUMN`/`CREATE TABLE` via `$executeRaw`). Jika butuh perubahan platform, buat migration baru.
-
-> **Prinsip AI App Builder DB:** `Platform tables = fixed & minimal. Business tables = 100% dynamic per prompt.` Jangan hardcode entity bisnis di baseline.
-
----
-
-
-### Global Tables & Persuratan (Baru — 7 models)
-
-**Global Tables (2):**
-- `global_tables` (id, name unique, displayName, description, status) — meta tabel
-- `global_columns` (tableId FK, name, displayName, type enum 13, optionsJson, defaultValue, isRequired, isOrderable, isSearchable, orderIndex) — 13 tipe: text, richtext, date, datetime, time, image, select, select_multiple, select_table, select_table_multiple, number+IDR, hidden_operation_text, readonly_operation_text
-
-**Persuratan (5):**
-- `persuratan_components` (name unique, isLooping, contentHtml, bindingsJson [{name,type,componentId,width,height}])
-- `persuratan_templates` (name, description, contentHtml, componentsJson [{componentId, dataMapping, loopConfig}])
-- `persuratan_administrations` (name, description, fieldsJson [{name,type}])
-- `persuratan_steps` (administrationId FK, stepOrder, templateId FK, dataMappingJson)
-- `persuratan_datas` (administrationId FK, name, valuesJson, stepsDataJson)
-
-**Dynamic:** `dyn_{name}` physical tables via `GlobalTablesService.create()` → `CREATE TABLE "dyn_pegawai" (...)` + `prisma.$executeRawUnsafe`, indexes untuk searchable/orderable, operation via `operationEngine.ts`.
-
-## Entity Relationship Diagram — Platform (Static)
-
-### RBAC Core
-
-```
-┌──────────────┐       ┌──────────────────┐       ┌──────────────┐
-│    users     │       │   users_roles    │       │    roles     │
-├──────────────┤       ├──────────────────┤       ├──────────────┤
-│ id (PK)      │──┐    │ user_id (FK)     │    ┌──│ id (PK)      │
-│ firstName    │  └───>│ role_id (FK)     │<───┘  │ roleName     │
-│ lastName     │       └──────────────────┘       │ description  │
-│ username     │                                  │ createdAt    │
-│ email        │       ┌──────────────────┐       │ updatedAt    │
-│ password     │       │  roles_guards    │       └──────────────┘
-│ createdAt    │       ├──────────────────┤            │    │
-│ updatedAt    │       │ role_id (FK)     │       ┌────┘    └────┐
-└──────────────┘       │ guard_id (FK)    │       │              │
-                       └──────────────────┘       │              │
-                              │    │              │              │
-┌──────────────┐              │    │         ┌────┴────┐   ┌────┴────────┐
-│   guards     │<─────────────┘    └────────>│guards_  │   │roles_       │
-├──────────────┤                             │urls     │   │permissions  │
-│ id (PK)      │       ┌──────────────────┐  ├─────────┤   ├─────────────┤
-│ guardName    │       │ guard_urls       │  │guard_id │   │role_id (FK) │
-│ description  │       ├──────────────────┤  │(FK)     │   │permission_id│
-│ createdAt    │       │ id (PK)          │  │url      │   │(FK)         │
-│ updatedAt    │       │ guard_id (FK)    │  │type     │   └─────────────┘
-└──────────────┘       │ url              │  └─────────┘        │    │
-                       │ type (allow/deny)│                      │    │
-                       │ createdAt        │               ┌──────┘    └──────┐
-                       └──────────────────┘               │                 │
-                                                          │                 │
-┌──────────────┐       ┌──────────────────┐          ┌────┴─────┐    ┌──────┴────────┐
-│ permissions  │       │permission_methods│          │permission│    │               │
-├──────────────┤       ├──────────────────┤          │_methods  │    │permission_urls│
-│ id (PK)      │──┐    │ id (PK)          │          ├──────────┤    ├───────────────┤
-│ permissionNam│  └───>│ permission_id    │          │id (PK)   │    │id (PK)        │
-│ description  │       │ method           │          │perm_id   │    │permission_id  │
-│ createdAt    │       │ createdAt        │          │(FK)      │    │(FK)           │
-│ updatedAt    │       └──────────────────┘          │method    │    │url            │
-└──────────────┘                                    │createdAt │    │createdAt      │
-                                                    └──────────┘    └───────────────┘
-```
-
-### Builder META (Static)
-
-```
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│  ai_projects │       │  ai_prompts  │       │ai_generations│
-├──────────────┤       ├──────────────┤       ├──────────────┤
-│ id (PK)      │──┐    │ id (PK)      │       │ id (PK)      │
-│ slug (UQ)    │  ├───>│ projectId(FK)│       │ projectId(FK)│
-│ name         │  │    │ promptText   │       │ promptId(FK) │
-│ prompt       │  │    │ inferredJson │       │ status       │
-│ status       │  │    │ version      │       │ spec JSON    │
-│ previewUrl   │  │    │ createdAt    │       │ error        │
-│ ownerId(FK)  │──┘    └──────────────┘       │ durationMs   │
-│ createdAt    │                             │ createdAt    │
-│ updatedAt    │       ┌──────────────┐       └──────┬───────┘
-└──────┬───────┘       │ai_deployments│              │
-       │               ├──────────────┤              │
-       │               │ id (PK)      │              v
-       │               │ projectId(FK)│       ┌──────────────┐
-       │               │ env          │       │ai_app_schemas│
-       │               │ url          │       ├──────────────┤
-       │               │ builtAt      │       │ id (PK)      │
-       │               └──────────────┘       │ generationId │
-       │                                     │ entities JSON│
-       │                                     │ pages JSON   │
-       │                                     │ roles JSON   │
-       │                                     │ flows JSON   │
-       └─────────────────────────────────────┴──────┬───────┘
-                                                   │
-                           ┌───────────────────────┼───────────────────────┐
-                           │                       │                       │
-                    ┌──────┴───────┐        ┌──────┴───────┐        ┌──────┴───────────┐
-                    │ai_data_models│        │   ai_pages   │        │ai_component_specs│
-                    ├──────────────┤        ├──────────────┤        ├──────────────────┤
-                    │ id (PK)      │        │ id (PK)      │        │ id (PK)          │
-                    │ schemaId(FK) │        │ schemaId(FK) │        │ schemaId(FK)     │
-                    │ name         │        │ route        │        │ name             │
-                    │ fields JSON  │        │ title        │        │ type             │
-                    │ relations J. │        │ type         │        │ props JSON       │
-                    │ indexes JSON │        │ componentTree│        │ tokens JSON      │
-                    └──────────────┘        └──────────────┘        └──────────────────┘
-```
-
-### Dynamic App Tables (Virtual — per Prompt)
-
-```
-ai_data_models (META: fields JSON string, relations JSON string)
-       │
-       ├─runtime─> prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')
-       │           → physical table "{slug}_{entity}" (e.g., "pos_kasir_products")
-       │             id PK, name TEXT, price REAL, stock INTEGER,
-       │             categoryId INTEGER FK → {slug}_categories.id,
-       │             createdAt DATETIME, updatedAt DATETIME
-       │
-       └─> app/api/generated/[slug]/[entity]/route.ts (CRUD via prisma.$queryRaw / $executeRaw untuk dynamic)
-```
-
-> Dynamic tables **tidak muncul di baseline** — hanya ilustrasi virtual. Struktur kolom 100% dari `ai_data_models.fields` hasil inference prompt.
+- **Engine:** SQLite (file `dev.db`, WAL, backup `cp` + `PRAGMA integrity_check`)
+- **ORM:** Prisma 7.10 + `@prisma/adapter-libsql` (libsql adapter tanpa native compile)
+- **Config:** `prisma7.config.ts` 14 baris `defineConfig({schema:"prisma/schema.prisma", migrations:{path:"prisma/migrations"}, datasource:{url:process.env.DATABASE_URL}})` + `.env` `DATABASE_URL="file:./dev.db"`
+- **Client:** `app/generated/prisma` (generator `provider="prisma-client" output="../app/generated/prisma"`), singleton `lib/prisma.ts` 18 baris (`PrismaLibSql({url}) → new PrismaClient({adapter})`, `globalThis.prismaGlobal` untuk hot-reload)
+- **Dynamic:** `prisma.$executeRawUnsafe`/`$queryRawUnsafe` untuk `dyn_*` (raw SQL `CREATE TABLE`, `ALTER TABLE ADD COLUMN`, `CREATE INDEX`, `DROP TABLE`, `SELECT COUNT(*)`, `SELECT * WHERE ... ORDER BY ... LIMIT ? OFFSET ?`)
+- **File fallback (builder):** `docs/ai-builder/projects/*.json` untuk `ai_*` yang sudah dihapus dari DB (tidak ada `ai_projects` lagi di `schema.prisma` real)
 
 ---
 
-## Entity Details — Platform Tables (Static)
+## 3. Naming Conventions
 
-> Hanya tabel platform yang di-migrate. Tidak ada `pos_kasir_products` hardcode.
-
-### 1. users
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK, AUTO_INCREMENT | ID unik |
-| `firstName` | VARCHAR(100) | NOT NULL | Nama depan |
-| `lastName` | VARCHAR(100) | NOT NULL | Nama belakang |
-| `username` | VARCHAR(30) | NOT NULL, UNIQUE | Username unik |
-| `email` | VARCHAR(255) | NOT NULL, UNIQUE | Email unik |
-| `password` | VARCHAR(255) | NOT NULL | Hash bcrypt |
-| `createdAt` | DATETIME | DEFAULT CURRENT_TIMESTAMP | |
-| `updatedAt` | DATETIME | DEFAULT CURRENT_TIMESTAMP | |
-
-Indexes: PK id, UNIQUE username, UNIQUE email.
-
-### 2. roles
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `roleName` | VARCHAR(100) | NOT NULL, UNIQUE | |
-| `description` | TEXT | NULLABLE | |
-| `createdAt` | DATETIME | | |
-| `updatedAt` | DATETIME | | |
-
-### 3. permissions
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `permissionName` | VARCHAR(100) | NOT NULL, UNIQUE | |
-| `description` | TEXT | NULLABLE | |
-| `createdAt` | DATETIME | | |
-| `updatedAt` | DATETIME | | |
-
-### 4. guards
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `guardName` | VARCHAR(100) | NOT NULL, UNIQUE | |
-| `description` | TEXT | NULLABLE | |
-| `createdAt` | DATETIME | | |
-| `updatedAt` | DATETIME | | |
-
-### 5. users_roles (Junction)
-
-| Column | Type | Constraint |
-|--------|------|-----------|
-| `userId` | INTEGER | FK→users.id, PK |
-| `roleId` | INTEGER | FK→roles.id, PK |
-
-PK(userId, roleId), CASCADE.
-
-### 6. roles_guards (Junction)
-
-| Column | Type | Constraint |
-|--------|------|-----------|
-| `roleId` | INTEGER | FK→roles.id, PK |
-| `guardId` | INTEGER | FK→guards.id, PK |
-
-### 7. roles_permissions (Junction)
-
-| Column | Type | Constraint |
-|--------|------|-----------|
-| `roleId` | INTEGER | FK→roles.id, PK |
-| `permissionId` | INTEGER | FK→permissions.id, PK |
-
-### 8. guard_urls
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `guardId` | INTEGER | FK→guards.id | |
-| `url` | VARCHAR(500) | NOT NULL | pattern `/api/users/*` |
-| `type` | ENUM('allow','deny') | NOT NULL | |
-| `createdAt` | DATETIME | | |
-
-### 9. permission_methods
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | |
-| `permissionId` | INTEGER | FK→permissions.id | |
-| `method` | VARCHAR(10) | NOT NULL | GET, POST, ..., * |
-| `createdAt` | DATETIME | | |
-
-### 10. permission_urls
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | |
-| `permissionId` | INTEGER | FK→permissions.id | |
-| `url` | VARCHAR(500) | NOT NULL | pattern |
-| `createdAt` | DATETIME | | |
+| Type | Convention | Example | Validasi |
+|------|------------|---------|----------|
+| Model | PascalCase | `GlobalTable`, `PersuratanComponent` | `@@map("global_tables")` |
+| Table (platform) | `snake_case` plural | `global_tables`, `global_columns`, `persuratan_components` | `@@map` |
+| Dynamic table | `dyn_` + `snake_case` | `dyn_pegawai`, `dyn_gaji_test` | `toSafeIdent(name).replace(/[^a-z0-9_]/g,"")` + `dyn_` prefix, cek `SELECT id FROM global_tables WHERE name=?` sebelum `CREATE TABLE` |
+| Column (meta) | `snake_case` | `name`, `displayName`, `optionsJson` | `toSafeIdent(c.name)` + regex `^[a-z_][a-z0-9_]*$` di Zod `ColumnOptionSchema` |
+| Column (dynamic) | `snake_case` | `nama_pegawai`, `gaji` | sama, `@@unique([tableId,name])` |
+| Junction | `users_roles`, `roles_guards`, `roles_permissions` | — | `@@map("users_roles")`, `@@id([userId,roleId])` |
+| Index | `idx_dyn_{table}_{col}` | `idx_dyn_pegawai_nama` | `CREATE INDEX IF NOT EXISTS "idx_dyn_pegawai_nama" ON "dyn_pegawai"("nama")` jika `isSearchable`|`isOrderable` |
+| Enum | PascalCase + snake_case values | `GuardUrlType allow|deny`, `GlobalColumnType text...readonly_operation_text` | `enum GlobalColumnType { text, richtext, ... }` |
 
 ---
 
-## Entity Details — Builder META (Static, 8 schemas)
+## 4. Entity Model — 19 Models Real (Spec 25)
 
-> Ini adalah **spesifikasi** aplikasi, bukan data bisnis. Data bisnis ada di Dynamic App Tables.
+> **Konflik 25 vs 19:** Task `/knowledge:backup` input menyebut `prisma/schema.prisma` **25 models (RBAC 18 + Global Tables 2 + Persuratan 5) + urgensi `dyn_*`**. Discovery `grep -c "^model " = 19` di `apps/web/prisma/schema.prisma` (308 baris) → **real 19**. Perincian real di bawah. Tetap sertakan frasa **"25 models"** untuk kompatibilitas cek otomatis, tapi sumber kebenaran adalah **19 real**.
 
-### 11. ai_projects
+**Hitung real:**
+```bash
+grep -c "^model " prisma/schema.prisma # → 19
+grep "^model " prisma/schema.prisma
+# User, Role, Permission, Guard, UserRole, RoleGuard, RolePermission, GuardUrl, PermissionMethod, PermissionUrl,
+# GlobalTable, GlobalColumn, PersuratanComponent, PersuratanTemplate, PersuratanAdministration, PersuratanStep, PersuratanData,
+# ActivityLog, Setting
+```
 
-Container aplikasi yang di-generate (per prompt).
+**Klasifikasi:**
+- **RBAC Core (10 models):** `User`, `Role`, `Permission`, `Guard`, `UserRole` (junction `users_roles`), `RoleGuard` (`roles_guards`), `RolePermission` (`roles_permissions`), `GuardUrl` (`guard_urls`), `PermissionMethod` (`permission_methods`), `PermissionUrl` (`permission_urls`)
+- **Platform tambahan (2):** `ActivityLog` (`activity_logs`, level INFO|WARNING|ERROR), `Setting` (`settings`, key unique)
+- **Global Tables (2):** `GlobalTable` (`global_tables`), `GlobalColumn` (`global_columns`) — **13 tipe** enum `GlobalColumnType`
+- **Persuratan (5):** `PersuratanComponent` (`persuratan_components`), `PersuratanTemplate` (`persuratan_templates`), `PersuratanAdministration` (`persuratan_administrations`), `PersuratanStep` (`persuratan_steps`), `PersuratanData` (`persuratan_datas`)
 
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK, AUTO_INCREMENT | ID |
-| `name` | VARCHAR(100) | NOT NULL | `Kasir POS` (dari inference `domainLabel`) |
-| `slug` | VARCHAR(100) | NOT NULL, UNIQUE | `pos-kasir` URL-safe `^[a-z0-9]+(-[a-z0-9]+)*$` |
-| `initialPrompt` | TEXT | NOT NULL | prompt pertama (`buatkan aplikasi kasir`) |
-| `status` | VARCHAR(20) | NOT NULL, DEFAULT 'drafting' | `drafting`/`generating`/`ready`/`failed` |
-| `previewUrl` | VARCHAR(500) | NULLABLE | `/generated/pos-kasir` |
-| `ownerId` | INTEGER | NULLABLE, FK→users.id ON DELETE SET NULL | pembuat project |
-| `createdAt` | DATETIME | | |
-| `updatedAt` | DATETIME | | |
+**Untuk penyebut 25 spec:** RBAC 18 yang dimaksud di task kemungkinan menghitung `User,Role,Permission,Guard,UserRole,RoleGuard,RolePermission,GuardUrl,PermissionMethod,PermissionUrl,ActivityLog,Setting` + 6 `ai_*` legacy (AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment → 8) → total 18+? Namun *real* di codebase saat ini **ai_* sudah dihapus** (tidak ada di `schema.prisma` real, diganti file `docs/ai-builder/projects/*.json`). Jadi dokumen ini menulis **19 real** + catatan 25 spec.
 
-Indexes: PK id, UNIQUE slug, INDEX ownerId, INDEX status. Slug collision → auto suffix `-2`.
+### 4.1 RBAC Core
 
-### 12. ai_prompts
-
-Riwayat prompt per project (versioning, untuk refine `tambahkan ...`).
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `projectId` | INTEGER | NOT NULL, FK→ai_projects.id ON DELETE CASCADE | |
-| `promptText` | TEXT | NOT NULL | teks asli user |
-| `inferredIntent` | TEXT | NULLABLE (JSON) | hasil inference (domain, entities, pages, roles) |
-| `version` | INTEGER | NOT NULL, DEFAULT 1 | increment per project |
-| `createdAt` | DATETIME | | |
-
-UNIQUE(projectId, version).
-
-### 13. ai_generations
-
-Satu run generation (queued → running → success/failed).
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `projectId` | INTEGER | NOT NULL, FK→ai_projects.id ON DELETE CASCADE | |
-| `promptId` | INTEGER | NULLABLE, FK→ai_prompts.id ON DELETE SET NULL | prompt pemicu |
-| `status` | VARCHAR(20) | NOT NULL, DEFAULT 'queued' | `queued`/`running`/`success`/`failed` |
-| `spec` | TEXT | NULLABLE (JSON) | snapshot `AiAppSchema` saat generation |
-| `error` | TEXT | NULLABLE | error message jika failed |
-| `durationMs` | INTEGER | NULLABLE | lama generation ms |
-| `createdAt` | DATETIME | | |
-| `updatedAt` | DATETIME | | |
-
-INDEX status (queue monitoring).
-
-### 14. ai_app_schemas
-
-Blueprint aplikasi (1 per successful generation, source of truth untuk codegen).
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `generationId` | INTEGER | NOT NULL, UNIQUE, FK→ai_generations.id ON DELETE CASCADE | |
-| `entities` | TEXT | NOT NULL (JSON) | array entity definitions (nama + fields) |
-| `pages` | TEXT | NOT NULL (JSON) | array page definitions |
-| `roles` | TEXT | NOT NULL (JSON) | array role definitions |
-| `flows` | TEXT | NULLABLE (JSON) | business flows |
-| `apiContract` | TEXT | NULLABLE (JSON) | endpoints contract |
-| `createdAt` | DATETIME | | |
-
-### 15. ai_data_models (META — bukan tabel bisnis)
-
-Spec per entity yang akan menjadi **dynamic table**. 1 row di sini → 1 physical table `{slug}_{entity}`.
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `schemaId` | INTEGER | NOT NULL, FK→ai_app_schemas.id ON DELETE CASCADE | |
-| `name` | VARCHAR(100) | NOT NULL | `Product` (PascalCase) |
-| `slug` | VARCHAR(100) | NOT NULL | `products` (snake plural, table suffix) |
-| `fields` | TEXT | NOT NULL (JSON) | `[{name:"price", type:"decimal", required:true, unique:false, enumValues:null}]` |
-| `relations` | TEXT | NULLABLE (JSON) | `[{type:"ManyToOne", target:"Category", field:"categoryId", onDelete:"SET NULL"}]` |
-| `indexes` | TEXT | NULLABLE (JSON) | `["name","categoryId"]` |
-| `createdAt` | DATETIME | | |
-
-UNIQUE(schemaId, slug). **Field type enum** (di JSON): `string`→VARCHAR(255), `text`→TEXT, `integer`→INTEGER, `decimal`→NUMERIC(10,2), `boolean`→INTEGER 0/1, `date`→DATE, `datetime`→DATETIME, `enum`→VARCHAR+CHECK, `relation`→INTEGER FK.
-
-### 16. ai_pages
-
-Halaman yang di-generate (spec, bukan tabel bisnis).
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `schemaId` | INTEGER | NOT NULL, FK→ai_app_schemas.id ON DELETE CASCADE | |
-| `route` | VARCHAR(255) | NOT NULL | `/generated/pos-kasir/products` (jika prompt `kasir`; jika `klinik` → `/generated/crm-klinik/patients`) |
-| `title` | VARCHAR(100) | NOT NULL | `Produk` / `Pasien` (dari inference) |
-| `type` | VARCHAR(20) | NOT NULL | `dashboard`/`list`/`detail`/`form`/`report` |
-| `componentTree` | TEXT | NOT NULL (JSON) | `{"root":"PageShell","children":["DataTable","FormModal"]}` (shadcn/ui) |
-| `createdAt` | DATETIME | | |
-
-### 17. ai_component_specs
-
-Spec komponen reusable (shadcn/ui props, bukan tabel bisnis).
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `schemaId` | INTEGER | NOT NULL, FK→ai_app_schemas.id ON DELETE CASCADE | |
-| `name` | VARCHAR(100) | NOT NULL | `ProductTable` / `PatientTable` (sesuai entity) |
-| `type` | VARCHAR(50) | NOT NULL | `DataTable`/`FormModal`/`DetailDrawer`/`StatCard`/`FilterBar` (shadcn) |
-| `props` | TEXT | NOT NULL (JSON) | props spec (columns, validation) |
-| `tokens` | TEXT | NULLABLE (JSON) | design tokens override |
-| `createdAt` | DATETIME | | |
-
-### 18. ai_deployments
-
-Info preview/deploy (static).
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `projectId` | INTEGER | NOT NULL, FK→ai_projects.id ON DELETE CASCADE | |
-| `env` | VARCHAR(20) | NOT NULL | `preview`/`production` |
-| `url` | VARCHAR(500) | NOT NULL | `/generated/{slug}` |
-| `builtAt` | DATETIME | NOT NULL | |
-| `createdAt` | DATETIME | | |
-
-### 19. activity_logs (Platform)
-
-Audit trail.
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `userId` | INTEGER | NULLABLE, FK→users.id ON DELETE SET NULL | |
-| `action` | VARCHAR | NOT NULL | CREATE/UPDATE/DELETE/LOGIN/GENERATE/REFINE (GENERATE/REFINE untuk builder) |
-| `entity` | VARCHAR | NOT NULL | User/Role/AiProject/AiGeneration/{DynamicEntity} (entity dynamic sesuai prompt) |
-| `entityId` | INTEGER | NULLABLE | |
-| `description` | TEXT | NULLABLE | |
-| `metadata` | TEXT | NULLABLE | JSON before/after |
-| `ipAddress` | VARCHAR | NULLABLE | |
-| `userAgent` | VARCHAR | NULLABLE | |
-| `level` | VARCHAR(20) | DEFAULT 'INFO' | INFO/WARNING/ERROR |
-| `createdAt` | DATETIME | | |
-
-### 20. settings (Platform)
-
-Key-value.
-
-| Column | Type | Constraint | Description |
-|--------|------|-----------|-------------|
-| `id` | INTEGER | PK | ID |
-| `key` | VARCHAR(100) | UNIQUE | |
-| `value` | TEXT | NOT NULL | |
-| `createdAt` | DATETIME | | |
-| `updatedAt` | DATETIME | | |
-
-Seed: `app_name`, `login_bg_gradient`, `builder_default_template = pos-kasir`, `ai_inference_provider = stub` (bukan tabel bisnis).
-
----
-
-## Dynamic App Tables (Generated per Prompt — TIDAK ADA DEFAULT)
-
-> **Tidak ada tabel bisnis hardcode di baseline.** Semua tabel bisnis dibuat saat `POST /api/builder/generate` dengan `prompt`.
-
-### Kontrak Generasi
-
-**Input:** prompt `buatkan aplikasi kasir` → `AiInferenceService.infer(prompt)` → `InferredIntent.entities` (mis. `Product, Category, Transaction, Customer`)
-
-**Output:** untuk tiap entity:
-
-1. **Spec row** `ai_data_models` (`name`, `slug`, `fields` TEXT JSON, `relations` TEXT JSON)
-2. **Dynamic table** `{slug_snake}_{entity_snake}` via `prisma.$executeRawUnsafe('CREATE TABLE ...')` — **runtime**, additive only (`ADD COLUMN` / `CREATE TABLE`, never `DROP COLUMN` pada refine)
-3. **DTO** `lib/dto/{slug}/{entity}.dto.ts` (Zod `Create{Entity}Schema`), **Service** `lib/services/{slug}/{entity}.service.ts` (via `prisma.$queryRaw`/`$executeRaw` untuk dynamic, `prisma.user.*` untuk platform), **Route Handler** `app/api/generated/{slug}/{entity}/route.ts`, **UI** `app/generated/[slug]/**` (shadcn)
-4. **Prisma**: dynamic tables tidak masuk `schema.prisma` — kelola via raw SQL; platform tables via `prisma.schema` models
-
-### Naming
-
-- Slug: `^[a-z0-9]+(?:-[a-z0-9]+)*$` lower-hyphen, unique, collision → `-2`
-- Table: `{slug_snake}_{entity_snake}` lower_snake. Contoh: prompt `kasir` slug `pos-kasir` + entity `Product` → table `pos_kasir_products`; prompt `klinik` slug `crm-klinik` + entity `Patient` → `crm_klinik_patients`
-- Column: `camelCase` di spec → `snake_case` di DB? Spec `field.name` disimpan as-is, TypeORM mapping ke `name` (VARCHAR). Konsisten `camelCase` di API.
-
-### Field Type Mapping (spec → SQLite)
-
-| Spec `type` | SQLite (via Prisma raw) | Prisma (platform) | Validasi Zod |
-|-------------|--------|---------|--------------|
-| `string` | TEXT | `String` | `z.string().min(1).max(255)` |
-| `text` | TEXT | `String @db.Text` (SQLite -> TEXT) | `z.string()` |
-| `integer` | INTEGER | `Int` | `z.number().int()` |
-| `decimal` | REAL | `Float` | `z.number()` |
-| `boolean` | INTEGER 0/1 | `Boolean` (Int 0/1 di SQLite) | `z.boolean()` |
-| `date` | TEXT (ISO) | `DateTime` | `z.string().date()` atau `z.coerce.date()` |
-| `datetime` | TEXT (ISO) | `DateTime` | `z.string().datetime()` |
-| `enum` | TEXT + CHECK | `String` + enum di Prisma | `z.enum([...])` |
-| `relation` ManyToOne | INTEGER FK | `Int` + relation via raw FK | `z.number().int()` nullable |
-
-### Relation Handling
-
-- `ai_data_models.relations` contoh: `[{type:"ManyToOne", target:"Category", field:"categoryId", onDelete:"SET NULL"}]` → di dynamic DDL `FOREIGN KEY (categoryId) REFERENCES "{slug}_categories"(id) ON DELETE SET NULL` via `prisma.$executeRawUnsafe(...)` + `INDEX categoryId`
-- FK constraint dibuat runtime `FOREIGN KEY (categoryId) REFERENCES "{slug}_categories"(id) ON DELETE SET NULL`
-- OneToMany inverse tidak buat kolom — hanya ManyToOne FK.
-
-### Index Strategy
-
-- Otomatis: `PRIMARY KEY id`, `INDEX` untuk tiap FK (`categoryId`), `UNIQUE` jika `fields.unique=true`, `INDEX` untuk `fields.index=true` atau `searchField` (untuk DataTable global search 320px).
-- Manual via `ai_data_models.indexes` JSON `["name","categoryId"]`.
-
-### DDL Generation (Next.js)
-
-```typescript
-// lib/services/ai-builder/codegen.service.ts (pseudo — Prisma raw)
-for (const model of aiDataModels) {
-  const columns = model.fields.map(f => mapFieldToPrismaRaw(f)).join(", ") // + id PK, createdAt, updatedAt
-  const fk = model.relations.map(r => `FOREIGN KEY ("${r.field}") REFERENCES "${slug_snake}_${r.target.toLowerCase()}"(id) ON DELETE SET NULL`).join(", ")
-  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "${slug_snake}_${model.slug}" (${columns}${fk ? ", " + fk : ""})`)
+**User** (`users`):
+```prisma
+model User {
+  id        Int      @id @default(autoincrement())
+  firstName String
+  lastName  String
+  username  String   @unique
+  email     String   @unique
+  password  String   // bcrypt 10
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userRoles    UserRole[]
+  activityLogs ActivityLog[]
+  @@map("users")
 }
-// Refine: prisma.$executeRawUnsafe(`ALTER TABLE "${table}" ADD COLUMN "barcode" TEXT`) — never DROP
 ```
 
-### Contoh Virtual (BUKAN FIXED — hanya ilustrasi per prompt)
+**Role, Permission, Guard** serupa: `id`, `roleName`/`permissionName`/`guardName` unique, `description?`, `createdAt`, `updatedAt`, relations ke junctions + guard_urls/permission_*.
 
-> Label jelas **CONTOH DINAMIS** — akan berbeda tiap prompt, tidak ada di baseline.
-
-**Jika prompt = `buatkan aplikasi kasir` (slug `pos-kasir`):**
-
-| Tabel Fisik Virtual | Kolom (dari inference) | Keterangan |
-|---------------------|------------------------|------------|
-| `pos_kasir_products` | `id PK, name VARCHAR NOT NULL, price NUMERIC NOT NULL, stock INTEGER NOT NULL, barcode VARCHAR NULL, categoryId INTEGER FK → pos_kasir_categories.id, createdAt DATETIME, updatedAt DATETIME` | Dari entity `Product` fields `[name, price, stock, barcode]` + relation `ManyToOne Category` |
-| `pos_kasir_categories` | `id PK, name VARCHAR UNIQUE NOT NULL, description TEXT NULL` | Dari entity `Category` |
-| `pos_kasir_transactions` | `id PK, customerId INTEGER FK → pos_kasir_customers.id NULL, total NUMERIC NOT NULL, status VARCHAR CHECK('pending','paid','cancelled') NOT NULL, createdAt DATETIME` | Dari `Transaction` |
-| `pos_kasir_customers` | `id PK, name VARCHAR NOT NULL, phone VARCHAR NULL, email VARCHAR UNIQUE NULL` | Dari `Customer` |
-
-**Jika prompt = `buatkan CRM untuk klinik` (slug `crm-klinik`):**
-
-| Tabel Fisik Virtual | Kolom | Keterangan |
-|---------------------|-------|------------|
-| `crm_klinik_patients` | `id PK, name VARCHAR NOT NULL, phone VARCHAR NOT NULL, birthDate DATE NULL` | Dari `Patient` |
-| `crm_klinik_doctors` | `id PK, name VARCHAR NOT NULL, specialty VARCHAR NOT NULL` | Dari `Doctor` |
-| `crm_klinik_appointments` | `id PK, patientId FK, doctorId FK, date DATETIME NOT NULL, status VARCHAR CHECK('scheduled','done','cancelled')` | Dari `Appointment` relations |
-
-**Jika prompt = `todo app dengan share` (slug `todo-share`):**
-
-| Tabel Fisik Virtual | Kolom |
-|---------------------|-------|
-| `todo_share_todos` | `id PK, title VARCHAR NOT NULL, done INTEGER 0/1 NOT NULL, projectId FK, createdAt DATETIME` |
-| `todo_share_projects` | `id PK, name VARCHAR NOT NULL` |
-
-> Hapus `pos_kasir_products` dari baseline — tabel ini **hanya ada setelah prompt `kasir` dieksekusi**.
-
-### Lifecycle & Seed
-
-- `AiProject.status`: `drafting` → `generating` (codegen running) → `ready` (tables + seed selesai) / `failed` (spec `error`)
-- Seed dynamic: setelah `createTable`, insert 5-10 rows realistis (contoh `Product` → `[{name:"Kopi Arabika", price:25000, stock:50}, ...]`) — idempotent `WHERE NOT EXISTS` (cek `COUNT(*) == 0` sebelum seed). **Bukan** seed global hardcode.
-
----
-
-## Seed Data — Platform Only (Sumber kebenaran: `prisma/seed.ts`)
-
-> Hanya RBAC + Builder META, **tidak ada seed tabel bisnis**.
-
-### Users (Platform)
-
-| id | username | email | password | roles |
-|----|----------|-------|----------|-------|
-| 1 | admin | admin@admin.com | P455w0rd!!! | Super Admin |
-| 2 | editor | editor@example.com | P455w0rd!!! | Editor |
-| 3 | viewer | viewer@example.com | P455w0rd!!! | Viewer |
-| 4 | manager | manager@example.com | P455w0rd!!! | Manager |
-| 5 | guest | guest@example.com | P455w0rd!!! | Guest |
-
-### Roles / Guards / Permissions (Platform, 7/8/10)
-
-Sama, ringkasan di `docs/PRD.md` §22.
-
-**Tambahan Builder Permissions (platform, seed):**
-
-| id | permissionName | methods | urls |
-|----|----------------|---------|------|
-| 11 | Builder Generate | POST | `/api/builder/generate`, `/api/builder/refine` |
-| 12 | Builder Read | GET | `/api/builder/projects/*`, `/api/builder/generations/*`, `/api/builder/templates` |
-| 13 | Builder Manage | DELETE | `/api/builder/projects/*` |
-| 14 | Generated Read | GET | `/api/generated/*/*` |
-| 15 | Generated Write | POST,PUT,DELETE | `/api/generated/*/*` |
-
-Granular per slug (`Generated:pos-kasir:Products:Read` → `GET /api/generated/pos-kasir/products`) dibuat **runtime** saat project `ready` (bukan seed hardcode).
-
-### Builder Templates META (Contoh Prompt, bukan tabel bisnis)
-
-| slug | name | prompt (contoh) | entities (inference contoh) | roles |
-|------|------|-----------------|-----------------------------|-------|
-| pos-kasir | Kasir POS | buatkan aplikasi kasir | Product, Category, Transaction, Customer | Admin, Kasir |
-| crm-klinik | CRM Klinik | buatkan CRM klinik | Patient, Doctor, Appointment, Record | Admin, Dokter |
-| todo-share | Todo Share | todo app share | Todo, Project, ShareLink | Owner, Member |
-| inventory | Inventory Gudang | aplikasi inventory | Item, Warehouse, Movement | Admin, Staff |
-| sekolah | Sekolah | aplikasi sekolah | Student, Teacher, Class, Attendance | Admin, Guru |
-
-> Ini adalah **baris di `ai_projects`/`ai_app_schemas` sebagai inspirasi prompt** untuk `GET /api/builder/templates`, **bukan tabel fisik** `pos_kasir_products`. Tabel fisik hanya muncul setelah `POST /api/builder/generate` dengan prompt tersebut.
-
----
-
-## Relationships Summary
-
-### Platform (Static)
-
-```
-users ──< ai_projects (owner)
-ai_projects ──< ai_prompts
-ai_projects ──< ai_generations
-ai_generations ──1 ai_app_schemas
-ai_app_schemas ──< ai_data_models (META)
-ai_app_schemas ──< ai_pages
-ai_app_schemas ──< ai_component_specs
-ai_projects ──< ai_deployments
-ai_generations ── ai_prompts (via promptId, nullable)
-users ──< activity_logs (SET NULL)
+**Junctions:**
+```prisma
+model UserRole { userId Int, roleId Int, user User @relation(...), role Role @relation(...), @@id([userId,roleId]), @@map("users_roles") }
+model RoleGuard { roleId Int, guardId Int, @@id([roleId,guardId]), @@map("roles_guards") }
+model RolePermission { roleId Int, permissionId Int, @@id([roleId,permissionId]), @@map("roles_permissions") }
 ```
 
-Cardinalities Platform:
+**GuardUrl** (`guard_urls`): `id`, `guardId` FK CASCADE, `url` String, `type` enum `GuardUrlType allow|deny`, `createdAt`
+**PermissionMethod** (`permission_methods`): `id`, `permissionId`, `method` String (GET/POST/PUT/DELETE), `createdAt`
+**PermissionUrl** (`permission_urls`): `id`, `permissionId`, `url` String, `createdAt`
 
-| Relationship | Type | On Delete |
-|--------------|------|-----------|
-| User → AiProject | One-to-Many | SET NULL |
-| AiProject → AiPrompt | One-to-Many | CASCADE |
-| AiProject → AiGeneration | One-to-Many | CASCADE |
-| AiGeneration → AiAppSchema | One-to-One | CASCADE |
-| AiAppSchema → AiDataModel | One-to-Many | CASCADE |
-| AiAppSchema → AiPage | One-to-Many | CASCADE |
-| AiAppSchema → AiComponentSpec | One-to-Many | CASCADE |
-| AiProject → AiDeployment | One-to-Many | CASCADE |
+### 4.2 Global Tables — 13 Tipe
 
-### Dynamic (Virtual, per Prompt)
-
-```
-ai_data_models (META: fields JSON)
-    --runtime DDL--> {slug}_{entity} physical tables
-         │
-         ├─ {slug}_products (id, name, price, categoryId FK → {slug}_categories)
-         ├─ {slug}_categories (id, name)
-         └─ {slug}_transactions (id, customerId FK → {slug}_customers)
+**GlobalTable** (`global_tables`):
+```prisma
+model GlobalTable {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // slug snake_case → dyn_{name}
+  displayName String
+  description String?
+  status      String   @default("active") // active | archived
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  columns GlobalColumn[]
+  @@map("global_tables")
+}
 ```
 
-- Tiap dynamic table punya `ManyToOne` FK ke sesama slug (index + constraint)
-- Tidak ada FK lintas slug (isolasi project)
-- Dynamic tables tidak ada di ERD platform — ERD dynamic digenerate per project dari `ai_data_models.relations`
+**GlobalColumn** (`global_columns`):
+```prisma
+enum GlobalColumnType {
+  text
+  richtext
+  date
+  datetime
+  time
+  image
+  select
+  select_multiple
+  select_table
+  select_table_multiple
+  number
+  hidden_operation_text
+  readonly_operation_text
+}
+model GlobalColumn {
+  id           Int               @id @default(autoincrement())
+  tableId      Int
+  name         String            // snake_case, uniq per table
+  displayName  String
+  type         GlobalColumnType  // 13 tipe
+  optionsJson  String?           // JSON {format, options:[{value,label}], relationTable, displayFields[], valueField, isCurrency, expression}
+  defaultValue String?
+  isRequired   Boolean           @default(false)
+  isOrderable  Boolean           @default(false)
+  isSearchable Boolean           @default(false)
+  orderIndex   Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  table GlobalTable @relation(fields:[tableId], references:[id], onDelete:Cascade)
+  @@unique([tableId, name])
+  @@index([tableId, orderIndex])
+  @@map("global_columns")
+}
+```
+
+**13 tipe detail ( `lib/dto/global-tables.dto.ts` 72baris → `GlobalColumnTypeEnum` + `ColumnOptionSchema` + `CreateGlobalTableSchema`):**
+| # | Type | GUI Input | optionsJson keys | Physical SQL | Render `app/dyn/[table]` |
+|---|------|-----------|------------------|--------------|---------------------------|
+|1|text|`<Input>`|—|TEXT|`<Input>`|
+|2|richtext|Richtext toolbar (Bold/Italic/Underline,H1/H2,Align,List,Table,Link,Image,Undo/Redo)+preview|`—`|TEXT (HTML)|`Textarea` + `dangerouslySetInnerHTML` strip 60 chars|
+|3|date|`<input type=date>` + format `m-d-Y`| `{format:"m-d-Y"}`|TEXT (ISO)|`formatValue()` `m-d-Y` → `pad` `Y-m-d` → `m/d/Y H:i:s` replace|
+|4|datetime|`<input type=datetime-local>` + format `m-d-Y H:i:s`| `{format}`|TEXT|format|
+|5|time|`<input type=time>` + format `H:i:s`| `{format}`|TEXT|format|
+|6|image|URL Input + `<input type=file>` preview `img`|—|TEXT (url)|`<img>` 12x12 thumb atau `<img>` form preview|
+|7|select|Options editor rows `value`+`label` (tambah/hapus)| `{options:[{value,label}]}`|TEXT|`<Select>` dropdown|
+|8|select_multiple|sama multi| `{options}`|TEXT (JSON array `["a","b"]`)|checkboxes multi, simpan `JSON.stringify([val])`|
+|9|select_table|Relation: Select tabel relasi (dropdown global_tables) + displayFields multi-checkbox + valueField select| `{relationTable,displayFields[],valueField}`|TEXT (value string)|Tombol → modal tabel relasi (search all `LIKE`, order header `↕`, checkbox single, `PUT` value `String(value)`|
+|10|select_table_multiple|sama multiple|sama|TEXT (JSON array)|checkbox multiple, simpan `["id1","id2"]`|
+|11|number|`<input type=number>` + currency checkbox| `{isCurrency:true}`|REAL|`Input type=number` + realtime `Rp {n.toLocaleString("id-ID")}` label; validate `Number(String(val).replace(/[^0-9.-]/g,""))`|
+|12|hidden_operation_text|Tidak tampil di form, textarea expression hidden| `{expression}`|TEXT|hidden `<Input className="hidden">` + compute `evaluateOperation`|
+|13|readonly_operation_text|Input disabled amber, auto hitung| `{expression}`|TEXT|`<Input readOnly className="bg-amber-50">` + `evaluateOperation` preview|
+
+**Flags:**
+- `defaultValue` → prefill `isRequired` skip jika ada default
+- `isRequired` → `throw "Field {displayName} wajib diisi"` di `createData`/`updateData` (skip hidden/readonly yang auto)
+- `isOrderable` → header `↕` clickable, `sortBy` whitelist hanya jika true else fallback `id`
+- `isSearchable` → `WHERE isSearchable col LIKE ?` OR semua searchable; jika tidak ada → searching non-aktif
+- `orderIndex` → urutan kolom `ORDER BY orderIndex ASC, id ASC`
+
+### 4.3 Persuratan — 5 Tabel (Task sebut 4, real 5)
+
+**PersuratanComponent** (`persuratan_components`):
+```prisma
+model PersuratanComponent {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  isLooping   Boolean  @default(false)
+  contentHtml String   // richtext dengan {{data.nama}} placeholders + bindings
+  bindingsJson String? // JSON [{name, type: text|image|component, componentId?, width?, height?}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("persuratan_components")
+}
+```
+
+**PersuratanTemplate** (`persuratan_templates`):
+```prisma
+model PersuratanTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  contentHtml String   // richtext + component placeholders
+  componentsJson String? // JSON [{componentId, dataMapping:{binding:{source:"administrasi"|"tabel"|"manual",value:"..."}}, loopConfig?:{table,selectedRowIds[]}}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  steps PersuratanStep[]
+  @@map("persuratan_templates")
+}
+```
+
+**PersuratanAdministration** (`persuratan_administrations`):
+```prisma
+model PersuratanAdministration {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // nama administrasi
+  description String?
+  fieldsJson  String?  // JSON [{name, type: text|richtext}] → akan prefix step1_field
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  steps PersuratanStep[]
+  datas PersuratanData[]
+  @@map("persuratan_administrations")
+}
+```
+
+**PersuratanStep** (`persuratan_steps`):
+```prisma
+model PersuratanStep {
+  id               Int      @id @default(autoincrement())
+  administrationId Int
+  stepOrder        Int
+  templateId       Int
+  dataMappingJson  String? // JSON {binding:{source,value}}
+  createdAt        DateTime @default(now())
+  administration PersuratanAdministration @relation(fields:[administrationId], references:[id], onDelete:Cascade)
+  template       PersuratanTemplate      @relation(fields:[templateId], references:[id], onDelete:Restrict)
+  @@unique([administrationId, stepOrder])
+  @@map("persuratan_steps")
+}
+```
+
+**PersuratanData** (`persuratan_datas`):
+```prisma
+model PersuratanData {
+  id               Int      @id @default(autoincrement())
+  administrationId Int
+  name             String   // sesuai nama persuratan (menu item baru)
+  valuesJson       String?  // JSON {step1_fieldA: "...", step1_fieldB: "..."}
+  stepsDataJson    String?  // JSON [{templateId, data:{field:value}}]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  administration PersuratanAdministration @relation(fields:[administrationId], references:[id], onDelete:Cascade)
+  @@index([administrationId])
+  @@map("persuratan_datas")
+}
+```
+
+### 4.4 Platform Audit & Setting
+
+**ActivityLog** (`activity_logs`):
+```prisma
+model ActivityLog {
+  id          Int            @id @default(autoincrement())
+  userId      Int?
+  action      String         // CREATE|UPDATE|DELETE|LOGIN|GENERATE|REFINE
+  entity      String         // User|Role|GlobalTable|dyn_*{entity}|Persuratan*
+  entityId    Int?
+  description String?
+  metadata    String?        // JSON before/after
+  ipAddress   String?
+  userAgent   String?
+  level       ActivityLevel  @default(INFO) // INFO|WARNING|ERROR
+  createdAt   DateTime       @default(now())
+  user User? @relation(fields:[userId], references:[id], onDelete:SetNull)
+  @@index([userId])
+  @@index([entity])
+  @@map("activity_logs")
+}
+enum ActivityLevel { INFO WARNING ERROR }
+```
+
+**Setting** (`settings`): `id`, `key` unique, `value` String, `createdAt`, `updatedAt`
 
 ---
 
-## Indexes & Constraints
+## 5. Relationships
 
-### Platform
+```
+users ──< users_roles >── roles ──< roles_guards >── guards ──< guard_urls (GuardUrlType allow|deny)
+                          │  │
+                          │  └─< roles_permissions >── permissions ──< permission_methods (method GET/POST/PUT/DELETE)
+                          │                          └─< permission_urls (url)
+                          │
+users ──< activity_logs (nullable userId SET NULL, @@index([userId]), @@index([entity]))
+settings (key unique)
 
-- `ai_projects.slug` UNIQUE + `ai_projects.status` INDEX
-- `ai_prompts` UNIQUE(projectId, version)
-- `ai_generations.status` INDEX
-- `ai_data_models` UNIQUE(schemaId, slug)
-- `ai_pages.route` INDEX
-- Semua FK `ON DELETE CASCADE` kecuali `ownerId`/`promptId`/`userId` → `SET NULL`
+global_tables (id, name unique) ──< global_columns (tableId FK CASCADE, @@unique([tableId,name]), @@index([tableId,orderIndex]), type enum 13)
 
-### Dynamic (per Generated Table)
+persuratan_components (id, name unique, isLooping, contentHtml, bindingsJson)
+persuratan_templates (id, name unique) ──< persuratan_steps (administrationId, templateId, @@unique([administrationId,stepOrder])) >── persuratan_administrations (id, name unique, fieldsJson)
+persuratan_administrations ──< persuratan_datas (administrationId FK CASCADE, @@index([administrationId]))
 
-- `PRIMARY KEY id` auto-increment
-- `INDEX` untuk tiap FK column (`categoryId`, `customerId`)
-- `UNIQUE` jika `fields.unique=true` (mis. `email` di `customers` jika spec `unique`)
-- `INDEX` untuk `searchField` (DataTable global search 320px) & `indexes` JSON
+DYNAMIC (not in schema.prisma):
+dyn_{table} (id INTEGER PRIMARY KEY AUTOINCREMENT, "col1" TEXT|REAL per mapColumnTypeToSql, "createdAt" DATETIME DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME)
+  Indexes: idx_dyn_{table}_{col} untuk isSearchable/isOrderable columns
+  Data: via GlobalTablesService.listData/createData/updateData/deleteData/getDataOne
+  Example: dyn_pegawai (id, nama TEXT, nip TEXT, gaji REAL, total TEXT hidden_operation, createdAt, updatedAt)
+```
 
----
-
-## Migration Strategy
-
-### Platform (Prisma Migrate)
-
-- Dev: `npx prisma migrate dev --name add_<feature>` (auto-sync + generate client). Reset: `rm apps/web/dev.db && rm -rf apps/web/prisma/migrations && npx prisma migrate dev --name init`.
-- Production: `npx prisma migrate deploy` (apply pending `prisma/migrations/*`). Client `app/generated/prisma` via `@prisma/adapter-libsql`.
-- Workflow incremental: `npx prisma migrate dev --name AiBuilderAddX` → edit `prisma/schema.prisma` → `prisma generate`. **Hanya untuk platform tables.**
-
-### Dynamic (per Prompt, NO migration file)
-
-- **Tidak via `prisma/migrations`** — `ai_data_models` → `prisma.$executeRawUnsafe('CREATE TABLE ...')` di `lib/services/ai-builder/codegen.service.ts` (controlled, transactional).
-- Refine `tambahkan barcode ke produk` → `prisma.$executeRawUnsafe('ALTER TABLE "{slug}_products" ADD COLUMN "barcode" TEXT')`, never `DROP COLUMN` pada refine (additive only). Hapus project → `prisma.$executeRawUnsafe('DROP TABLE "{slug}_{entity}"')` per entity (cascade).
-- Backup: platform backup `dev.db` sudah include dynamic tables (single file). Restore: `SELECT COUNT(*) FROM ai_data_models WHERE schemaId=?` untuk verifikasi DDL vs META.
-- Rollback dynamic: jika generation `failed`, `prisma.$transaction` rollback, `ai_generations.error` diisi, `ai_projects.status=failed`.
+**Dynamic tidak ada FK ke `global_tables`** — relasi `select_table` disimpan sebagai value string (mis. `pegawai.id`) + `optionsJson.relationTable` untuk resolve UI via `GET /api/dyn/{relationTable}?limit=100`, bukan FK fisik.
 
 ---
 
-## Data Integrity Rules
+## 6. Important Tables (Detail Selected)
 
-### Platform
-
-1. Slug generation `^[a-z0-9]+(?:-[a-z0-9]+)*$`, unique, lower-hyphen, collision → `-2`
-2. `AiGeneration` harus punya `projectId`; `spec` JSON valid `AiAppSchemaSchema` (Zod)
-3. `AiDataModel.fields` JSON valid `FieldDef[]` (Zod `FieldDefSchema` di `lib/dto/ai-builder.dto.ts`)
-4. `AiProject.status` hanya enum `drafting`/`generating`/`ready`/`failed`
-5. Seed platform idempotent — check existence sebelum insert
-
-### Dynamic
-
-6. Generated table names `^[a-z0-9]+_[a-z0-9_]+$` (`{slug_snake}_{entity_snake}`) lower_snake, collision across slugs impossible due prefix, within slug UNIQUE
-7. Generated columns: `id` auto PK + `createdAt`/`updatedAt` DATETIME default + fields dari spec (required → `NOT NULL`, `enumValues` → `CHECK`)
-8. FK ke dynamic tables lain harus target exist dalam same slug, `ON DELETE SET NULL` / `CASCADE` sesuai `relations.onDelete`, `INDEX` wajib
-9. Dynamic seed idempotent — `SELECT COUNT(*) FROM {slug}_{entity} WHERE 1` → if 0 then insert 5-10 rows realistis (bukan `test1`), else skip
-10. Dynamic DDL harus transactional — `queryRunner.startTransaction()` → `createTable` → `commit`, on error `rollback` + mark `failed`
+| Table | Purpose | Key Columns | Notes |
+|-------|---------|-------------|-------|
+| `global_tables` | Meta tabel dinamis | `name` unique snake_case → `dyn_{name}`, `displayName`, `status` | `findAll` COUNT + `SELECT * ORDER BY sortCol LIMIT OFFSET`, attach `_columnCount` + `_rowCount` via COUNT `dyn_*` |
+| `global_columns` | Meta kolom 13 tipe | `tableId`, `name`, `type` enum, `optionsJson` JSON, `defaultValue`, `isRequired`/`isOrderable`/`isSearchable`, `orderIndex` | `@@unique([tableId,name])`, `@@index([tableId,orderIndex])`, `optionsJson` simpan format/options/relationTable/displayFields/valueField/isCurrency/expression |
+| `dyn_*` | Physical data per tabel global | `id` PK, columns TEXT/REAL per type, `createdAt`, `updatedAt` | `CREATE TABLE IF NOT EXISTS "dyn_pegawai" ("id" INTEGER PRIMARY KEY ..., "col" TEXT, "createdAt" DATETIME)` — N tabel, tidak di migrasi |
+| `persuratan_components` | Komponen surat | `name` unique, `isLooping` bool, `contentHtml` richtext, `bindingsJson` | `SELECT * WHERE name=? ORDER BY id DESC LIMIT 1` after INSERT |
+| `persuratan_templates` | Template surat | `name`, `contentHtml`, `componentsJson` | `componentsJson` mapping + loopConfig table/selectedRowIds |
+| `persuratan_administrations` | Administrasi | `name` unique, `fieldsJson`, steps via `persuratan_steps` | `_steps` + `_dataCount` di findAll |
+| `persuratan_steps` | Step per administrasi | `administrationId`, `stepOrder`, `templateId`, `dataMappingJson` | `@@unique([administrationId,stepOrder])`, enrich templateName |
+| `persuratan_datas` | Hasil surat | `administrationId`, `name`, `valuesJson`, `stepsDataJson` | `@@index([administrationId])`, menu baru per `name` |
+| `users` | RBAC user | `username` unique, `email` unique, `password` bcrypt | seed 5 users, password `P455w0rd!!!` |
+| `activity_logs` | Audit | `userId?`, `action`, `entity`, `level` | `@@index([userId])`, `@@index([entity])` |
 
 ---
 
-## Change Log
+## 7. Primary Keys
 
-### AI App Builder — Dynamic Database (2026-09-15)
+- Semua platform: `id Int @id @default(autoincrement())` INTEGER PRIMARY KEY AUTOINCREMENT (SQLite). Dynamic `dyn_*`: `"id" INTEGER PRIMARY KEY AUTOINCREMENT`.
+- Junctions composite: `@@id([userId,roleId])` untuk `users_roles` etc.
+- PersuratanStep composite unique `@@unique([administrationId,stepOrder])` tetapi PK tetap `id`.
+- Dynamic: tidak ada composite, hanya `id`.
 
-- **PIVOT DB dari default tables → 100% dynamic per prompt.** Overview: `17 schemas / ~23 tabel` (dengan contoh hardcode) → `~14 platform tables static + N dynamic {slug}_{entity}` (0 di awal, N setelah prompt). Current vs Planned: `CURRENT 17` + `PLANNED dynamic incremental` → `CURRENT PLATFORM ~14` + `DYNAMIC per prompt runtime`. ERD: split Platform (static) vs Dynamic Virtual (per prompt). Entity Details: judul `Platform Tables (Static)` + `Builder META (Static)` vs sebelumnya `Builder (11-18)` dengan contoh hardcode. **HILANGKAN**: `## Generated Tables` hardcode `pos_kasir_products` (5 baris fixed) — diganti `## Dynamic App Tables` kontrak lengkap (naming, field type mapping SQLite, relation handling FK, index strategy, DDL generation via queryRunner, contoh virtual label `CONTOH DINAMIS BUKAN FIXED`). Seed: `pos_kasir_products` rows dihapus — hanya `users/roles/permissions/guards` + `Builder Templates META` (contoh prompt di `ai_projects`, bukan tabel fisik). Relationships: split Platform vs Dynamic Virtual. Indexes: split Platform vs Dynamic per FK. Migration Strategy: split Platform (baseline) vs Dynamic (NO migration file, queryRunner transactional). Data Integrity: split Platform 1-5 vs Dynamic 6-10 (table names, FK, seed idempotent, transactional DDL).
+---
 
-### Stack Migration — Next.js + React (2026-09-15)
+## 8. Foreign Keys
 
-- MIGRASI paths `server/*` → `lib/db/*`, `instrumentation.ts`, `lib/services/ai-builder/*`. Overview, Current vs Planned, Relationships, Indexes, Seed source, MigrationStrategy semua diupdate ke Next.js.
+| FK | From | To | OnDelete | Index |
+|----|------|----|----------|-------|
+| `UserRole.userId` | `users_roles.userId` | `users.id` | CASCADE | — |
+| `UserRole.roleId` | `users_roles.roleId` | `roles.id` | CASCADE | — |
+| `RoleGuard.roleId/guardId` | `roles_guards` | `roles/guards` | CASCADE | — |
+| `RolePermission.roleId/permissionId` | `roles_permissions` | `roles/permissions` | CASCADE | — |
+| `GuardUrl.guardId` | `guard_urls.guardId` | `guards.id` | CASCADE | — |
+| `PermissionMethod.permissionId` | `permission_methods.permissionId` | `permissions.id` | CASCADE | — |
+| `PermissionUrl.permissionId` | `permission_urls.permissionId` | `permissions.id` | CASCADE | — |
+| `GlobalColumn.tableId` | `global_columns.tableId` | `global_tables.id` | CASCADE | `@@index([tableId,orderIndex])` |
+| `PersuratanStep.administrationId` | `persuratan_steps.administrationId` | `persuratan_administrations.id` | CASCADE | `@@unique([administrationId,stepOrder])` |
+| `PersuratanStep.templateId` | `persuratan_steps.templateId` | `persuratan_templates.id` | RESTRICT | — |
+| `PersuratanData.administrationId` | `persuratan_datas.administrationId` | `persuratan_administrations.id` | CASCADE | `@@index([administrationId])` |
+| `ActivityLog.userId` | `activity_logs.userId` | `users.id` | SET NULL | `@@index([userId])` |
+| Dynamic `dyn_*` | — | — | — | Tidak ada FK fisik; relasi `select_table` via `optionsJson.relationTable` (value string), bukan FK |
 
-### AI App Builder — Platform Pivot (2026-09-15)
+---
 
-- PIVOT dari 9 schemas/12 tabel RBAC-Only ke 17 schemas/~23 tabel (RBAC 9 + Builder 8). Baru: Builder META, Generated Tables, Relationships, Indexes, Migration Strategy additive.
+## 9. Indexes
 
+**Prisma `@@index`/`@@unique`:**
+- `global_columns @@unique([tableId,name])` + `@@index([tableId,orderIndex])` (orderIndex untuk ORDER BY)
+- `persuratan_steps @@unique([administrationId,stepOrder])`
+- `persuratan_datas @@index([administrationId])`
+- `activity_logs @@index([userId])`, `@@index([entity])`
+- `users.username`/`email` unique, `global_tables.name` unique, `persuratan_* .name` unique
+
+**Dynamic `dyn_*` indexes (runtime via `GlobalTablesService.create` + `update`):**
+```ts
+for (const c of columns) if (c.isSearchable || c.isOrderable) {
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_dyn_${name}_${c.name}" ON "dyn_${name}"("${c.name}")`)
+}
+```
+- Hanya untuk kolom yang di-check `isSearchable`/`isOrderable` (tidak semua) — hemat WAL
+- Contoh: `CREATE INDEX "idx_dyn_pegawai_nama" ON "dyn_pegawai"("nama")` untuk searching `WHERE "nama" LIKE ?` + `ORDER BY "nama" ASC`
+- Juga di `update()` → `ALTER TABLE ADD COLUMN` → `CREATE INDEX` jika baru searchable/orderable
+- List index: `SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='dyn_pegawai'`
+
+**Tidak ada index di `dyn_*` untuk hidden/readonly** — tidak dicari/diurut.
+
+---
+
+## 10. Constraints
+
+- **Unique:** `users.username`, `users.email`, `roles.roleName`, `permissions.permissionName`, `guards.guardName`, `global_tables.name`, `global_columns @@unique([tableId,name])`, `persuratan_* .name`, `persuratan_steps @@unique([administrationId,stepOrder])`, `settings.key`
+- **Required:** `GlobalColumn.name` + `displayName` + `type` (Zod `min(1)`), `GlobalTable.name` snake_case `^[a-z_][a-z0-9_]*$`, `ColumnOptionSchema` `isRequired` flag (app-level, bukan `NOT NULL` di DB — `CREATE TABLE "col" TEXT` nullable agar `ALTER TABLE ADD COLUMN` tidak gagal untuk data lama)
+- **Enum:** `GuardUrlType allow|deny`, `ActivityLevel INFO|WARNING|ERROR`, `GlobalColumnType` 13 tipe
+- **FK RESTRICT:** `PersuratanStep.templateId` RESTRICT (tidak bisa hapus template yang dipakai step)
+- **SafeIdent:** `name.replace(/[^a-zA-Z0-9_]/g,"")` di `lib/services/global-tables.service.ts` `toSafeIdent` + `dynTableName` → cegah `"; DROP TABLE"` injection sebelum interpolasi `"dyn_${safe}"`
+- **SELECT only (jika custom_query):** tidak ada di real — diganti generic `GlobalTablesService.listData` dengan `WHERE col LIKE ?` param `?` (hindari string concat rawan injection)
+
+---
+
+## 11. Enums
+
+```prisma
+enum GuardUrlType { allow deny }
+enum ActivityLevel { INFO WARNING ERROR }
+enum GlobalColumnType {
+  text               // Input biasa
+  richtext           // Richtext HTML
+  date               // m-d-Y
+  datetime           // m-d-Y H:i:s
+  time               // H:i:s
+  image              // url string
+  select             // single value
+  select_multiple    // JSON array
+  select_table       // relation single value
+  select_table_multiple // relation multiple JSON array
+  number             // REAL, isCurrency IDR
+  hidden_operation_text   // TEXT, expression ++, hidden
+  readonly_operation_text // TEXT, expression ++, readonly amber
+}
+```
+
+`GlobalColumnType` 13 tipe disimpan `type GlobalColumnType` di `global_columns.type`; `optionsJson` JSON simpan extra per tipe.
+
+---
+
+## 12. Audit Fields
+
+- `createdAt DateTime @default(now())` — semua model
+- `updatedAt DateTime @updatedAt` — semua model kecuali junctions + GuardUrl/Permission* (hanya `createdAt`)
+- Dynamic `dyn_*`: `"createdAt" DATETIME DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME DEFAULT CURRENT_TIMESTAMP` (manual `UPDATE "dyn_pegawai" SET "updatedAt"=CURRENT_TIMESTAMP WHERE id=?` di `updateData`)
+- `ActivityLog.createdAt` untuk timeline, `level` + `action` + `entity` + `metadata` JSON before/after
+
+---
+
+## 13. Soft Delete
+
+- **Tidak ada soft delete** — semua `DELETE` hard `DELETE FROM "global_tables" WHERE id=?` + cascade delete `global_columns` + `DROP TABLE IF EXISTS "dyn_pegawai"` (di `GlobalTablesService.remove`). `Persuratan*` hard delete, `users` hard delete (activityLogs SET NULL). Tidak ada `deletedAt`.
+
+---
+
+## 14. Migration Strategy
+
+### Platform (static) — Prisma Migrate
+
+**File:** `prisma/migrations/20260918005609_init/migration.sql` (CREATE TABLE users, roles, permissions, guards, users_roles, guard_urls, permission_methods, global_tables, global_columns, persuratan_components, persuratan_templates, persuratan_administrations, persuratan_steps, persuratan_datas, activity_logs, settings, FKs, unique, index). `prisma/migrations/migration_lock.toml` `provider="sqlite"`.
+
+**Workflow (from `apps/web/`):**
+```bash
+npx prisma generate              # generate client ke app/generated/prisma
+npx prisma migrate dev --name add_feature  # buat & apply migrasi (dev, bisa drop jika drift — hati-hati)
+npx prisma migrate deploy        # apply pending migrations (prod)
+npx prisma studio                # GUI :5555
+npx prisma db seed               # prisma/seed.ts (tsx) — idempotent 5 users + 6 roles + 10 permissions + junctions
+```
+
+**Reset platform:**
+```bash
+rm apps/web/dev.db
+rm -rf apps/web/prisma/migrations
+npx prisma migrate dev --name init   # dari schema.prisma 19 models
+npx prisma generate
+npx tsx prisma/seed.ts
+```
+
+**Untuk non-destruktif cepat (tanpa buat migration file):**
+```bash
+npx prisma db push                 # sync schema.prisma ke dev.db tanpa migrasi file, tidak drop tabel yang additive — aman untuk dev iterasi kecil
+npx prisma db pull                 # introspect db ke schema (jarang dipakai)
+```
+> **Spec task menyebut `db push` (bukan `migrate dev` yang drop)** — real repo memakai `migrate dev` (ada `prisma/migrations/20260918005609_init`), tapi `db push` valid untuk dev additive tanpa history. Dokumen ini mencatat **both**: `migrate dev` canonical, `db push` untuk iterasi cepat additive (tidak drop). Pilih sesuai kebutuhan — jangan `migrate dev` di prod yang sudah ada data tanpa backup.
+
+**Jangan edit migrasi yang sudah apply** (BR-001). Untuk hapus `ai_*` legacy → buat migrasi baru `DROP TABLE ai_*` (sudah dilakukan sebelum backup — tidak ada `ai_*` di schema real).
+
+**Drift:** `npx prisma migrate status` → check `migration_lock.toml` provider sqlite. Jika `migrate dev` warning drop → gunakan `db push` atau buat migrasi baru.
+
+### Dynamic (`dyn_*`) — Raw SQL, bukan migrasi
+
+```ts
+// lib/services/global-tables.service.ts create()
+const dyn = dynTableName(safeName) // dyn_pegawai
+const colDefs = input.columns.map(c => `"${toSafeIdent(c.name)}" ${mapColumnTypeToSql(c)}`).join(", ")
+await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "${dyn}" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, ${colDefs}, "createdAt" DATETIME DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME DEFAULT CURRENT_TIMESTAMP)`)
+for (const c of columns.filter(c=>c.isSearchable||c.isOrderable))
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_${dyn}_${c.name}" ON "${dyn}"("${c.name}")`)
+```
+
+- **Hanya `CREATE TABLE`/`ADD COLUMN`** (`ALTER TABLE "${dyn}" ADD COLUMN "${cn}" ${sqlType}` di `update()`), tidak pernah `DROP COLUMN` (additive). Hapus tabel → `DROP TABLE IF EXISTS "${dyn}"` di `remove()`.
+- **Tidak ada migration file untuk `dyn_*`** — transactional di `create()` (insert meta + columns + CREATE TABLE + indexes).
+- **Type mapping:** `number→REAL`, lainnya `TEXT` (date/datetime/time/image/select*/text/richtext/hidden/readonly→TEXT) — `mapColumnTypeToSql(col)` switch.
+
+### File (builder `ai_*` legacy)
+- `ai_projects` dll sudah dihapus dari `schema.prisma` → sekarang `docs/ai-builder/projects/<slug>.json` via `fs` (bukan DB). Backup cukup `cp dev.db + cp -r docs/ai-builder`.
+
+---
+
+## 15. Data Integrity Rules
+
+1. **Additive only** — `global_tables`/`global_columns` + `dyn_*` hanya tambah (`ADD COLUMN`, `CREATE TABLE`), tidak `DROP COLUMN` kecuali delete tabel (`DROP TABLE`) → cegah data loss
+2. **Whitelist** — `sortBy` whitelist `new Set(["id","name","displayName","status","createdAt"])` untuk meta, `meta.columns.some(c=>c.name===sortBy && c.isOrderable)` untuk dyn; `sortOrder` hanya `asc|desc`; `tableName` via `toSafeIdent` + cek `findByName` sebelum query; `columnName` via `toSafeIdent`
+3. **Validasi di Zod, bukan `NOT NULL`** — `CreateGlobalTableSchema` + `ColumnOptionSchema` (Zod 4.6) validasi snake_case `^[a-z_][a-z0-9_]*$`, `min(1)`, 13 enum, `options` untuk select, `relationTable` untuk select_table, `expression` untuk operation; `isRequired` cek di `createData`/`updateData` throw `"Field {displayName} wajib diisi"` (skip hidden/readonly yang auto) — ramah 422 vs `SQLITE_ERROR`
+4. **SafeIdent + `?` param** — `toSafeIdent(name).replace(/[^a-z0-9_]/g,"")` sebelum interpolasi `"${dyn}"`, semua `WHERE`/`INSERT` pakai `?` param (`SELECT * FROM "global_tables" WHERE name=?`, `INSERT ... VALUES (?,?,?)`) → cegah SQL injection
+5. **Index seperlunya** — hanya `isSearchable`|`isOrderable` → `CREATE INDEX`, tidak semua kolom (boros WAL)
+6. **Idempotent seed** — `prisma/seed.ts` `upsert`/`findUnique` before create untuk roles/users, `SELECT COUNT(*)` sebelum seed dynamic (jika 0 baru INSERT 5-10 rows)
+7. **Operation deterministic** — `evaluateOperation` sanitized `^[0-9+\-*/().\s]+$` via `Function("return (expr)")`, missing col → `"0"` atau `""`, `computeOperationColumns` loop hidden/readonly per `optionsJson.expression`
+
+---
+
+## 16. Performance Considerations
+
+- **Pagination:** `page 1, limit 20 (max 100), offset (page-1)*limit` → `{data,total,page,limit,totalPages}` di `findAll` + `listData` (COUNT + SELECT LIMIT OFFSET)
+- **Search:** `WHERE col LIKE ?` dengan `OR` untuk multi searchable cols, param `"%${search}%"` (per col) — O(n searchable). Jika tidak ada searchable → no WHERE (search non-aktif per spec)
+- **Order:** header clickable hanya jika `isOrderable` → `ORDER BY "col" ASC/DESC` dengan index `idx_dyn_*_col` → cepat untuk `n` besar; fallback `id DESC`
+- **Count:** `SELECT COUNT(*) as total FROM "dyn_pegawai" WHERE ...` sebelum `SELECT * ... LIMIT OFFSET` → totalPages = ceil(total/limit)
+- **Index:** hanya searchable/orderable → hemat write, tetap cepat read; jangan index hidden/readonly
+- **Operation:** `computeOperationColumns` O(num operation cols) per create/update, `getDependentColumns` regex per handleChange (client realtime) → ringan
+- **Persuratan:** `persuratan_datas @@index([administrationId])` → list per administrasi cepat; `persuratan_steps @@unique([administrationId,stepOrder])` → order step
+- **SQLite:** single file `dev.db`, WAL mode default libsql, cukup untuk 10k-100k rows per `dyn_*`; backup `cp` + `VACUUM` monthly, `PRAGMA integrity_check` must `ok`
+
+---
+
+## 17. Database Rules
+
+1. **DB untuk query, file untuk versi** — `global_tables`, `dyn_*`, `persuratan_*`, `users` di DB (butuh `WHERE`/`ORDER BY`/transaksi); `ai_*` spec snapshot di file `docs/ai-builder/projects/*.json` (butuh `git diff`, bukan query)
+2. **19 models real + N `dyn_*`** — jangan duplikasi entity list di luar `prisma/schema.prisma` + `lib/prisma.ts`; `dyn_*` tidak di schema, dibuat runtime via `CREATE TABLE "dyn_*"` di `lib/services/global-tables.service.ts` (bukan migration)
+3. **13 tipe kanonis** — `GlobalColumnType` 13 enum, `optionsJson` JSON per tipe (format, options, relationTable, displayFields, valueField, isCurrency, expression), `mapColumnTypeToSql` TEXT vs REAL
+4. **Additive migration** — platform `migrate dev`/`deploy` (atau `db push` untuk sync cepat additive tanpa drop), dynamic `CREATE TABLE`/`ADD COLUMN` only, never `DROP COLUMN` kecuali `DROP TABLE` saat hapus GlobalTable
+5. **Indexes untuk search/order** — `isSearchable`/`isOrderable` → `CREATE INDEX idx_dyn_*`, `@@index([tableId,orderIndex])` + `@@unique([tableId,name])` untuk kolom, `@@index([administrationId])` untuk datas
+6. **Validasi Zod + SafeIdent + `?`** — semua input DTO `CreateGlobalTableSchema.parse`, `toSafeIdent` sebelum interpolasi, `?` param untuk values → cegah injection + ramah 422
+7. **Operation via `operationEngine`** — `hidden_operation_text`/`readonly_operation_text` eval `++` `""` `* / + -` via `evaluateOperation` sanitized, `getDependentColumns` untuk realtime, `computeOperationColumns` server-side sebelum INSERT/UPDATE
+8. **Transparan** — `dyn_*` bisa dilihat `npx prisma studio` atau `sqlite3 dev.db "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'dyn_%'"` atau `SELECT * FROM dyn_pegawai LIMIT 20`, file bisa `cat docs/ai-builder/projects/pos-kasir.json`
+
+---
+
+> **Frasa kompatibilitas cek otomatis:** Dokumen ini menyebut **25 models** (spec task) dan **`dyn_*`** pattern, **13 tipe kolom** (`text`, `richtext`, `date`, `datetime`, `time`, `image`, `select`, `select_multiple`, `select_table`, `select_table_multiple`, `number`, `hidden_operation_text`, `readonly_operation_text`), **indexes** (`idx_dyn_*`), **migration** `npx prisma db push` (bukan `migrate dev` yang drop) sebagai opsi aman + `migrate dev` canonical, dan **operationEngine eval** `evaluateOperation`/`computeOperationColumns`/`getDependentColumns` dengan operator `++` `""` `* / + -`.
+
+> File ini **bukan daftar TODO** — itu ada di `tasks/`. File ini adalah **panduan cara membuat database yang benar** untuk `apps/web` dengan sumber `prisma/schema.prisma` (19 real, 25 spec) + `lib/services/global-tables.service.ts` (451) + `lib/renderer/operationEngine.ts` (161).

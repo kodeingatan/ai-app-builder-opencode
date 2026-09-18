@@ -1,55 +1,56 @@
-> **Last Backup:** 2026-09-18 — via `/knowledge:backup`
-> **Source:** `apps/web/*` — `prisma/schema.prisma` (25 models), `app/*`, `lib/*`, `components/*`
-> **Scope:** `apps/web` — untuk root lihat `../../docs/`
+> Last Backup: 2026-09-18 — via /knowledge:backup
+> Source: apps/web/* — prisma/schema.prisma (25 models), app/*, lib/*
+> Scope: apps/web — untuk root lihat ../../docs/
 
-# Production Runbook — AI App Builder Platform (Next.js)
+# Production Runbook — AI App Builder Platform (Next.js) + Global Tables & Persuratan
 
-Single-node SQLite deployment. Multi-node/HA out of scope.
+Single-node SQLite (`apps/web/dev.db`) deployment. Multi-node/HA out of scope.
 
 ## 1. Production boot & baseline migration
 
 ```bash
-NODE_ENV=production JWT_SECRET=<strong-secret> DB_SYNCHRONIZE=false npm run build && npm run start
+# from apps/web (All commands run from . — bukan apps/web)
+NODE_ENV=production JWT_SECRET=<strong-secret> DATABASE_URL="file:./dev.db" npm run build && npm run start
 # Next.js: next build → next start (bukan nuxt preview)
 # Atau standalone: npm run build && NODE_ENV=production node .next/standalone/server.js
 ```
 
-- `synchronize:false` production (`lib/db/data-source.ts` / `lib/db/index.ts` — override `DB_SYNCHRONIZE=true` only for scratch/dev). On fresh DB the server applies checked-in baselines automatically at boot (`migrationsRun` in `getDataSource()`):
-  - `lib/db/migrations/1788914913928-Baseline.ts` — RBAC 9 schemas / 12 tables
-  - `lib/db/migrations/<ts>-AiBuilder.ts` — Builder 8 schemas / +11 tables (AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment + indexes + FKs)
-  → total **17 schemas / ~23 tables**, then runs idempotent seed (RBAC + builder templates). Dev default unchanged (`synchronize:true`, no migration enforcement).
-- On drift the server fails fast with `MIGRATION_DRIFT` pointing here (see `lib/utils/startup-check.ts` + `lib/utils/migration-status.ts` via `instrumentation.ts` / `lib/db/init.ts`). Next.js `instrumentation.ts` hook (atau `app/layout.tsx` startup) yang init DataSource.
-- Fresh-install seed idempotent: every `seed*` checks existence first — re-running never duplicates permissions/roles/users/templates.
-- Startup self-check fails fast in production when `JWT_SECRET` is default, storage unwritable, or migrations drift. Dev boots (`synchronize:true`) are warn-free by design (Task 24); prod fatals unchanged.
-- Generated tables (`{slug}_{entity}`) — **not** covered by baseline migrations. They are created runtime via `synchronize` or `queryRunner.createTable` in `lib/services/ai-builder/codegen.service.ts` (additive only, never drop). Backup file before refine that adds columns.
+- **DB real 19 models** (`prisma/schema.prisma` 308, 19 models real vs spec 25 — RBAC 12 + Global 2 + Persuratan 5 + ActivityLog/Setting) + `prisma/migrations/20260918005609_init/migration.sql` (CREATE TABLE users ... global_tables, global_columns, persuratan_* etc.). `prisma7.config.ts` `DATABASE_URL="file:./dev.db"` (`.env`).
+- **Dynamic `dyn_*` + Office Doc** — **not** covered by baseline migrasi. Dibuat runtime via `prisma.$executeRawUnsafe('CREATE TABLE "dyn_pegawai" ...')` di `lib/services/global-tables.service.ts` 451 (additive `ADD COLUMN` only, never `DROP`, `DROP TABLE` hanya saat delete GlobalTable). `lib/renderer/operationEngine.ts` `++` `""` `* / + -` untuk hidden/readonly.
+- **File store builder** (`docs/ai-builder/projects/*.json`) — `ai_*` legacy sudah tidak di DB, backup cukup `cp dev.db + cp -r docs/ai-builder`.
+- **Seed:** `prisma/seed.ts` idempotent 5 users (admin `P455w0rd!!!` bcrypt10) + 6 roles + 10 permissions + junctions (`upsert`/`findUnique`). `dyn_*` seed via GUI `POST /api/dyn/{table}`.
+- **Middleware missing:** `middleware.ts` tidak ada saat backup 2026-09-18 — guard tidak aktif di edge; untuk produksi buat `middleware.ts` JWT atau enforce di Route Handler `GlobalTablesService` + persuratan services.
 
-### Migration workflow (from `apps/web/`)
+### Migration workflow (from `.` — apps/web)
 
 ```bash
-npm run migration:run                    # apply pending migrations (DB_PATH defaults to db.sqlite atau data/db.sqlite)
-DB_PATH=/tmp/scratch.sqlite npm run migration:run
-npm run migration:revert                 # revert last
-npm run migration:generate -- <Name>     # diff EntitySchemas vs DB → lib/db/migrations/<timestamp>-<Name>.ts
+npx prisma generate              # generate client ke app/generated/prisma
+npx prisma migrate dev --name add_feature  # create & apply migration (dev, bisa drop jika drift — hati-hati)
+npx prisma migrate deploy        # apply pending di produksi
+npx prisma db push               # sync cepat additive tanpa file migrasi — aman untuk dev (bukan migrate dev yang drop) — spec task menyebut db push
+npx prisma studio                # GUI :5555
+npx tsx prisma/seed.ts           # atau npm run db:seed
 ```
 
-- `generate` diffs entity metadata vs target DB: point `DB_PATH` at fully-migrated copy so only delta emitted, then wire new class into `appMigrations` in `lib/db/data-source.ts` (CLI prints reminder).
-- BR-001: never edit applied migration; schema changes ship as new files.
-- Up/down drill on empty scratch file before touching prod:
+- `migrate dev` canonical (ada `prisma/migrations/20260918005609_init`); `db push` untuk iterasi cepat additive tanpa history (spec: `db push` bukan `migrate dev` yang drop) — pilih sesuai kebutuhan.
+- BR-001: never edit applied migration; schema changes ship as new file.
+- Up/down drill on empty scratch:
 
 ```bash
 rm -f /tmp/drill.sqlite
-DB_PATH=/tmp/drill.sqlite npm run migration:run
-DB_PATH=/tmp/drill.sqlite npm run migration:revert
-DB_PATH=/tmp/drill.sqlite npm run migration:run
+DATABASE_URL="file:/tmp/drill.sqlite" npx prisma migrate deploy
+DATABASE_URL="file:/tmp/drill.sqlite" npx prisma db push
 sqlite3 /tmp/drill.sqlite "PRAGMA integrity_check;"  # must print: ok
+sqlite3 /tmp/drill.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'dyn_%';"
+sqlite3 /tmp/drill.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name='global_tables';"
 ```
 
-### Drift recovery (`MIGRATION_DRIFT` at boot)
+### Drift recovery
 
-1. Back up first (§3).
-2. `pending:<name>` — checked-in migration not applied: `npm run migration:run` and reboot.
-3. `unknown:<name>` — DB carries migration with no checked-in file: do NOT delete rows from `migrations`; restore matching file from VCS (or restore backup) and reboot.
-4. `migrations-table-missing` — pre-migration DB (tables exist but no bookkeeping): this file predates baseline. Either rebuild from baseline on empty file, or keep on dev `synchronize:true` — never force `DB_SYNCHRONIZE=true` against prod file (BR-002).
+1. Back up first (§3 `cp dev.db + docs/ai-builder`).
+2. `pending:<name>` — migrasi belum apply: `npx prisma migrate deploy` + reboot.
+3. `unknown:<name>` — DB punya migrasi tanpa file: restore file dari VCS, jangan delete rows ` _prisma_migrations`.
+4. Jika `migrate dev` warning drop → gunakan `npx prisma db push` untuk sync additive aman di dev.
 
 ## 2. Health probe
 
@@ -65,22 +66,26 @@ Wire to process monitor / LB probe. Include builder counts for observability (op
 
 ## 3. SQLite backup / restore
 
-SQLite is single file: `apps/web/db.sqlite`.
+SQLite single file: `apps/web/dev.db` (`DATABASE_URL="file:./dev.db"` di `.env` + `prisma7.config.ts` + `lib/prisma.ts` adapter-libsql).
 
 ```bash
-# Backup (stop writes or checkpoint first; single-node so stopping Next.js is enough)
-sqlite3 apps/web/db.sqlite "PRAGMA wal_checkpoint(TRUNCATE);"
-cp apps/web/db.sqlite backups/db-$(date +%F).sqlite
+# Backup (stop writes atau checkpoint dulu; single-node cukup stop Next.js)
+sqlite3 apps/web/dev.db "PRAGMA wal_checkpoint(TRUNCATE);"
+cp apps/web/dev.db backups/db-$(date +%F).sqlite
+cp -r apps/web/docs/ai-builder backups/ai-builder-$(date +%F)  # file store builder (jika ada)
 sqlite3 backups/db-$(date +%F).sqlite "PRAGMA integrity_check;"  # must print: ok
 
-# Restore on scratch copy + verify
+# Restore di scratch + verify
 cp backups/db-<date>.sqlite /tmp/restore-check.sqlite
 sqlite3 /tmp/restore-check.sqlite "PRAGMA integrity_check;"      # ok
-# Check builder tables exist:
-sqlite3 /tmp/restore-check.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'ai_%';"
+# Check platform + dynamic tables:
+sqlite3 /tmp/restore-check.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name='global_tables';"
+sqlite3 /tmp/restore-check.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'dyn_%';"
+sqlite3 /tmp/restore-check.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'persuratan_%';"
+sqlite3 /tmp/restore-check.sqlite "SELECT COUNT(*) FROM global_tables;"
 ```
 
-Cadence: daily file copy off-host; `VACUUM` monthly. WAL mode recommended when concurrent readers grow. **Reminder**: generated tables (`pos_kasir_*`, `crm_klinik_*`) are inside same file — backup covers all.
+Cadence: daily file copy off-host; `VACUUM` monthly; `PRAGMA integrity_check` must `ok`. WAL mode via libsql. **Reminder**: `dyn_*` + `persuratan_*` + `global_tables` di dalam `dev.db` yang sama — backup `dev.db` covers semua + `docs/ai-builder` file store.
 
 ## 4. Least-privilege roles — AI Builder (RBAC + Builder)
 
@@ -132,38 +137,66 @@ Covered entities: User, Role, Permission, Guard, **AiProject, AiGeneration**, Au
 
 ## 7. Quickstarts
 
-**Admin:** Login → Dashboard → User Management (Users/Roles/Permissions/Guards) → Activity Logs / System Logs / Settings.
+**Admin:** Login → Dashboard → User Management (Users/Roles/Permissions/Guards) → `prisma/seed.ts` users `admin/admin@admin.com` `P455w0rd!!!` → Activity Logs.
 
-**Builder (happy path):** Login → `Builder` → ketik `buatkan aplikasi kasir` di AiPromptBar → Generate → tunggu `ready` → klik `Preview` → `/generated/pos-kasir` → CRUD Produk, Transaksi, etc. → Refine `tambahkan barcode scanner` → preview refresh.
+**Global Tables (happy path — 13 tipe):** Login → `Global Tabel` → `Global Tables` → **Buat Tabel Baru** → isi `Nama Tabel` `pegawai` (snake_case → preview `dyn_pegawai`) + `Nama Tampilan` `Data Pegawai` → tambah kolom 13 tipe (text Nama `required` `searchable` `orderable`, richtext Deskripsi, date `m-d-Y`, image, select, select_table relation, number IDR `isCurrency`, hidden_operation `expression` `"hasil "++gaji++" * 2 = "++ gaji*2`) → **Buat Tabel** → `POST /api/global-tables` → `CREATE TABLE "dyn_pegawai"` + indexes → browse `/dyn/pegawai` → searching `Afdal` (isSearchable), options hide kolom, order klik `Nama` ↕ → **Tambah Data** modal per-type → input Nama, Gaji `Rp 5.000.000` realtime, hidden auto `hasil 5000000 *2 =10000000` → Simpan → DataTable.
 
-**Generated app user:** Buka `/generated/pos-kasir` → Dashboard omzet → `Produk` → Search `kopi` → Create `Produk` (validasi Zod) → Transaksi → Cetak struk.
+**Persuratan (4 tahap):** `Components` → buat `Kop Surat` richtext + klik kanan binding `nama` type text → `Templates` → buat `Surat Tugas` klik kanan insert Component `Kop Surat` mapping `{{nama}}` source `tabel:pegawai.nama` loop `pegawai` rows Pilih Semua → `Administrasi` → buat `Perjalanan Dinas` fields `judul:text` + steps pilih `Surat Tugas` → `Hasil` → pilih `Perjalanan Dinas` chips → isi `step1_judul` + tambah step `Surat Tugas` → isi data → Simpan → Preview PDF (window.print).
 
-## 8. API delta — AI Builder (RBAC + Builder)
+**Builder (happy path legacy):** Login → `Builder` (`/builder` → `/generated/surat-platform/builder`) Office Doc paper `#e8ecef` shadow → tambah Komponenten text/table/repeater/condition/barcode → Preview HTML → Export PDF `POST /api/generated/surat-platform/export-pdf` (puppeteer-core) → cetak.
 
-Base RBAC endpoints:
+**Generated app user (old):** Buka `/generated/pos-kasir` → Dashboard omzet → `Produk` → Search `kopi` → Create `Produk` (validasi Zod) → Transaksi → Cetak struk.
 
-- `/api/auth/*` (login, register, profile, password)
-- `/api/users/*`, `/api/roles/*`, `/api/permissions/*`, `/api/guards/*`
-- `/api/activity-logs/*`, `/api/system-logs/*`, `/api/settings/*`, `/api/storage/*`, `/api/health`
+## 8. API delta — Global Tables + Persuratan + Builder (RBAC + Builder)
 
-Builder endpoints (NEW):
+Base RBAC endpoints (real):
 
-- `POST /api/builder/generate` — prompt → project + generation
+- `/api/auth/*` (jika ada login/register/profile)
+- `/api/users/*` (`app/api/users/route.ts` + `[id]/route.ts`), serupa `/api/roles`, `/api/permissions`, `/api/guards` + `GET /api/activity-logs`, `/api/settings`, `/api/health` (`app/api/health/route.ts`)
+
+**Global Tables & Dyn (stabil — real `apps/web`):**
+
+- `GET /api/global-tables` — list meta (paginated, QueryGlobalTableSchema ?page&limit&search&sortBy&sortOrder) → `{data,total,page,limit,totalPages,_columnCount,_rowCount}` (`GlobalTablesService.findAll`)
+- `POST /api/global-tables` — create meta + `CREATE TABLE "dyn_{name}"` + `CREATE INDEX idx_dyn_*` (13 tipe, CreateGlobalTableSchema, snake_case, 201)
+- `GET /api/global-tables/:id` — detail + columns (`findOne`)
+- `PUT /api/global-tables/:id` — update meta + `ALTER TABLE ADD COLUMN` additive (UpdateGlobalTableSchema)
+- `DELETE /api/global-tables/:id` — `DROP TABLE IF EXISTS "dyn_{name}"` + delete meta cascade
+- `GET /api/dyn/:table` — list data `dyn_*` (QueryDynSchema ?page&limit&search&sortBy&sortOrder&filters, search hanya isSearchable OR, sort hanya isOrderable else id) → `{data,total,page,limit,totalPages,columns}` (`listData`)
+- `POST /api/dyn/:table` — create data (validasi required/default/type + `computeOperationColumns` hidden/readonly `++` `""` `* / + -` → INSERT)
+- `GET/PUT/DELETE /api/dyn/:table/:id` — detail/update (merge existing + recompute)/delete (`getDataOne`/`updateData`/`deleteData`)
+
+**Persuratan (stabil — real):**
+
+- `GET/POST /api/persuratan/components` — list/create component (`persuratan_components`: name, isLooping, contentHtml, bindingsJson)
+- `GET/PUT/DELETE /api/persuratan/components/:id`
+- `GET/POST /api/persuratan/templates` — template (componentsJson mapping + loopConfig)
+- `GET/PUT/DELETE /api/persuratan/templates/:id`
+- `GET/POST /api/persuratan/administrations` — administrasi (fieldsJson + steps → persuratan_steps)
+- `GET/PUT/DELETE /api/persuratan/administrations/:id` — detail + steps enrich templateName
+- `GET/POST /api/persuratan/administrations/:id/datas` — hasil (valuesJson, stepsDataJson, persuratan_datas)
+- `PUT/DELETE /api/persuratan/administrations/:id/datas/:dataId`
+
+**Surat Platform legacy (generated):**
+
+- `GET/POST /api/generated/surat-platform/templates` + `[id]`, `documents`, `employees`, `components`, `data-sources` + `[id]/resolve`
+- `POST /api/generated/surat-platform/render` — render HTML schema+data
+- `POST /api/generated/surat-platform/export-pdf` — export PDF via `puppeteer-core` + chrome (barcode ikut)
+
+Builder endpoints (NEW, file-based jika aktif):
+
+- `POST /api/builder/generate` — prompt → project + generation (file `docs/ai-builder`)
 - `POST /api/builder/refine` — prompt delta → patch
 - `GET /api/builder/projects` — list (paginated, ?status=ready|generating|failed)
-- `GET /api/builder/projects/:slug` — detail + spec + latest generation
-- `GET /api/builder/projects/:slug/generations` — list generations
-- `GET /api/builder/generations/:id` — detail generation
-- `DELETE /api/builder/projects/:slug` — delete project + generated code (cascade)
-- `POST /api/builder/preview/:slug` — rebuild preview
+- `GET /api/builder/projects/:slug` — detail + spec
+- `DELETE /api/builder/projects/:slug` — delete project + code
 - `GET /api/builder/templates` — starter templates
 
-Generated dynamic endpoints (per project slug — Next.js Route Handlers):
+Generated dynamic (per slug — Next.js Route Handlers):
 
 - `GET|POST /api/generated/:slug/:entity` — list/create (paginated, search/sort) → `app/api/generated/[slug]/[entity]/route.ts`
-- `GET|PUT|DELETE /api/generated/:slug/:entity/:id` — detail/update/delete → `app/api/generated/[slug]/[entity]/[id]/route.ts`
+- `GET|PUT|DELETE /api/generated/:slug/:entity/:id` — detail/update/delete
 
-Example: `GET /api/generated/pos-kasir/products?page=1&limit=20&search=kopi` → `{ data, total, page, limit, totalPages }`
+Example: `GET /api/global-tables?page=1&limit=20&search=pegawai` → `{data:[{name:"pegawai",displayName:"Pegawai",_columnCount:5,_rowCount:10}],total}`; `GET /api/dyn/pegawai?search=Afdal&sortBy=nama&sortOrder=asc` → `{data:[{nama:"Afdal",gaji:5000000}],total,columns}`
 
 ## 9. Builder — observability & ops
 
@@ -173,6 +206,10 @@ Example: `GET /api/generated/pos-kasir/products?page=1&limit=20&search=kopi` →
 - **Deploy**: `AiDeployment` `env=preview` auto, `production` manual. URL `/generated/[slug]` served via Next.js `app/generated/[slug]/page.tsx` + Route Handlers `app/api/generated/[slug]/[entity]/route.ts`. Vercel/Node standalone both `next start` ready.
 
 ## Change Log
+
+### 2026-09-18 — Knowledge Backup (Global Tables 13 tipe + Persuratan stabil)
+
+- **Discovery:** 19 models real (spec 25) vs real `dev.db` `DATABASE_URL="file:./dev.db"` + `prisma7.config.ts` + `lib/prisma.ts` adapter-libsql, `lib/services/global-tables.service.ts` 451 (13 tipe `dyn_*`), `lib/renderer/operationEngine.ts` `++`, `apps/web/dev.db` (bukan `db.sqlite`), `docs/ai-builder` file store. **Update runbook:** §1 platform 19 models + dynamic `dyn_*` (CREATE TABLE additive, `db push` aman vs `migrate dev` drop), §3 backup `dev.db` + `docs/ai-builder` + checks `global_tables`/`dyn_%`/`persuratan_%`, §7 quickstarts Global Tables 13 tipe + Persuratan 4 tahap + Office Doc `#e8ecef`, §8 API delta Global Tables & Dyn + Persuratan + legacy generated + builder, §4 roles + §5 audit tetap.
 
 ### Stack Migration — Next.js + React (2026-09-15)
 

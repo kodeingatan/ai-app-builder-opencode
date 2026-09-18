@@ -1,6 +1,6 @@
-> **Last Backup:** 2026-09-18 — via `/knowledge:backup`
-> **Source:** `apps/web/*` — `prisma/schema.prisma` (25 models), `app/*`, `lib/*`, `components/*`
-> **Scope:** `apps/web` — untuk root lihat `../../docs/`
+> Last Backup: 2026-09-18 — via /knowledge:backup
+> Source: apps/web/* — prisma/schema.prisma (25 models), app/*, lib/*
+> Scope: apps/web — untuk root lihat ../../docs/
 
 # Design System — AI App Builder Platform
 
@@ -16,23 +16,26 @@ Filosofi: **Notion-calm + Professional Workspace** — warm paper, satu aksen st
 
 > Sumber inspirasi: Notion (`DESIGN-notion.md`, dihapus setelah adopsi). Prinsip: kanvas paper-calm, **satu aksen struktural** (Notion blue), chrome monokrom, sticker hanya untuk ilustrasi.
 
-### Primary (Notion Blue — satu-satunya aksen struktural)
+### Primary (Notion Blue — satu-satunya aksen struktural) — HSL `210 100% 44%` ~ `#0075de`
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| Primary | `#0075de` | Main brand — primary CTA, inline link, active/focus signal. **WAJIB untuk semua generated app primary button** |
+| Token | Hex / HSL | Usage |
+|-------|-----------|-------|
+| Primary | `#0075de` HSL `210 100% 44%` | Main brand — primary CTA, inline link, active/focus signal. **WAJIB untuk semua generated app primary button**. Token kanonis `app/globals.css` `@theme inline --color-primary: hsl(210 100% 44%)` + `:root --primary: 210 100% 44%` + `--ring: 210 100% 44%` |
 | Primary Hover | `#0069c4` | Button hover (12% darken) |
 | Primary Pressed | `#005bab` | Pressed state |
 | Primary Soft | `#e8f2fd` | Background hover/light (tint ~8%) |
 | Deep Indigo | `#213183` | Full-bleed inverted band (hero dashboard) — satu momen gelap |
 
-### Canvas & Surface (warm paper, bukan clinical white)
+### Canvas & Surface (warm paper, bukan clinical white) — Office Doc paper `#e8ecef`
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| Canvas | `#ffffff` | Nav bar, kartu, panel, field |
-| Canvas Soft | `#f6f5f4` | Page canvas + footer band — warm off-white paper-calm |
-| Hairline | `#e6e6e6` | Border 1px kartu & divider (black-10%-on-white) |
+| Canvas | `#ffffff` | Nav bar, kartu, panel, field (cards putih) |
+| Canvas Soft | `#f6f5f4` | Page canvas + footer band — warm off-white paper-calm (`body { background: #f6f5f4 }` di `app/globals.css`) |
+| Office Doc Paper | `#e8ecef` | Background canvas editor Office Doc `app/generated/surat-platform/builder/page.tsx` (`className="bg-[#e8ecef]"`) + paper putih `shadow-[0_2px_16px_rgba(0,0,0,0.12),0_1px_4px_rgba(0,0,0,0.08)]` (shadow paper) |
+| Hairline | `#e6e6e6` | Border 1px kartu & divider (black-10%-on-white) — `border-[#e6e6e6]` + `--color-border: #e6e6e6` + `--border: 0 0% 89.8%` |
+
+> **Office Doc:** Builder tengah `bg-[#e8ecef]` flex justify-center, paper `bg-white` `width:794px` (A4) / `816px` (Letter) `minHeight:520px` `shadow-[0_2px_16px_rgba(0,0,0,0.12),0_1px_4px_rgba(0,0,0,0.08)]`, header `h-7` border `h-8` footer, ruler `bg-[#f3f4f6]` `h-6` 20 ticks, zoom `60-140%` `scale(zoom/100)`.
 
 ### Ink (teks — warm charcoal)
 
@@ -76,7 +79,7 @@ Filosofi: **Notion-calm + Professional Workspace** — warm paper, satu aksen st
 
 ## Typography
 
-Font: **Inter** (substitusi `NotionInter` — pakai negative tracking agar setajam Notion).
+Font: **Inter** (substitusi `NotionInter` — pakai negative tracking agar setajam Notion). `app/globals.css` `font-family: var(--font-geist-sans), Inter, system-ui` + `app/layout.tsx` `Inter` import.
 
 | Token | Size | Weight | Line Height | Tracking | Usage |
 |-------|------|--------|-------------|----------|-------|
@@ -182,48 +185,48 @@ Filosofi **barely-there**: hairline + micro-shadow berlapis nyaris transparan �
 
 ---
 
-## PageShell (Kanonis List/Detail/Editor — Wajib untuk Semua App: RBAC + Generated)
+## PageShell (Kanonis List/Detail/Editor — Wajib untuk Semua App: RBAC + Generated + Global Tables + Persuratan)
 
-Kanonis shell untuk semua halaman `list` / `detail` / `editor`.
+Kanonis shell untuk semua halaman `list` / `detail` / `editor` — **real** `components/layout/PageShell.tsx` + `app/global-tables/page.tsx` 412, `app/dyn/[table]/page.tsx` 520, `app/components-persuratan` 259, `app/templates-persuratan` 328, dll. semua pakai `PageShell` (bukan `PageShell.vue` legacy).
 
-- **Komponen**: `app/components/layout/PageShell.vue` — `props: title, breadcrumbs: {label, href?}[], description?`, slots `actions` + `default`
-- **Struktur**: `breadcrumb` → `header (title + actions)` → `toolbar (DataTable)` → `konten (table/detail/editor)` → `pagination`. Padding `head 16px 20px`, `body 24px`, border `1px #e6e6e6` radius `12`, `flex-wrap` responsive (`column <768px`)
-- **Breadcrumb**: leaf `span aria-current="page"`, lainnya `<a href>` + `preventDefault` + `router.push`
-- **Generated apps**: tiap list page (`/generated/pos-kasir/products`) WAJIB pakai PageShell — jangan buat header custom tanpa breadcrumb.
+- **Komponen**: `components/layout/PageShell.tsx` — `props: title, breadcrumbs: {label, href?}[], description?, children, actions` (ReactNode)
+- **Struktur**: `breadcrumb` (`next/link`) → `header (title + actions)` → `toolbar (DataTable)` → `konten (table/detail/editor)` → `pagination`. Padding `head 16px 20px`, `body 24px`, border `1px #e6e6e6` radius `12` (`rounded-[12px]`), `flex-wrap` responsive (`column <768px`), `bg-[#f6f5f4]` canvas
+- **Breadcrumb**: leaf `span aria-current="page"`, lainnya `<Link href>` 
+- **Generated/Dyn apps**: tiap list page (`/global-tables`, `/dyn/pegawai`, `/components-persuratan`) WAJIB pakai PageShell — jangan buat header custom tanpa breadcrumb. `PageShell` di `app/globals.css` radius `12px` kanonis.
 
 ---
 
-## Detail View (Read Detail — Wajib untuk Generated Drawer/Page)
+## Detail View (Read Detail — Wajib untuk Generated Drawer/Page) — Kanonis `detail-view`
 
-Standar layout untuk semua **read detail** (drawer, inline card). Menggantikan `NDescriptions`.
+Standar layout untuk semua **read detail** (drawer, inline card) — **real** `app/globals.css` 19-44 + `app/dyn/[table]/page.tsx` detail modal + `app/global-tables/page.tsx` detail:
 
 ```html
 <div class="detail-view">
   <div class="detail-field">
     <span class="detail-label">{LABEL}</span>
-    <span class="detail-value">{VALUE}</span>
+    <span class="detail-value">{VALUE}</span> <!-- atau <img> untuk image -->
   </div>
 </div>
 ```
 
-| Class | Property | Value |
-|-------|----------|-------|
-| `.detail-view` | display | `flex` + `column` |
-| `.detail-field` | padding | `12px 0` + border-bottom `1px solid rgba(0,0,0,0.06)` |
-| `.detail-label` | font-size | `11px` + `600` + `uppercase` + `letter-spacing 0.05em` + `#94a3b8` |
-| `.detail-value` | font-size | `14px` + `500` + `#1e293b` + `line-height 1.5` |
+| Class | Property | Value (real `app/globals.css`) |
+|-------|----------|--------------------------------|
+| `.detail-view` | display | `grid` + `gap:12px` (di globals.css `display:grid; gap:12px`) |
+| `.detail-field` | padding | `10px 0` + `flex-col gap:4px` + `border-bottom 1px solid #e6e6e6` (last-child none) |
+| `.detail-label` | font-size | `11px` + `600` + `uppercase` + `letter-spacing 0.05em` + `#6b7280` |
+| `.detail-value` | font-size | `14px` + `400` + `#111827` |
 
-Modifiers: `.detail-value--text` (400 #334155), `.detail-value--mono` (mono 13px), `.detail-value--code` (bg #f8fafc border #e2e8f0 radius 8 padding 12), `.detail-value--dark` (bg #1e293b).
+**Real usage:** `app/global-tables/page.tsx` detail → `<div className="detail-view"><div className="detail-field"><span className="detail-label">Status</span><span className="detail-value">{detail.status}</span></div>` + `font-mono` untuk `dyn_{name}`; `app/dyn/[table]/page.tsx` detail → loop `columns.map(c=><div className="detail-field"><span>{c.displayName}</span><span>{c.type==="image" ? <img> : String}</span></div>)`. **Jangan pakai table/descriptions.**
 
-**Generated apps**: DetailDrawer per entity wajib pakai pola ini — jangan pakai NDescriptions.
+**Office Doc paper detail:** Builder tidak pakai detail-view — pakai paper `#e8ecef` + shadow `[0_2px_16px]` sebagai detail.
 
 ---
 
-## Table (Kanonis — Wajib untuk Semua Tabel: RBAC + Generated + Global Tables)
+## Table (Kanonis — Wajib untuk Semua Tabel: RBAC + Generated + Global Tables + Persuratan) — Kanonis `DataTable`
 
-> **Update 2026-09-18:** `app/dyn/[table]` pakai `DataTable` kanonis dengan **searching** (hanya kolom isSearchable), **options** (kolom tampil), **orders** (hanya isOrderable) + per-type input (select_table modal, number IDR, operation hidden/readonly).
+> **Update 2026-09-18 (real):** `app/global-tables/page.tsx` + `app/dyn/[table]/page.tsx` (520) pakai `DataTable` kanonis (`components/common/DataTable/DataTable.tsx`) dengan **searching** (Input `search` hanya kolom `isSearchable` → `WHERE col LIKE ?` OR), **options** (checkboxes `visibleCols` kolom tampil → filter `visibleColumns`), **orders** (klik header `↕` hanya jika `isOrderable` → `ORDER BY col ASC/DESC`, tampil `Sort: {col} {order}`) + per-type cell (`formatValue` date `m-d-Y`, currency `Rp`, image thumb, richtext strip, operation badge). Persuratan pages (`components-persuratan` 259, `templates-persuratan` 328) juga pakai `DataTable` kanonis (columns `name`, `bindings`, `preview`, `actions`).
 
-## Table (Kanonis — Wajib untuk Semua Tabel: RBAC + Generated)
+## Table (Kanonis — Detail Dimensions & Required Features)
 
 ### Dimensions
 
@@ -252,7 +255,7 @@ Modifiers: `.detail-value--text` (400 #334155), `.detail-value--mono` (mono 13px
 | Empty | Empty (shadcn) `Belum ada data` + CTA `+ Buat ...` |
 | Loading | Spinner overlay semi-transparan |
 
-**Generated apps**: DataTable per entity wajib pakai `app/components/common/DataTable/DataTable.vue` — jangan buat `NDataTable` manual tanpa toolbar kanonis. Toolbar layout:
+**Generated/Dyn apps**: DataTable per entity wajib pakai `components/common/DataTable/DataTable.tsx` (real `import DataTable from "@/components/common/DataTable/DataTable"` di `app/global-tables/page.tsx:3` + `app/dyn/[table]/page.tsx:3` + persuratan pages) — jangan buat `<table>` manual tanpa toolbar kanonis. Toolbar layout kanonis `PageShell` + `DataTable` + `Menampilkan {from}-{to} dari {total}` (ID):
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -562,6 +565,10 @@ Badge Pill, Empty-State Card, Toast (sonner), Auth Card, Modal Card (`Dialog`), 
 ---
 
 ## Change Log
+
+### 2026-09-18 — Knowledge Backup (Global Tables 13 tipe + Office Doc paper)
+
+- **Discovery:** `prisma/schema.prisma` 19 models real (vs spec 25) + `app/globals.css` 98 baris tokens `hsl(210 100% 44%)` ~ `#0075de`, `#f6f5f4` `#e6e6e6` `Inter` `radius 12px` `.detail-view` `grid gap:12px`, `app/generated/surat-platform/builder/page.tsx` 647+ baris paper `bg-[#e8ecef]` `shadow-[0_2px_16px_rgba(0,0,0,0.12),0_1px_4px_rgba(0,0,0,0.08)]` ruler/zoom, `components/layout/AppLayout.tsx` 178 4 grup, `next.config.ts` rewrites. **Update design-system:** header `Last Backup: 2026-09-18`, source 19 real, tokens `#0075de` HSL 210 100% 44% (`@theme inline` + `:root --primary: 210 100% 44%`), canvas `#f6f5f4` (body bg), Office Doc paper `#e8ecef` + shadow, Inter via `var(--font-geist-sans)`, PageShell kanonis `components/layout/PageShell.tsx` (bukan `.vue`), detail-view `grid` + `#6b7280`/`#111827`, DataTable kanonis `components/common/DataTable` dengan searching/options/orders + per-type `formatValue`, Office Doc builder 3-panel.
 
 ### Stack Migration — Next.js + React (2026-09-15)
 
