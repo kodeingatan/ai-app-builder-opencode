@@ -18,13 +18,13 @@
 - Input: `buatkan aplikasi kasir`
 - Output: App POS lengkap → Dashboard omzet, Produk (CRUD + kategori + stok + barcode), Transaksi (keranjang + diskon + print struk), Pelanggan, Laporan, User & Role (Admin/Kasir), Activity Log, Settings. UI modern, search, pagination, mobile-friendly. Route `/generated/pos-kasir`.
 
-**Current Implementation State**: Platform dibangun di atas **RBAC Foundation** (9 EntitySchemas / 12 tabel: User/Role/Permission/Guard/ActivityLog/Setting) yang menjadi fondasi auth & permission untuk semua generated app. Di atasnya, **AI Builder Layer** menambahkan 8 EntitySchemas baru (AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment) → total **17 EntitySchemas / ~23 tabel**. Generation flow: Prompt → Intent Inference → Spec → Architecture → CodeGen → UI Assembly → Preview → Iterate.
+**Current Implementation State**: Platform dibangun di atas **RBAC Foundation** (Prisma 18 models: User/Role/Permission/Guard/ActivityLog/Setting + junctions) yang menjadi fondasi auth & permission untuk semua generated app. Di atasnya, **AI Builder Layer** menambahkan 8 models baru (AiProject, AiPrompt, AiGeneration, AiAppSchema, AiDataModel, AiPage, AiComponentSpec, AiDeployment) → total **18 Prisma models** + N dynamic `{slug}_{entity}` via `prisma.$executeRaw`. Generation flow: Prompt → Intent Inference → Spec → Architecture → CodeGen (Prisma raw) → UI Assembly → Preview → Iterate.
 
 **Tech Stack**:
 - Frontend: Next.js 15 (App Router) + React 19 + TypeScript + shadcn/ui + Tailwind CSS v4 + lucide-react + Framer Motion
-- Backend: Next.js Route Handlers (`app/api/**/route.ts`) + TypeORM 1.1 EntitySchema + SQLite (`better-sqlite3`) + Zod + JWT
+- Backend: Next.js Route Handlers (`app/api/**/route.ts`) + Prisma 7.10 + SQLite (`@prisma/adapter-libsql`, `dev.db`, `DATABASE_URL="file:./dev.db"`) + Zod + JWT
 - Auth: JWT (JSON Web Token) 24 jam, `httpOnly` cookie + `middleware.ts` guard
-- AI Builder: Prompt Inference Engine + Spec-to-Schema Generator + UI Assembly Engine + Preview & Iteration
+- AI Builder: Prompt Inference Engine + Spec-to-Schema Generator (Prisma raw) + UI Assembly Engine + Preview & Iteration
 
 ---
 
@@ -199,7 +199,7 @@ Dashboard, User/Role/Permission/Guard CRUD, Activity Logs, System Logs, Settings
 
 ## 12. Constraints
 
-- Database: SQLite (better-sqlite3) — cocok untuk skala kecil-menengah, single file. `synchronize: true` dev, `synchronize: false` + `migrationsRun: true` production. TypeORM via Next.js Route Handlers.
+- Database: SQLite via Prisma ( `dev.db`, `DATABASE_URL="file:./dev.db"`, `prisma/schema.prisma` + `prisma7.config.ts`, adapter `@prisma/adapter-libsql`) — cocok untuk skala kecil-menengah, single file. Prisma Migrate `migrate dev` / `migrate deploy`. Dynamic tables via `prisma.$executeRaw`.
 - Monolith: Next.js 15 (App Router) — frontend (React Server Components + Client Islands) + API Routes satu package, tanpa microservice
 - Auth JWT 24 jam, bcrypt, `httpOnly` cookie, `middleware.ts` guard
 - TypeScript strict (`strict: true`), Zod validation single source of truth (DTOs di `lib/dto/`)
@@ -441,7 +441,7 @@ Sistem (group)
 ### Performance
 - Generation <30s untuk app 3-4 entities (tanpa LLM eksternal lambat)
 - List pagination 20 default, max 100
-- SQLite + better-sqlite3 cukup untuk preview skala kecil; production single-file backup
+- SQLite via Prisma cukup untuk preview skala kecil; production single-file backup
 
 ### UX
 - **Responsive** mobile-first

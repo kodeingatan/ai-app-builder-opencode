@@ -2,22 +2,22 @@
 
 ## Overview
 
-- **Database Engine**: SQLite (via `better-sqlite3`)
-- **ORM**: TypeORM 1.1 (`EntitySchema` pattern)
-- **Platform Tables (static)**: **~14 EntitySchemas / 18 physical tables** — RBAC 6 core + 3 junctions + Builder META 8 + Platform (`activity_logs`, `settings`) — di-migrate via baseline. **Tidak ada tabel bisnis hardcode.**
+- **Database Engine**: SQLite (via Prisma + `@prisma/adapter-libsql`)
+- **ORM**: Prisma 7.10 (`prisma/schema.prisma` — 18 models platform, client di `app/generated/prisma`)
+- **Platform Tables (static)**: **18 Prisma models / 18 physical tables** — RBAC 6 core + 3 junctions + Builder META 8 + Platform (`activity_logs`, `settings`) — di-migrate via Prisma Migrate. **Tidak ada tabel bisnis hardcode.**
 - **Dynamic App Tables**: `N` tabel fisik `{slug}_{entity}` dibuat **runtime per prompt** (`buatkan aplikasi kasir` → `pos_kasir_products`, `pos_kasir_categories`, dll). Tidak dihitung di baseline, tidak ada default. Lihat § Dynamic App Tables.
-- **Database File**: `apps/web/db.sqlite` (atau `data/db.sqlite`), single file. Dynamic tables hidup di file yang sama.
-- **Migrations**: `synchronize: true` dev (default, override `DB_SYNCHRONIZE`), `synchronize: false` + `migrationsRun: true` production. Baseline `lib/db/migrations/1788914913928-Baseline.ts` (PLATFORM tables) + `lib/db/migrations/<ts>-AiBuilder.ts` (Builder META) auto-run via `getDataSource()` (`lib/db/data-source.ts`). Drift → `MIGRATION_DRIFT` via `lib/utils/migration-status.ts`. CLI: `npm run migration:generate -- <Name>` / `migration:run` / `migration:revert` (detail `docs/production-runbook.md` §1). BR-001: never edit applied migration. **Dynamic tables TIDAK via migration file** — via `queryRunner.createTable` di `lib/services/ai-builder/codegen.service.ts`.
-- **Seed**: idempotent via `instrumentation.ts` / `lib/db/seed.ts` (RBAC users/roles/permissions/guards + Builder Templates META) — dipanggil saat Next.js boot. **Tidak seed tabel bisnis** — data bisnis di-seed runtime setelah generate (5-10 rows per entity, idempotent `WHERE NOT EXISTS`).
-- **Startup gating**: dev `synchronize:true` suppress `JWT_SECRET_DEFAULT` + `MIGRATION_DRIFT` warns; prod fatals.
+- **Database File**: `apps/web/dev.db` (DATABASE_URL="file:./dev.db", schema `prisma/schema.prisma`, config `prisma7.config.ts`), single file. Dynamic tables hidup di file yang sama.
+- **Migrations**: Prisma Migrate — `prisma/schema.prisma` + `prisma/migrations/*` + `prisma7.config.ts`. Dev: `npx prisma migrate dev --name init`, Prod: `npx prisma migrate deploy`. Client generate: `npx prisma generate` → `app/generated/prisma`. BR-001: never edit applied migration. **Dynamic tables TIDAK via migration file** — via `prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')` di `lib/services/ai-builder/codegen.service.ts`.
+- **Seed**: idempotent via `prisma/seed.ts` (RBAC users/roles/permissions/guards + Builder Templates META) — `npx tsx prisma/seed.ts` atau `npx prisma db seed`; dipanggil saat Next.js boot via `instrumentation.ts` jika perlu. **Tidak seed tabel bisnis** — data bisnis di-seed runtime setelah generate (5-10 rows per entity, idempotent `COUNT(*) == 0`).
+- **Startup gating**: Prisma `migrate deploy` di production; dev auto-sync via `migrate dev`. `lib/prisma.ts` singleton cegah hot-reload duplicate client.
 
 ---
 
 ## Current vs Planned — Platform vs Dynamic
 
-- **CURRENT PLATFORM (static, di-migrate)**: ~14 EntitySchemas / 18 tabel fisik — RBAC foundation + Builder META + Platform. Lihat § Entity Relationship Diagram & § Entity Details — Platform Tables. Ini yang ada di `lib/db/data-source.ts` `appEntities` sejak awal.
-- **DYNAMIC (per prompt, runtime)**: Setiap `AiProject` menghasilkan `ai_data_models` rows (spec JSON) → `lib/services/ai-builder/codegen.service.ts` generate **physical tables** `lib/db/entities/generated/{slug}/{entity}.entity.ts` + `app/api/generated/[slug]/[entity]/route.ts`. Tabel dinamis diregistrasi runtime via `getGeneratedEntities(slug)` dan `appEntities` dynamic. **Jumlah tabel = 0 di awal, N setelah prompt.** Tidak ada `pos_kasir_products` default — hanya muncul jika user prompt `kasir`.
-- **PLANNED**: Platform schema changes ship sebagai additive migration baru setelah baseline. Dynamic tables tidak perlu migration — additive DDL per project (`ADD COLUMN`/`CREATE TABLE`). Jika butuh perubahan platform, buat migration baru.
+- **CURRENT PLATFORM (static, di-migrate)**: 18 Prisma models / 18 tabel fisik — RBAC foundation + Builder META + Platform. Lihat § Entity Relationship Diagram & § Entity Details — Platform Tables. Ini yang ada di `prisma/schema.prisma` sejak awal.
+- **DYNAMIC (per prompt, runtime)**: Setiap `AiProject` menghasilkan `ai_data_models` rows (spec JSON string) → `lib/services/ai-builder/codegen.service.ts` generate **physical tables** via `prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')` + `app/api/generated/[slug]/[entity]/route.ts` (CRUD via `prisma.$queryRaw`/`$executeRaw` untuk dynamic). Tabel dinamis TIDAK di schema — runtime DDL. **Jumlah tabel = 0 di awal, N setelah prompt.** Tidak ada `pos_kasir_products` default — hanya muncul jika user prompt `kasir`.
+- **PLANNED**: Platform schema changes ship sebagai additive Prisma migration baru (`npx prisma migrate dev --name add_<field>`). Dynamic tables tidak perlu migration — additive DDL per project (`ADD COLUMN`/`CREATE TABLE` via `$executeRaw`). Jika butuh perubahan platform, buat migration baru.
 
 > **Prinsip AI App Builder DB:** `Platform tables = fixed & minimal. Business tables = 100% dynamic per prompt.` Jangan hardcode entity bisnis di baseline.
 
@@ -113,16 +113,15 @@
 ### Dynamic App Tables (Virtual — per Prompt)
 
 ```
-ai_data_models (META: fields JSON, relations JSON)
+ai_data_models (META: fields JSON string, relations JSON string)
        │
-       ├─runtime─> lib/db/entities/generated/{slug}/{entity}.entity.ts
-       │           + queryRunner.createTable("{slug}_{entity}")
+       ├─runtime─> prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')
        │           → physical table "{slug}_{entity}" (e.g., "pos_kasir_products")
-       │             id PK, name VARCHAR, price NUMERIC, stock INTEGER,
+       │             id PK, name TEXT, price REAL, stock INTEGER,
        │             categoryId INTEGER FK → {slug}_categories.id,
        │             createdAt DATETIME, updatedAt DATETIME
        │
-       └─> app/api/generated/[slug]/[entity]/route.ts (CRUD via TypeORM)
+       └─> app/api/generated/[slug]/[entity]/route.ts (CRUD via prisma.$queryRaw / $executeRaw untuk dynamic)
 ```
 
 > Dynamic tables **tidak muncul di baseline** — hanya ilustrasi virtual. Struktur kolom 100% dari `ai_data_models.fields` hasil inference prompt.
@@ -403,10 +402,10 @@ Seed: `app_name`, `login_bg_gradient`, `builder_default_template = pos-kasir`, `
 
 **Output:** untuk tiap entity:
 
-1. **Spec row** `ai_data_models` (`name`, `slug`, `fields` JSON, `relations` JSON)
-2. **Entity file** `lib/db/entities/generated/{slug}/{entity}.entity.ts` (EntitySchema)
-3. **Physical table** `{slug_snake}_{entity_snake}` via `queryRunner.createTable()` — **runtime**, additive only (`ADD COLUMN` / `CREATE TABLE`, never `DROP COLUMN` pada refine)
-4. **DTO** `lib/dto/{slug}/{entity}.dto.ts` (Zod `Create{Entity}Schema`), **Service** `lib/services/{slug}/{entity}.service.ts`, **Route Handler** `app/api/generated/{slug}/{entity}/route.ts`, **UI** `app/generated/[slug]/**` (shadcn)
+1. **Spec row** `ai_data_models` (`name`, `slug`, `fields` TEXT JSON, `relations` TEXT JSON)
+2. **Dynamic table** `{slug_snake}_{entity_snake}` via `prisma.$executeRawUnsafe('CREATE TABLE ...')` — **runtime**, additive only (`ADD COLUMN` / `CREATE TABLE`, never `DROP COLUMN` pada refine)
+3. **DTO** `lib/dto/{slug}/{entity}.dto.ts` (Zod `Create{Entity}Schema`), **Service** `lib/services/{slug}/{entity}.service.ts` (via `prisma.$queryRaw`/`$executeRaw` untuk dynamic, `prisma.user.*` untuk platform), **Route Handler** `app/api/generated/{slug}/{entity}/route.ts`, **UI** `app/generated/[slug]/**` (shadcn)
+4. **Prisma**: dynamic tables tidak masuk `schema.prisma` — kelola via raw SQL; platform tables via `prisma.schema` models
 
 ### Naming
 
@@ -416,23 +415,23 @@ Seed: `app_name`, `login_bg_gradient`, `builder_default_template = pos-kasir`, `
 
 ### Field Type Mapping (spec → SQLite)
 
-| Spec `type` | SQLite | TypeORM | Validasi Zod |
+| Spec `type` | SQLite (via Prisma raw) | Prisma (platform) | Validasi Zod |
 |-------------|--------|---------|--------------|
-| `string` | VARCHAR(255) | `varchar` | `z.string().min(1).max(255)` |
-| `text` | TEXT | `text` | `z.string()` |
-| `integer` | INTEGER | `int` | `z.number().int()` |
-| `decimal` | NUMERIC(10,2) | `decimal` | `z.number()` |
-| `boolean` | INTEGER 0/1 | `boolean` | `z.boolean()` |
-| `date` | DATE | `date` | `z.string().date()` atau `z.coerce.date()` |
-| `datetime` | DATETIME | `datetime` | `z.string().datetime()` |
-| `enum` | VARCHAR(50) + CHECK | `varchar` | `z.enum([...])` |
-| `relation` ManyToOne | INTEGER FK | `int` + `ManyToOne` relation | `z.number().int()` nullable |
+| `string` | TEXT | `String` | `z.string().min(1).max(255)` |
+| `text` | TEXT | `String @db.Text` (SQLite -> TEXT) | `z.string()` |
+| `integer` | INTEGER | `Int` | `z.number().int()` |
+| `decimal` | REAL | `Float` | `z.number()` |
+| `boolean` | INTEGER 0/1 | `Boolean` (Int 0/1 di SQLite) | `z.boolean()` |
+| `date` | TEXT (ISO) | `DateTime` | `z.string().date()` atau `z.coerce.date()` |
+| `datetime` | TEXT (ISO) | `DateTime` | `z.string().datetime()` |
+| `enum` | TEXT + CHECK | `String` + enum di Prisma | `z.enum([...])` |
+| `relation` ManyToOne | INTEGER FK | `Int` + relation via raw FK | `z.number().int()` nullable |
 
 ### Relation Handling
 
-- `ai_data_models.relations` contoh: `[{type:"ManyToOne", target:"Category", field:"categoryId", onDelete:"SET NULL"}]` → di EntitySchema `relations: { category: { type:"many-to-one", target:"Category", joinColumn: { name:"categoryId" }, onDelete:"SET NULL" } }` + `columns: { categoryId: { type:"int", nullable:true } }` + `INDEX categoryId`
-- FK constraint dibuat runtime `FOREIGN KEY (categoryId) REFERENCES {slug}_categories(id) ON DELETE SET NULL`
-- OneToMany inverse otomatis, tidak buat kolom.
+- `ai_data_models.relations` contoh: `[{type:"ManyToOne", target:"Category", field:"categoryId", onDelete:"SET NULL"}]` → di dynamic DDL `FOREIGN KEY (categoryId) REFERENCES "{slug}_categories"(id) ON DELETE SET NULL` via `prisma.$executeRawUnsafe(...)` + `INDEX categoryId`
+- FK constraint dibuat runtime `FOREIGN KEY (categoryId) REFERENCES "{slug}_categories"(id) ON DELETE SET NULL`
+- OneToMany inverse tidak buat kolom — hanya ManyToOne FK.
 
 ### Index Strategy
 
@@ -442,16 +441,13 @@ Seed: `app_name`, `login_bg_gradient`, `builder_default_template = pos-kasir`, `
 ### DDL Generation (Next.js)
 
 ```typescript
-// lib/services/ai-builder/codegen.service.ts (pseudo)
+// lib/services/ai-builder/codegen.service.ts (pseudo — Prisma raw)
 for (const model of aiDataModels) {
-  const columns = model.fields.map(f => mapFieldToColumn(f)) // + id, createdAt, updatedAt
-  const relations = model.relations.map(r => mapRelationToFK(r, slug))
-  await queryRunner.createTable(new Table({
-    name: `${slug_snake}_${model.slug}`,
-    columns, indices, foreignKeys: relations
-  }))
+  const columns = model.fields.map(f => mapFieldToPrismaRaw(f)).join(", ") // + id PK, createdAt, updatedAt
+  const fk = model.relations.map(r => `FOREIGN KEY ("${r.field}") REFERENCES "${slug_snake}_${r.target.toLowerCase()}"(id) ON DELETE SET NULL`).join(", ")
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "${slug_snake}_${model.slug}" (${columns}${fk ? ", " + fk : ""})`)
 }
-// Refine: alterTable → addColumn only, never drop
+// Refine: prisma.$executeRawUnsafe(`ALTER TABLE "${table}" ADD COLUMN "barcode" TEXT`) — never DROP
 ```
 
 ### Contoh Virtual (BUKAN FIXED — hanya ilustrasi per prompt)
@@ -491,7 +487,7 @@ for (const model of aiDataModels) {
 
 ---
 
-## Seed Data — Platform Only (Sumber kebenaran: `lib/db/seed.ts`)
+## Seed Data — Platform Only (Sumber kebenaran: `prisma/seed.ts`)
 
 > Hanya RBAC + Builder META, **tidak ada seed tabel bisnis**.
 
@@ -604,18 +600,18 @@ ai_data_models (META: fields JSON)
 
 ## Migration Strategy
 
-### Platform (baseline)
+### Platform (Prisma Migrate)
 
-- Dev: `synchronize: true` (auto-sync platform tables, no migration file needed). Reset: `rm apps/web/db.sqlite`.
-- Production: `synchronize: false`, `migrationsRun: true`. Baseline platform auto-apply at boot (`lib/db/migrations/1788914913928-Baseline.ts` + `*AiBuilder.ts`); drift fail-fast `MIGRATION_DRIFT`.
-- Workflow incremental: `npm run migration:generate -- AiBuilderAddX` → wire di `lib/db/data-source.ts` `appMigrations`. **Hanya untuk platform tables.**
+- Dev: `npx prisma migrate dev --name add_<feature>` (auto-sync + generate client). Reset: `rm apps/web/dev.db && rm -rf apps/web/prisma/migrations && npx prisma migrate dev --name init`.
+- Production: `npx prisma migrate deploy` (apply pending `prisma/migrations/*`). Client `app/generated/prisma` via `@prisma/adapter-libsql`.
+- Workflow incremental: `npx prisma migrate dev --name AiBuilderAddX` → edit `prisma/schema.prisma` → `prisma generate`. **Hanya untuk platform tables.**
 
 ### Dynamic (per Prompt, NO migration file)
 
-- **Tidak via `lib/db/migrations`** — `ai_data_models` → `queryRunner.createTable()` di `lib/services/ai-builder/codegen.service.ts` (controlled, transactional).
-- Refine `tambahkan barcode ke produk` → `queryRunner.addColumn("{slug}_products", { name:"barcode", type:"varchar", isNullable:true })`, never `dropColumn`/`dropTable` pada refine (additive only). Hapus project → `queryRunner.dropTable()` per entity (cascade).
-- Backup: platform backup `db.sqlite` sudah include dynamic tables (single file). Restore: `COUNT(*) FROM ai_data_models WHERE schemaId=?` untuk verifikasi DDL vs META.
-- Rollback dynamic: jika generation `failed`, `queryRunner` rollback transaction, `ai_generations.error` diisi, `ai_projects.status=failed`.
+- **Tidak via `prisma/migrations`** — `ai_data_models` → `prisma.$executeRawUnsafe('CREATE TABLE ...')` di `lib/services/ai-builder/codegen.service.ts` (controlled, transactional).
+- Refine `tambahkan barcode ke produk` → `prisma.$executeRawUnsafe('ALTER TABLE "{slug}_products" ADD COLUMN "barcode" TEXT')`, never `DROP COLUMN` pada refine (additive only). Hapus project → `prisma.$executeRawUnsafe('DROP TABLE "{slug}_{entity}"')` per entity (cascade).
+- Backup: platform backup `dev.db` sudah include dynamic tables (single file). Restore: `SELECT COUNT(*) FROM ai_data_models WHERE schemaId=?` untuk verifikasi DDL vs META.
+- Rollback dynamic: jika generation `failed`, `prisma.$transaction` rollback, `ai_generations.error` diisi, `ai_projects.status=failed`.
 
 ---
 

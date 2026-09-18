@@ -1,0 +1,327 @@
+// Prisma schema for AI App Builder Platform — SQLite via Prisma
+// Prisma 7.10 + @prisma/adapter-libsql — single source of truth untuk platform
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ── Enums ──
+enum AiProjectStatus {
+  drafting
+  generating
+  ready
+  failed
+}
+
+enum AiGenerationStatus {
+  queued
+  running
+  success
+  failed
+}
+
+enum GuardUrlType {
+  allow
+  deny
+}
+
+enum ActivityLevel {
+  INFO
+  WARNING
+  ERROR
+}
+
+// ── RBAC Core ──
+model User {
+  id        Int      @id @default(autoincrement())
+  firstName String  
+  lastName  String  
+  username  String   @unique
+  email     String   @unique
+  password  String  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userRoles    UserRole[]
+  activityLogs ActivityLog[]
+  aiProjects   AiProject[] @relation("UserAiProjects")
+
+  @@map("users")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  roleName    String   @unique
+  description String? 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userRoles       UserRole[]
+  guardRoles      RoleGuard[]
+  permissionRoles RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id             Int      @id @default(autoincrement())
+  permissionName String   @unique
+  description    String? 
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  rolePermissions    RolePermission[]
+  permissionMethods  PermissionMethod[]
+  permissionUrls     PermissionUrl[]
+
+  @@map("permissions")
+}
+
+model Guard {
+  id          Int      @id @default(autoincrement())
+  guardName   String   @unique
+  description String? 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roleGuards RoleGuard[]
+  guardUrls  GuardUrl[]
+
+  @@map("guards")
+}
+
+// Junction: users_roles
+model UserRole {
+  userId Int
+  roleId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("users_roles")
+}
+
+// Junction: roles_guards
+model RoleGuard {
+  roleId  Int
+  guardId Int
+  role    Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  guard   Guard @relation(fields: [guardId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, guardId])
+  @@map("roles_guards")
+}
+
+// Junction: roles_permissions
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("roles_permissions")
+}
+
+model GuardUrl {
+  id        Int          @id @default(autoincrement())
+  guardId   Int
+  url       String      
+  type      GuardUrlType
+  createdAt DateTime     @default(now())
+
+  guard Guard @relation(fields: [guardId], references: [id], onDelete: Cascade)
+
+  @@map("guard_urls")
+}
+
+model PermissionMethod {
+  id           Int        @id @default(autoincrement())
+  permissionId Int
+  method       String    
+  createdAt    DateTime   @default(now())
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@map("permission_methods")
+}
+
+model PermissionUrl {
+  id           Int      @id @default(autoincrement())
+  permissionId Int
+  url          String  
+  createdAt    DateTime @default(now())
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@map("permission_urls")
+}
+
+// ── Builder META (8 schemas) ──
+model AiProject {
+  id            Int               @id @default(autoincrement())
+  name          String           
+  slug          String            @unique
+  initialPrompt String           
+  status        AiProjectStatus   @default(drafting)
+  previewUrl    String?          
+  ownerId       Int?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  owner       User?         @relation("UserAiProjects", fields: [ownerId], references: [id], onDelete: SetNull)
+  prompts     AiPrompt[]
+  generations AiGeneration[]
+  deployments AiDeployment[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@map("ai_projects")
+}
+
+model AiPrompt {
+  id             Int      @id @default(autoincrement())
+  projectId      Int
+  promptText     String  
+  inferredIntent String?  // JSON stringified InferredIntent
+  version        Int      @default(1)
+  createdAt      DateTime @default(now())
+
+  project     AiProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  generations AiGeneration[]
+
+  @@unique([projectId, version])
+  @@map("ai_prompts")
+}
+
+model AiGeneration {
+  id         Int                 @id @default(autoincrement())
+  projectId  Int
+  promptId   Int?
+  status     AiGenerationStatus  @default(queued)
+  spec       String?             // JSON stringified AiAppSchema snapshot
+  error      String?            
+  durationMs Int?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  project  AiProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  prompt   AiPrompt?   @relation(fields: [promptId], references: [id], onDelete: SetNull)
+  appSchema AiAppSchema?
+
+  @@index([status])
+  @@map("ai_generations")
+}
+
+model AiAppSchema {
+  id           Int      @id @default(autoincrement())
+  generationId Int      @unique
+  entities     String   // JSON array EntityDef
+  pages        String   // JSON array PageDef
+  roles        String   // JSON array RoleDef
+  flows        String?  // JSON Business flows
+  apiContract  String?  // JSON ApiContract
+  createdAt    DateTime @default(now())
+
+  generation     AiGeneration      @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  dataModels     AiDataModel[]
+  pagesList      AiPage[]
+  componentSpecs AiComponentSpec[]
+
+  @@map("ai_app_schemas")
+}
+
+model AiDataModel {
+  id        Int      @id @default(autoincrement())
+  schemaId  Int
+  name      String   // PascalCase e.g. Product
+  slug      String   // snake plural e.g. products -> becomes table suffix
+  fields    String   // JSON FieldDef[] [{name:"price", type:"decimal", required:true,...}]
+  relations String?  // JSON RelationDef[]
+  indexes   String?  // JSON string[] search/index fields
+  createdAt DateTime @default(now())
+
+  schema AiAppSchema @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+
+  @@unique([schemaId, slug])
+  @@map("ai_data_models")
+}
+
+model AiPage {
+  id            Int      @id @default(autoincrement())
+  schemaId      Int
+  route         String  
+  title         String  
+  type          String   // dashboard|list|detail|form|report
+  componentTree String   // JSON {root:"PageShell", children:["DataTable"...]}
+  createdAt     DateTime @default(now())
+
+  schema AiAppSchema @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+
+  @@index([route])
+  @@map("ai_pages")
+}
+
+model AiComponentSpec {
+  id        Int      @id @default(autoincrement())
+  schemaId  Int
+  name      String   // e.g. ProductTable
+  type      String    // DataTable|FormModal|DetailDrawer|StatCard|FilterBar
+  props     String   // JSON props spec
+  tokens    String?  // JSON design tokens override
+  createdAt DateTime @default(now())
+
+  schema AiAppSchema @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+
+  @@map("ai_component_specs")
+}
+
+model AiDeployment {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  env       String   // preview|production
+  url       String  
+  builtAt   DateTime
+  createdAt DateTime @default(now())
+
+  project AiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("ai_deployments")
+}
+
+// ── Platform: ActivityLog & Setting ──
+model ActivityLog {
+  id          Int            @id @default(autoincrement())
+  userId      Int?
+  action      String         // CREATE|UPDATE|DELETE|LOGIN|GENERATE|REFINE
+  entity      String         // User|Role|AiProject|{DynamicEntity}
+  entityId    Int?
+  description String?       
+  metadata    String?        // JSON before/after
+  ipAddress   String?       
+  userAgent   String?       
+  level       ActivityLevel  @default(INFO)
+  createdAt   DateTime       @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity])
+  @@map("activity_logs")
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

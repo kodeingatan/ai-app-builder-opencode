@@ -39,15 +39,15 @@ Jika tidak cocok — infer generik: 3 entities (`Item`, `Category`, `Transaction
 
 Setiap entity hasil generate WAJIB:
 
-- EntitySchema `lib/db/entities/generated/{slug}/{entity}.entity.ts` — columns + relations + indexes (TypeORM 1.1 EntitySchema)
+- Dynamic table `prisma.$executeRawUnsafe('CREATE TABLE "{slug}_{entity}" (...)')` — columns + FK + indexes via Prisma raw SQL
 - DTO `lib/dto/{slug}/{entity}.dto.ts` — `Create{Entity}Schema` Zod ketat + `QuerySchema` (page/limit/search/sortBy/sortOrder)
-- Service `lib/services/{slug}/{entity}.service.ts` — plain object `findAll`, `findOne`, `create`, `update`, `remove` via TypeORM `getDataSource()`
+- Service `lib/services/{slug}/{entity}.service.ts` — plain object `findAll`, `findOne`, `create`, `update`, `remove` via `prisma.*` (platform) atau `prisma.$queryRaw`/`$executeRaw` (dynamic)
 - Route Handlers `app/api/generated/{slug}/{entity}/route.ts` (`GET` list, `POST` create), `app/api/generated/{slug}/{entity}/[id]/route.ts` (`GET`, `PUT`, `DELETE`) — `NextRequest`/`NextResponse.json`, `lib/auth/guard.ts` (`requireApiAccess`)
 - Types `lib/types/{slug}/{entity}.ts`
 - Pages `app/generated/[slug]/page.tsx` (dashboard) + `app/generated/[slug]/[entity]/page.tsx` (list) + `app/generated/[slug]/[entity]/[id]/page.tsx` — PageShell + DataTable shadcn + Dialog+Form (`react-hook-form` + `zodResolver`) pill CTA + Drawer/Sheet detail-view (`use client` islands)
 - Hooks `app/generated/[slug]/hooks/use{Entity}Data.ts` (TanStack Query) + Stores `stores/{slug}-{entity}.ts` (Zustand)
-- Seed 5-10 rows realistis (bukan `test 1`, `test 2`) via `lib/db/seed.ts`
-- Register di `lib/db/data-source.ts` (`appEntities` + dynamic import) + `middleware.ts` guard matcher
+- Seed 5-10 rows realistis (bukan `test 1`, `test 2`) via `prisma/seed.ts` + `lib/db/dynamic.ts` helper
+- Register via `prisma.$executeRaw` (dynamic, bukan data-source) + `middleware.ts` guard matcher
 
 ## UI Assembly Rules (Anti Jelek — Next.js + shadcn/ui)
 
@@ -65,8 +65,8 @@ Setiap entity hasil generate WAJIB:
 
 ## Tech Constraints (Next.js)
 
-- Stack: Next.js 15 (App Router) + React 19 + TypeScript 5 strict + shadcn/ui (Radix primitives di `components/ui/*`) + Tailwind v4 utility + Zustand 5 + TanStack Query 5 + lucide-react + Framer Motion 12 + TypeORM 1.1 EntitySchema + better-sqlite3 + Zod + JWT 24h (httpOnly cookie, `middleware.ts`)
+- Stack: Next.js 15 (App Router) + React 19 + TypeScript 5 strict + shadcn/ui (Radix primitives di `components/ui/*`) + Tailwind v4 utility + Zustand 5 + TanStack Query 5 + lucide-react + Framer Motion 12 + Prisma 7.10 + SQLite via @prisma/adapter-libsql + Zod + JWT 24h (httpOnly cookie, `middleware.ts`)
 - Commands from `apps/web/` — `npm run dev` (next dev --turbopack), `build` (next build), `start` (next start) — see `AGENTS.md` Commands
-- All generated tables `snake_case` with slug prefix: `pos_kasir_products` — additive only on refine (migration via `lib/db/migration-cli.ts`)
+- All generated tables `snake_case` with slug prefix: `pos_kasir_products` — additive only on refine via `prisma.$executeRaw` (Prisma Migrate untuk platform: `npx prisma migrate dev`)
 - Icons: `lucide-react` — `<Sparkles size={16} />`, `<Package />`, `<Receipt />`, `<Users />`, `<Calendar />` — **never** `@vicons/carbon` + `h(NIcon)` (Vue legacy)
 - Conventions Next.js: `"use client"` only for interactive, `params` is Promise (`await params`), `NextRequest`/`NextResponse.json`, `next/link` for nav, `instrumentation.ts` for DB init

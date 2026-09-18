@@ -126,7 +126,7 @@ Check that all files listed in `## Tasks` + `## Test Plan` exist:
 For each implemented item:
 
 1. Read the file
-2. Verify it follows project conventions (AGENTS.md — EntitySchema, plain object Service, Nitro route, Zod DTO, shadcn/ui direct import, `lib/types/`)
+2. Verify it follows project conventions (AGENTS.md — Prisma models, plain object Service via prisma.*, Next.js Route Handler, Zod DTO, shadcn/ui direct import, `lib/types/`)
 3. Verify it matches the task requirements — mapping ke `User Flow Step` / `AC` / `FR/BR/DR/INV/EC`
 4. Verify it works with existing code dan TIDAK menyimpang dari mockup FASE 1 tanpa catatan
 
@@ -135,8 +135,8 @@ For each implemented item:
 | Convention | Check | FASE |
 |------------|-------|------|
 | Naming | Files, functions, variables follow existing patterns | 1 & 2 |
-| Structure | Files are in correct directories (`lib/db/entities/`, `components/`, `tests/unit/` etc.) | 2 |
-| Imports | Import paths use correct aliases `~/`, `@/`, `~~/` | 2 |
+| Structure | Files are in correct directories (`prisma/schema.prisma`, `lib/services/`, `components/`, `tests/unit/` etc.) | 2 |
+| Imports | Import paths use correct aliases `@/` (Next.js) | 2 |
 | Types | TypeScript types correct, no unnecessary `any` | 2 |
 | Error handling | `createError` h3, Zod validation, `getErrorMessage` + Alert 403 | 2 |
 | Validation | Zod DTOs — sync dengan FR/BR/EC | 2 |
@@ -149,9 +149,9 @@ For each implemented item:
 
 Check that the implementation integrates (FASE 2):
 
-1. New entities are registered in `lib/db/data-source.ts` (`appEntities`)
-2. New services are importable from API routes
-3. New API routes are accessible (Nitro)
+1. New Prisma models are registered in `prisma/schema.prisma` + `lib/prisma.ts` (no data-source)
+2. New services (via prisma.*) are importable from API routes
+3. New API routes are accessible (Next.js Route Handlers)
 4. New frontend components render correctly (sesuai mockup + **Storybook stories** FASE 1 — `apps/web/stories/{feature}/*.stories.tsx`)
 5. New stores/composables work with existing code
 6. `## UI > Referensi Design` di FASE 2 benar-benar menunjuk ke `tasks/NN-ui-design.md` + Storybook stories yang ada
@@ -221,7 +221,7 @@ npm run dev           # Development server
 
 Verify (FASE 2):
 
-- [ ] Server starts without errors — tidak ada warning `orm-data-source` / `better-sqlite3` yang baru
+- [ ] Server starts without errors — tidak ada warning `prisma` / `lib/prisma` yang baru
 - [ ] API endpoints respond correctly — setiap `## API > Endpoint Overview` dapat di-hit dengan token valid/invalid (401/403)
 - [ ] Pages render without errors — sesuai mockup + **Storybook stories** FASE 1, responsive desktop/tablet/mobile, no console error — token `globals.css` ter-apply
 - [ ] States ter-trigger manual: loading (delay), empty (hapus data), error (matikan API), validation (input salah), permission (role tanpa akses) — sesuai `## UI > States` + Storybook story variants
@@ -289,9 +289,9 @@ Generate a verification report **seolah QA tester independen** — fokus pada Us
 
 | Integration | Status | Notes |
 |-------------|--------|-------|
-| Entity registered in `orm-data-source.ts` | PASS/FAIL | {notes} |
+| Entity/model registered in `prisma/schema.prisma` | PASS/FAIL | {notes} |
 | Service importable | PASS/FAIL | {notes} |
-| API routes accessible (Nitro) | PASS/FAIL | {notes} |
+| API routes accessible (Next.js) | PASS/FAIL | {notes} |
 | Frontend renders (sesuai mockup FASE 1) | PASS/FAIL | {notes} |
 | UI referensi FASE 1 valid | PASS/FAIL | {notes} |
 
