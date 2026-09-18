@@ -1,64 +1,36 @@
-# apps/web — AI App Builder Platform (Next.js)
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-> `Minimal Prompt → Maximal App` — Next.js 15 (App Router) + React 19 + shadcn/ui
+## Getting Started
 
-## Quick Start (dari `apps/web/`)
-
-```bash
-npm install          # butuh rebuild better-sqlite3 & bcrypt jika native
-npm run dev          # Next.js dev --turbopack http://localhost:3000
-npm run build        # next build
-npm run start        # next start
-npm run lint         # next lint
-npm run test         # vitest
-npm run test:e2e     # playwright
-```
-
-## AI App Builder
-
-Ketik di `/builder` atau chat:
-
-```
-buatkan aplikasi kasir
-```
+First, run the development server:
 
 ```bash
-npm run builder:generate -- "buatkan aplikasi kasir"
-npm run builder:list
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-AI akan infer (domain, 3-5 entities, 4-7 pages, 2-3 roles) → generate Next.js:
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-- `lib/db/entities/generated/{slug}/` (EntitySchema)
-- `lib/dto/{slug}/`, `lib/services/{slug}/`, `app/api/generated/[slug]/[entity]/route.ts`
-- `app/generated/[slug]/` (`page.tsx`, `components/`, `hooks/` TanStack Query)
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-Design tokens: `app/globals.css` HSL `--primary: 210 100% 44%` (~ `#0075de`), canvas `#f6f5f4`, hairline `#e6e6e6`, shadcn `components/ui` (Button pill `rounded-full`, Input tight `rounded-[4px]`, Card `rounded-xl`, Dialog, Table), lucide-react icons.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-Lihat `AGENTS.md` § Behaviour Contract (Wajib): *Infer don't ask, Beautiful by default, Minimal Prompt → Maximal App*.
+## Learn More
 
-## Struktur Next.js
+To learn more about Next.js, take a look at the following resources:
 
-```
-app/
-  layout.tsx, globals.css, page.tsx
-  (auth)/login/page.tsx, (auth)/register/page.tsx
-  (dashboard)/dashboard/page.tsx, users/page.tsx, ...
-  builder/page.tsx, builder/[slug]/page.tsx
-  generated/[slug]/page.tsx, generated/[slug]/[entity]/page.tsx
-  api/auth/login/route.ts, api/users/route.ts, api/builder/generate/route.ts, api/generated/[slug]/[entity]/route.ts
-components/
-  ui/ (Button, Input, Card, Dialog, Table, etc.)
-  common/DataTable/  layout/PageShell  builder/AiPromptBar.tsx
-hooks/ (useApi, useAiBuilder, useDataTable, useAuthorization)
-lib/
-  db/data-source.ts, db/seed.ts, db/entities/, db/migrations/
-  dto/, services/, services/ai-builder/, auth/jwt.ts, utils/
-middleware.ts, instrumentation.ts, next.config.ts
-```
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## Tech Stack
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-Next.js 15 + React 19 + TypeScript strict + Tailwind v4 + shadcn/ui + lucide-react + Framer Motion + Zustand + TanStack Query + TypeORM 1.1 EntitySchema + SQLite better-sqlite3 + Zod + JWT httpOnly cookie + middleware.ts
+## Deploy on Vercel
 
-Docs: `docs/PRD.md` | `docs/architecture.md` | `docs/database.md` | `docs/design-system.md` (Next.js + shadcn)
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
