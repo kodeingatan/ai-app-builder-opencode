@@ -3,12 +3,10 @@ import PageShell from "@/components/layout/PageShell"
 import DataTable from "@/components/common/DataTable/DataTable"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select } from "@/components/ui/select"
 import { useEffect, useState } from "react"
 import { Plus, Database, Pencil, Trash2, X, Eye, Play, Filter, Code } from "lucide-react"
+import Link from "next/link"
 
 export default function DataSourcesPage() {
   const [data, setData] = useState<any[]>([])
@@ -16,9 +14,6 @@ export default function DataSourcesPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
-  const [showModal, setShowModal] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
-  const [form, setForm] = useState({ name: "", type: "entity", entity: "", config_json: "", description: "" })
   const [detail, setDetail] = useState<any>(null)
   const [testDept, setTestDept] = useState<string>("Bidang TI")
   const [testResult, setTestResult] = useState<any>(null)
@@ -38,18 +33,6 @@ export default function DataSourcesPage() {
   const handlePage = (p:number)=>{ setPage(p); load(p, search)}
   const handleSearch = (s:string)=>{ setSearch(s); setPage(1); load(1,s)}
 
-  const openCreate = () => { 
-    setEditing(null); 
-    setForm({ 
-      name:"Employees by Department (Custom Query)", 
-      type:"custom_query", 
-      entity:"surat_platform_employees", 
-      config_json: JSON.stringify({ query: "SELECT * FROM \"surat_platform_employees\" WHERE department = {{department}}", defaults: { department: "Bidang TI" } }, null, 2), 
-      description:"Custom Query additive — filter departemen tanpa rebuild. Contoh: WHERE department = {{department}}" 
-    }); 
-    setShowModal(true)
-  }
-  const openEdit = (row:any)=>{ setEditing(row); setForm({ name:row.name, type:row.type, entity:row.entity||"", config_json:row.config_json||"", description:row.description||""}); setShowModal(true)}
   const handleTest = async (row:any) => {
     setTestLoading(true)
     setDetail(row)
@@ -60,17 +43,10 @@ export default function DataSourcesPage() {
     } catch (e:any) { setTestResult({ message: e.message }) }
     setTestLoading(false)
   }
-  const handleSubmit = async()=>{
-    const payload=form
-    const url=editing?`/api/generated/surat-platform/data-sources/${editing.id}`:`/api/generated/surat-platform/data-sources`
-    const method=editing?"PUT":"POST"
-    const res=await fetch(url,{method, headers:{ "Content-Type":"application/json"}, body: JSON.stringify(payload)})
-    if(res.ok){ setShowModal(false); load(page, search)} else alert((await res.json()).message)
-  }
   const handleDelete=async(id:number)=>{ if(!confirm("Hapus?")) return; await fetch(`/api/generated/surat-platform/data-sources/${id}`,{method:"DELETE"}); load(page, search)}
 
   return (
-    <PageShell title="Data Sources" description="Layer abstraksi data — Component tidak langsung query DB, melainkan via Data Source (entity / api / custom_query / static) lalu di-binding dengan {{}}." breadcrumbs={[{ label:"Surat Platform", href:"/"},{ label:"Data Sources"}]} actions={<Button onClick={openCreate}><Plus size={16}/> Tambah Data Source</Button>}>
+    <PageShell title="Data Sources" description="Layer abstraksi data — Component tidak langsung query DB, melainkan via Data Source (entity / api / custom_query / static) lalu di-binding dengan {{}}." breadcrumbs={[{ label:"Surat Platform", href:"/"},{ label:"Data Sources"}]} actions={<Link href="/generated/surat-platform/data-sources/new"><Button><Plus size={16}/> Tambah Data Source</Button></Link>}>
       <div className="rounded-[12px] bg-violet-50 border border-violet-200 p-4 flex flex-col md:flex-row gap-4 items-start">
         <div className="flex-1">
           <div className="text-sm font-bold flex items-center gap-2"><Filter size={16} className="text-violet-600"/> Filter Departemen — Custom Query Demo (additive)</div>
@@ -89,7 +65,7 @@ export default function DataSourcesPage() {
         <div className="text-[11px] font-mono bg-white border rounded-[8px] p-3 w-full md:w-[360px]">
           <div className="font-semibold text-violet-800 flex items-center gap-1.5"><Code size={12}/> Example config_json</div>
           <pre className="mt-1 text-xs overflow-auto">{`{
-  "query": "SELECT * FROM \\"surat_platform_employees\\" WHERE department = {{department}}",
+  "query": "SELECT * FROM \"surat_platform_employees\" WHERE department = {{department}}",
   "defaults": { "department": "Bidang TI" }
 }`}</pre>
           <div className="mt-2 text-[#6b7280]">GET /api/.../data-sources/{"{id}"}/resolve?department=Bidang%20TI</div>
@@ -110,31 +86,10 @@ export default function DataSourcesPage() {
           { key:"type", header:"Tipe", render:(r)=><Badge variant={r.type==="entity"?"success":r.type==="custom_query"?"warning":"secondary"}>{r.type}</Badge> },
           { key:"entity", header:"Entity", render:(r)=><span className="font-mono text-xs bg-[#f6f5f4] px-2 py-1 rounded border">{r.entity||"-"}</span> },
           { key:"description", header:"Deskripsi", render:(r)=><span className="text-xs text-[#6b7280] truncate max-w-[240px] block">{r.description||"-"}</span> },
-          { key:"actions", header:"Aksi", render:(r)=><div className="flex items-center gap-1"><button onClick={()=>handleTest(r)} title="Test Resolve dengan filter departemen" className="p-1.5 rounded bg-violet-50 hover:bg-violet-100 text-violet-700"><Play size={14}/></button><button onClick={()=>setDetail(r)} className="p-1.5 rounded hover:bg-[#f6f5f4]"><Eye size={14}/></button><button onClick={()=>openEdit(r)} className="p-1.5 rounded hover:bg-[#f6f5f4]"><Pencil size={14}/></button><button onClick={()=>handleDelete(r.id)} className="p-1.5 rounded hover:bg-red-50 text-red-600"><Trash2 size={14}/></button></div> },
+          { key:"actions", header:"Aksi", render:(r)=><div className="flex items-center gap-1"><button onClick={()=>handleTest(r)} title="Test Resolve dengan filter departemen" className="p-1.5 rounded bg-violet-50 hover:bg-violet-100 text-violet-700"><Play size={14}/></button><button onClick={()=>setDetail(r)} className="p-1.5 rounded hover:bg-[#f6f5f4]"><Eye size={14}/></button><Link href={`/generated/surat-platform/data-sources/${r.id}/edit`} className="p-1.5 rounded hover:bg-[#f6f5f4] inline-flex"><Pencil size={14}/></Link><button onClick={()=>handleDelete(r.id)} className="p-1.5 rounded hover:bg-red-50 text-red-600"><Trash2 size={14}/></button></div> },
         ]}
       />
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30" onClick={()=>setShowModal(false)} />
-          <div className="relative bg-white rounded-[12px] w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between"><div className="font-semibold text-sm">{editing?"Edit":"Tambah"} Data Source</div><button onClick={()=>setShowModal(false)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={16}/></button></div>
-            <div className="p-6 space-y-4">
-              <div><Label>Nama</Label><Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Employee" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Tipe</Label><Select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="entity">entity</option><option value="api">api</option><option value="custom_query">custom_query</option><option value="static">static</option></Select></div>
-                <div><Label>Entity</Label><Input value={form.entity} onChange={e=>setForm({...form,entity:e.target.value})} placeholder="employees" /></div>
-              </div>
-              <div><Label>Config JSON</Label><Textarea className="font-mono text-xs min-h-[140px]" value={form.config_json} onChange={e=>setForm({...form,config_json:e.target.value})} placeholder='{"query":"SELECT * FROM \"surat_platform_employees\" WHERE department = {{department}}"}' />
-                {form.type==="custom_query" && <div className="text-[11px] text-[#6b7280] mt-1">Gunakan <code className="bg-[#f6f5f4] px-1 rounded border">{"{{department}}"}</code> <code className="bg-[#f6f5f4] px-1 rounded border">{"{{status}}"}</code> sebagai placeholder — akan di-resolve via <code className="bg-[#f6f5f4] px-1 rounded border">/resolve?department=...</code>. Contoh query di atas additive tanpa ubah schema.</div>}
-                {form.type==="entity" && <div className="text-[11px] text-[#6b7280] mt-1">Entity akan di-resolve otomatis dengan filter department/status via <code className="bg-[#f6f5f4] px-1 rounded border">?department=Bidang TI</code></div>}
-              </div>
-              <div><Label>Deskripsi</Label><Textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} /></div>
-              <div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>setShowModal(false)}>Batal</Button><Button onClick={handleSubmit}>Simpan</Button></div>
-            </div>
-          </div>
-        </div>
-      )}
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30" onClick={()=>{ setDetail(null); setTestResult(null)}} />
