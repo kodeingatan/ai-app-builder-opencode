@@ -23,7 +23,8 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Table as TableIcon, Link2, Image as ImageIcon, Undo, Redo, Quote, Heading1, Heading2, Heading3,
   Minus, Eraser, X, Plus, Sparkles, Eye, Boxes, Trash2, Copy, Info, FileText, Settings2, LayoutTemplate, MousePointer2,
-  Palette, Pipette, Rows3, Columns3, Trash, Combine, Split, ArrowUp, ArrowDown, MinusSquare, PaintBucket, Grid3x3, Type, Highlighter
+  Palette, Pipette, Rows3, Columns3, Trash, Combine, Split, ArrowUp, ArrowDown, MinusSquare, PaintBucket, Grid3x3, Type, Highlighter,
+  Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, Maximize2, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, SlidersHorizontal, Brush, Layers
 } from "lucide-react"
 
 type Binding = { name: string, type: "text"|"image"|"component", componentId?: number, width?: number, height?: number }
@@ -148,7 +149,37 @@ const CustomImage = Image.extend({
   }
 })
 
-// --- Custom Table Cell with background, verticalAlign, borders ---
+// Helpers for border position rendering
+function buildBorderPositionStyle(attrs: any): string {
+  const pos = attrs.borderPosition
+  if (!pos || pos === 'all') return ''
+  const color = attrs.borderColor || '#e6e6e6'
+  const width = attrs.borderWidth || '1px'
+  const style = attrs.borderStyle || 'solid'
+  const bw = `${width} ${style} ${color}`
+  // For collapsed tables, hiding a side = border-style hidden/none for that side
+  switch (pos) {
+    case 'none': return 'border: none !important; border-style: hidden !important'
+    case 'left': return `border-left: ${bw}; border-top: none !important; border-right: none !important; border-bottom: none !important`
+    case 'right': return `border-right: ${bw}; border-top: none !important; border-left: none !important; border-bottom: none !important`
+    case 'leftRight': return `border-left: ${bw}; border-right: ${bw}; border-top: none !important; border-bottom: none !important`
+    case 'top': return `border-top: ${bw}; border-left: none !important; border-right: none !important; border-bottom: none !important`
+    case 'bottom': return `border-bottom: ${bw}; border-top: none !important; border-left: none !important; border-right: none !important`
+    case 'topBottom': return `border-top: ${bw}; border-bottom: ${bw}; border-left: none !important; border-right: none !important`
+    case 'topLeft': return `border-top: ${bw}; border-left: ${bw}; border-right: none !important; border-bottom: none !important`
+    case 'topRight': return `border-top: ${bw}; border-right: ${bw}; border-left: none !important; border-bottom: none !important`
+    case 'bottomLeft': return `border-bottom: ${bw}; border-left: ${bw}; border-top: none !important; border-right: none !important`
+    case 'bottomRight': return `border-bottom: ${bw}; border-right: ${bw}; border-top: none !important; border-left: none !important`
+    case 'leftTopBottom': return `border-left: ${bw}; border-top: ${bw}; border-bottom: ${bw}; border-right: none !important`
+    case 'rightTopBottom': return `border-right: ${bw}; border-top: ${bw}; border-bottom: ${bw}; border-left: none !important`
+    case 'leftRightTop': return `border-left: ${bw}; border-right: ${bw}; border-top: ${bw}; border-bottom: none !important`
+    case 'leftRightBottom': return `border-left: ${bw}; border-right: ${bw}; border-bottom: ${bw}; border-top: none !important`
+    case 'outer': return `border: ${bw}` // outer handled via per-cell edge logic; fallback is all
+    default: return ''
+  }
+}
+
+// --- Custom Table Cell with background, verticalAlign, borders, height ---
 const CustomTableCell = TableCell.extend({
   addAttributes() {
     return {
@@ -172,17 +203,42 @@ const CustomTableCell = TableCell.extend({
       borderColor: {
         default: null,
         parseHTML: (el: HTMLElement) => el.style.borderColor || el.getAttribute('data-border-color') || null,
-        renderHTML: (attrs: any) => attrs.borderColor ? { 'data-border-color': attrs.borderColor, style: `border-color: ${attrs.borderColor}` } : {}
+        renderHTML: (attrs: any) => {
+          // When borderPosition controls sides, suppress individual color to avoid conflict — borderPosition will render it
+          if (attrs.borderPosition && attrs.borderPosition !== 'all') return { 'data-border-color': attrs.borderColor } as any
+          return attrs.borderColor ? { 'data-border-color': attrs.borderColor, style: `border-color: ${attrs.borderColor}` } : {}
+        }
       },
       borderWidth: {
         default: null,
         parseHTML: (el: HTMLElement) => el.style.borderWidth || el.getAttribute('data-border-width') || null,
-        renderHTML: (attrs: any) => attrs.borderWidth ? { style: `border-width: ${attrs.borderWidth}` } : {}
+        renderHTML: (attrs: any) => {
+          if (attrs.borderPosition && attrs.borderPosition !== 'all') return attrs.borderWidth ? { 'data-border-width': attrs.borderWidth } as any : {}
+          return attrs.borderWidth ? { 'data-border-width': attrs.borderWidth, style: `border-width: ${attrs.borderWidth}` } : {}
+        }
       },
       borderStyle: {
         default: null,
         parseHTML: (el: HTMLElement) => el.style.borderStyle || el.getAttribute('data-border-style') || null,
-        renderHTML: (attrs: any) => attrs.borderStyle ? { style: `border-style: ${attrs.borderStyle}` } : {}
+        renderHTML: (attrs: any) => {
+          if (attrs.borderPosition && attrs.borderPosition !== 'all') return attrs.borderStyle ? { 'data-border-style': attrs.borderStyle } as any : {}
+          return attrs.borderStyle ? { 'data-border-style': attrs.borderStyle, style: `border-style: ${attrs.borderStyle}` } : {}
+        }
+      },
+      borderPosition: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-border-position') || null,
+        renderHTML: (attrs: any) => {
+          if (!attrs.borderPosition) return {}
+          const style = buildBorderPositionStyle(attrs)
+          if (!style) return { 'data-border-position': attrs.borderPosition }
+          return { 'data-border-position': attrs.borderPosition, style }
+        }
+      },
+      height: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.style.height || el.getAttribute('data-height') || null,
+        renderHTML: (attrs: any) => attrs.height ? { 'data-height': attrs.height, style: `height: ${attrs.height}` } : {}
       },
     }
   }
@@ -208,17 +264,54 @@ const CustomTableHeader = TableHeader.extend({
       borderColor: {
         default: null,
         parseHTML: (el: HTMLElement) => el.style.borderColor || el.getAttribute('data-border-color') || null,
-        renderHTML: (attrs: any) => attrs.borderColor ? { 'data-border-color': attrs.borderColor, style: `border-color: ${attrs.borderColor}` } : {}
+        renderHTML: (attrs: any) => {
+          if (attrs.borderPosition && attrs.borderPosition !== 'all') return { 'data-border-color': attrs.borderColor } as any
+          return attrs.borderColor ? { 'data-border-color': attrs.borderColor, style: `border-color: ${attrs.borderColor}` } : {}
+        }
       },
       borderWidth: {
         default: null,
         parseHTML: (el: HTMLElement) => el.style.borderWidth || el.getAttribute('data-border-width') || null,
-        renderHTML: (attrs: any) => attrs.borderWidth ? { style: `border-width: ${attrs.borderWidth}` } : {}
+        renderHTML: (attrs: any) => {
+          if (attrs.borderPosition && attrs.borderPosition !== 'all') return attrs.borderWidth ? { 'data-border-width': attrs.borderWidth } as any : {}
+          return attrs.borderWidth ? { 'data-border-width': attrs.borderWidth, style: `border-width: ${attrs.borderWidth}` } : {}
+        }
       },
       borderStyle: {
         default: null,
         parseHTML: (el: HTMLElement) => el.style.borderStyle || el.getAttribute('data-border-style') || null,
-        renderHTML: (attrs: any) => attrs.borderStyle ? { style: `border-style: ${attrs.borderStyle}` } : {}
+        renderHTML: (attrs: any) => {
+          if (attrs.borderPosition && attrs.borderPosition !== 'all') return attrs.borderStyle ? { 'data-border-style': attrs.borderStyle } as any : {}
+          return attrs.borderStyle ? { 'data-border-style': attrs.borderStyle, style: `border-style: ${attrs.borderStyle}` } : {}
+        }
+      },
+      borderPosition: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-border-position') || null,
+        renderHTML: (attrs: any) => {
+          if (!attrs.borderPosition) return {}
+          const style = buildBorderPositionStyle(attrs)
+          if (!style) return { 'data-border-position': attrs.borderPosition }
+          return { 'data-border-position': attrs.borderPosition, style }
+        }
+      },
+      height: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.style.height || el.getAttribute('data-height') || null,
+        renderHTML: (attrs: any) => attrs.height ? { 'data-height': attrs.height, style: `height: ${attrs.height}` } : {}
+      },
+    }
+  }
+})
+
+const CustomTableRow = TableRow.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      height: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.style.height || el.getAttribute('data-row-height') || null,
+        renderHTML: (attrs: any) => attrs.height ? { 'data-row-height': attrs.height, style: `height: ${attrs.height}` } : {}
       },
     }
   }
@@ -240,6 +333,19 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
   const [linkModal, setLinkModal] = useState<{open:boolean, url:string}>({open:false, url:''})
   const [imageModal, setImageModal] = useState<{open:boolean, url:string}>({open:false, url:''})
   const [cellBg, setCellBg] = useState('#ffffff')
+  const [borderColor, setBorderColor] = useState('#e6e6e6')
+  const [borderWidth, setBorderWidth] = useState('1px')
+  const [borderStyle, setBorderStyle] = useState('solid')
+  const [cellHeight, setCellHeight] = useState('')
+  const [rowHeight, setRowHeight] = useState('')
+  const [editorHeight, setEditorHeight] = useState(380)
+  const [tableOpsCollapsed, setTableOpsCollapsed] = useState(false)
+  const isDraggingEditorRef = useRef(false)
+  const startYRef = useRef(0)
+  const startHRef = useRef(0)
+  const isDraggingRowRef = useRef(false)
+  const rowDragStartY = useRef(0)
+  const rowDragStartH = useRef(0)
 
   const showToast = (message:string, type:Toast['type']='error')=>{
     const id = Date.now() + Math.random()
@@ -272,8 +378,8 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
       TextAlign.configure({ types: ['heading','paragraph'] }),
       Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { class: 'text-[#0075de] underline underline-offset-2 cursor-pointer' } }),
       CustomImage.configure({ inline: false, allowBase64: true }),
-      Table.configure({ resizable: true, handleWidth:5, lastColumnResizable:true, allowTableNodeSelection:true }),
-      TableRow,
+      Table.configure({ resizable: true, handleWidth: 8, lastColumnResizable:true, allowTableNodeSelection:true }),
+      CustomTableRow,
       CustomTableHeader,
       CustomTableCell,
       Placeholder.configure({ placeholder: 'Ketik konten di sini… gunakan klik kanan untuk menambah data terikat tepat di posisi kursor' }),
@@ -336,6 +442,51 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     }, 120)
     return ()=> clearTimeout(timer)
   },[form.contentHtml, form.bindings, tick])
+
+  // Row height drag via bottom edge — cursor row-resize & drag to resize height
+  useEffect(()=>{
+    if (!editor) return
+    const dom = editor.view.dom as HTMLElement
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // ignore if clicking on column handle
+      if (target.closest('.column-resize-handle')) return
+      const tr = target.closest('tr') as HTMLElement | null
+      if (!tr || !dom.contains(tr)) return
+      const rect = tr.getBoundingClientRect()
+      const distToBottom = rect.bottom - e.clientY
+      if (distToBottom < 0 || distToBottom > 9) return // only within 9px from bottom edge
+      e.preventDefault()
+      const startY = e.clientY
+      const startH = tr.offsetHeight || 40
+      const trEl = tr
+      // visual feedback
+      trEl.style.outline = '2px solid #0075de'
+      const onMove = (ev: MouseEvent) => {
+        const nh = Math.max(28, startH + (ev.clientY - startY))
+        trEl.style.height = `${nh}px`
+        trEl.querySelectorAll('td, th').forEach(c => (c as HTMLElement).style.height = `${nh}px`)
+        document.body.style.cursor = 'row-resize'
+        document.body.style.userSelect = 'none'
+      }
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+        trEl.style.outline = ''
+        const finalH = trEl.style.height
+        try { (editor.chain().focus() as any).updateAttributes('tableRow', { height: finalH }).run() } catch {}
+        try { editor.chain().focus().setCellAttribute('height', finalH).run() } catch {}
+        setTimeout(()=>{ const html = editor.getHTML(); setForm(prev=>({...prev, contentHtml: html})); setTick(v=>v+1); showToast(`Tinggi baris → ${finalH}`, 'success') }, 30)
+      }
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
+      document.body.style.cursor = 'row-resize'
+    }
+    dom.addEventListener('mousedown', onMouseDown)
+    return ()=> dom.removeEventListener('mousedown', onMouseDown)
+  }, [editor])
 
   const handleContextMenu=(e:React.MouseEvent)=>{
     e.preventDefault()
@@ -512,6 +663,198 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     setImageModal({open:false, url:''})
   }
 
+  // --- Border helpers ---
+  const applyBorderPreset = (preset: string) => {
+    if (!editor) return
+    // Always sync border attrs first so renderHTML has fresh color/width/style
+    editor.chain().focus().setCellAttribute('borderColor', borderColor).setCellAttribute('borderWidth', borderWidth).setCellAttribute('borderStyle', borderStyle).run()
+    if (preset === 'outer') {
+      applyOuterBorder()
+      return
+    }
+    // 'all' clears borderPosition (default all borders via individual attrs)
+    if (preset === 'all') {
+      editor.chain().focus().setCellAttribute('borderPosition', null).run()
+      showToast('Border: semua sisi', 'success')
+      return
+    }
+    editor.chain().focus().setCellAttribute('borderPosition', preset).run()
+    const labels: Record<string,string> = { none: 'Tanpa border', left: 'Border kiri saja', right: 'Border kanan saja', leftRight: 'Border kiri & kanan', top: 'Border atas saja', bottom: 'Border bawah saja' }
+    showToast(labels[preset] || `Border: ${preset}`, 'success')
+  }
+  const applyOuterBorder = () => {
+    if (!editor) return
+    try {
+      const domTable = editor.view.dom.querySelector('table')
+      if (!domTable) {
+        editor.chain().focus().setCellAttribute('borderPosition', null).setCellAttribute('borderColor', borderColor).setCellAttribute('borderWidth', borderWidth).setCellAttribute('borderStyle', borderStyle).run()
+        showToast('Outer border diterapkan ke cell terpilih', 'success')
+        return
+      }
+      const domRows = domTable.querySelectorAll('tr')
+      const rowCount = domRows.length
+      if (rowCount === 0) return
+      const firstRowCells = domRows[0].querySelectorAll('td, th').length
+      const isSingleRow = rowCount === 1
+      const isSingleCol = firstRowCells === 1
+      const { state } = editor.view
+      let tr2 = state.tr
+      let any = false
+      domRows.forEach((trEl, ri) => {
+        const cells = trEl.querySelectorAll('td, th')
+        const colCount = cells.length
+        cells.forEach((cellEl, ci) => {
+          const isFirstRow = ri === 0
+          const isLastRow = ri === rowCount - 1
+          const isFirstCol = ci === 0
+          const isLastCol = ci === colCount - 1
+          let preset: string | null = 'none'
+          if (rowCount === 1 && colCount === 1) {
+            preset = null // single cell = all sides
+          } else if (isSingleRow && !isSingleCol) {
+            // single row, multiple cols -> need top+bottom plus left/right edges
+            if (isFirstCol) preset = 'leftTopBottom'
+            else if (isLastCol) preset = 'rightTopBottom'
+            else preset = 'topBottom'
+          } else if (isSingleCol && !isSingleRow) {
+            // single column, multiple rows
+            if (isFirstRow) preset = 'leftRightTop'
+            else if (isLastRow) preset = 'leftRightBottom'
+            else preset = 'leftRight'
+          } else {
+            // normal multi-row multi-col
+            if (isFirstRow && isFirstCol) preset = 'topLeft'
+            else if (isFirstRow && isLastCol) preset = 'topRight'
+            else if (isLastRow && isFirstCol) preset = 'bottomLeft'
+            else if (isLastRow && isLastCol) preset = 'bottomRight'
+            else if (isFirstRow) preset = 'top'
+            else if (isLastRow) preset = 'bottom'
+            else if (isFirstCol) preset = 'left'
+            else if (isLastCol) preset = 'right'
+            else preset = 'none'
+          }
+
+          const pos = (editor.view as any).posAtDOM(cellEl, 0) as number | null
+          if (typeof pos === 'number') {
+            const node = state.doc.nodeAt(pos)
+            if (node) {
+              const newAttrs: any = { ...node.attrs }
+              if (preset === null) {
+                newAttrs.borderPosition = null
+              } else {
+                newAttrs.borderPosition = preset
+              }
+              newAttrs.borderColor = borderColor
+              newAttrs.borderWidth = borderWidth
+              newAttrs.borderStyle = borderStyle
+              tr2 = tr2.setNodeMarkup(pos, undefined, newAttrs)
+              any = true
+            }
+          }
+        })
+      })
+      if (any) {
+        editor.view.dispatch(tr2)
+        showToast('Outer border: hanya tepi luar tabel', 'success')
+        setTimeout(()=>{ const html = editor.getHTML(); setForm(prev=>({...prev, contentHtml: html})); setTick(v=>v+1)}, 40)
+      } else {
+        editor.chain().focus().setCellAttribute('borderPosition', null).run()
+      }
+    } catch (e: any) {
+      console.error(e)
+      editor.chain().focus().setCellAttribute('borderPosition', null).run()
+      showToast('Outer border fallback ke semua sisi', 'info')
+    }
+  }
+
+  const applyCellHeight = () => {
+    if (!editor) return
+    const h = cellHeight.trim()
+    if (!h) {
+      editor.chain().focus().setCellAttribute('height', null).run()
+      showToast('Tinggi cell direset ke auto', 'info')
+      return
+    }
+    const val = /^\d+$/.test(h) ? `${h}px` : h
+    if (!/^\d+(px|%|em|rem)$/.test(val)) { showToast('Format tinggi tidak valid (contoh 48px atau 2em)', 'error'); return }
+    editor.chain().focus().setCellAttribute('height', val).run()
+    showToast(`Tinggi cell: ${val}`, 'success')
+  }
+  const applyRowHeight = () => {
+    if (!editor) return
+    const h = rowHeight.trim()
+    if (!h) {
+      try { (editor.chain().focus() as any).updateAttributes('tableRow', { height: null }).run() } catch {}
+      // also clear cell heights in row
+      editor.chain().focus().setCellAttribute('height', null).run()
+      showToast('Tinggi baris direset', 'info')
+      return
+    }
+    const val = /^\d+$/.test(h) ? `${h}px` : h
+    if (!/^\d+(px|%|em|rem)$/.test(val)) { showToast('Format tinggi tidak valid', 'error'); return }
+    try { (editor.chain().focus() as any).updateAttributes('tableRow', { height: val }).run() } catch { editor.chain().focus().setCellAttribute('height', val).run() }
+    showToast(`Tinggi baris: ${val}`, 'success')
+  }
+
+  // Editor container height drag
+  const handleEditorGripMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    isDraggingEditorRef.current = true
+    startYRef.current = e.clientY
+    startHRef.current = editorHeight
+    const onMove = (ev: MouseEvent) => {
+      if (!isDraggingEditorRef.current) return
+      const dy = ev.clientY - startYRef.current
+      const nh = Math.max(240, Math.min(900, startHRef.current + dy))
+      setEditorHeight(nh)
+    }
+    const onUp = () => {
+      isDraggingEditorRef.current = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'ns-resize'
+    document.body.style.userSelect = 'none'
+  }
+  // Row height drag (bottom edge of selected row)
+  const handleRowDragMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startY = e.clientY
+    const el = editor?.view.dom.querySelector('.selectedCell')?.closest('tr') as HTMLElement | null
+    const targetTr = el || (editor?.view.dom.querySelector('table tr') as HTMLElement | null)
+    if (!targetTr) return
+    const startH = targetTr.offsetHeight || 40
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const nh = Math.max(24, startH + dy)
+      targetTr.style.height = `${nh}px`
+      // also apply to cells
+      targetTr.querySelectorAll('td, th').forEach(c => (c as HTMLElement).style.height = `${nh}px`)
+    }
+    const onUp = (ev: MouseEvent) => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      // sync to editor attribute
+      const finalH = targetTr.style.height
+      try { (editor!.chain().focus() as any).updateAttributes('tableRow', { height: finalH }).run() } catch {}
+      try { editor!.chain().focus().setCellAttribute('height', finalH).run() } catch {}
+      setTimeout(() => {
+        const html = editor!.getHTML()
+        setForm(prev => ({ ...prev, contentHtml: html }))
+        setTick(v=>v+1)
+      }, 30)
+      showToast(`Tinggi baris → ${finalH}`, 'success')
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'row-resize'
+  }
+
   if(loading) return <div className="p-8 text-center text-sm text-[#6b7280] animate-pulse">Memuat data...</div>
   if (!editor) return <div className="p-8 text-center text-sm text-[#6b7280]">Memuat editor…</div>
 
@@ -644,166 +987,315 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
               <p className="text-[11px] text-[#6b7280] mt-1">Toolbar lengkap — heading H1-H6, list, tabel, link, gambar semua aktif. Klik kanan di posisi kursor untuk menambah <span className="font-mono bg-[#f6f5f4] px-1 py-0.5 rounded text-[#111]">{`{{data}}`}</span> tepat di pointer terbaru.</p>
             </CardHeader>
             <CardContent className="p-0">
-              {/* Toolbar */}
-              <div className="sticky top-0 z-10 bg-[#f9fafb] border-y border-[#e6e6e6] p-2 flex flex-wrap items-center gap-1.5">
-                {/* Group: History */}
-                <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1">
-                  <button type="button" title="Undo (Ctrl+Z)" onClick={()=>editor.chain().focus().undo().run()} disabled={!can(()=>editor.can().chain().focus().undo().run())} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center disabled:opacity-30"><Undo size={14}/></button>
-                  <button type="button" title="Redo (Ctrl+Y)" onClick={()=>editor.chain().focus().redo().run()} disabled={!can(()=>editor.can().chain().focus().redo().run())} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center disabled:opacity-30"><Redo size={14}/></button>
-                </div>
-                {/* Group: Text style */}
-                <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1">
-                  <button type="button" title="Bold (Ctrl+B)" onClick={()=>editor.chain().focus().toggleBold().run()} className={`w-7 h-7 rounded flex items-center justify-center ${isActive('bold') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><Bold size={14}/></button>
-                  <button type="button" title="Italic (Ctrl+I)" onClick={()=>editor.chain().focus().toggleItalic().run()} className={`w-7 h-7 rounded flex items-center justify-center ${isActive('italic') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><Italic size={14}/></button>
-                  <button type="button" title="Underline (Ctrl+U)" onClick={()=>editor.chain().focus().toggleUnderline().run()} className={`w-7 h-7 rounded flex items-center justify-center ${isActive('underline') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><UnderlineIcon size={14}/></button>
-                  <button type="button" title="Strikethrough" onClick={()=>editor.chain().focus().toggleStrike().run()} className={`w-7 h-7 rounded flex items-center justify-center ${isActive('strike') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><Strikethrough size={14}/></button>
-                  <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center"/>
-                  <button type="button" title="Clear formatting" onClick={()=>editor.chain().focus().unsetAllMarks().clearNodes().run()} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center"><Eraser size={14}/></button>
-                </div>
-                {/* Group: Headings H1-H6 */}
-                <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 items-center">
-                  <div className="flex items-center gap-1">
-                    <Type size={12} className="text-[#6b7280] ml-1"/>
-                    <select value={getHeadingLevel()} onChange={e=>{
-                      const v=e.target.value
-                      if(v==='p') editor.chain().focus().setParagraph().run()
-                      else editor.chain().focus().toggleHeading({level: Number(v) as any}).run()
-                    }} className="h-7 text-xs border-0 bg-transparent px-1 focus:ring-0 focus:outline-none">
-                      <option value="p">P</option>
-                      <option value="1">H1</option>
-                      <option value="2">H2</option>
-                      <option value="3">H3</option>
-                      <option value="4">H4</option>
-                      <option value="5">H5</option>
-                      <option value="6">H6</option>
-                    </select>
+              {/* Toolbar - Redesigned: lebih rapi, berlabel, grouping jelas */}
+              <div className="sticky top-0 z-10 bg-gradient-to-b from-[#fcfcfc] to-[#f9fafb] border-y border-[#e6e6e6]">
+                {/* Top row - main formatting */}
+                <div className="p-2.5 flex flex-wrap items-center gap-1.5">
+                  {/* Group: History */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <span className="hidden xl:flex items-center px-2 text-[10px] font-semibold tracking-wide text-[#9ca3af] uppercase">Riwayat</span>
+                    <button type="button" title="Undo (Ctrl+Z)" onClick={()=>editor.chain().focus().undo().run()} disabled={!can(()=>editor.can().chain().focus().undo().run())} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center disabled:opacity-30 transition-colors"><Undo size={14}/></button>
+                    <button type="button" title="Redo (Ctrl+Y)" onClick={()=>editor.chain().focus().redo().run()} disabled={!can(()=>editor.can().chain().focus().redo().run())} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center disabled:opacity-30 transition-colors"><Redo size={14}/></button>
                   </div>
-                  <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center"/>
-                  <button type="button" title="Heading 1" onClick={()=>editor.chain().focus().toggleHeading({level:1}).run()} className={`px-1.5 h-7 rounded flex items-center justify-center gap-0.5 text-[11px] ${isActive('heading',{level:1}) ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><Heading1 size={12}/>1</button>
-                  <button type="button" title="Heading 2" onClick={()=>editor.chain().focus().toggleHeading({level:2}).run()} className={`px-1.5 h-7 rounded flex items-center justify-center gap-0.5 text-[11px] ${isActive('heading',{level:2}) ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><Heading2 size={12}/>2</button>
-                  <button type="button" title="Heading 3" onClick={()=>editor.chain().focus().toggleHeading({level:3}).run()} className={`px-1.5 h-7 rounded flex items-center justify-center gap-0.5 text-[11px] ${isActive('heading',{level:3}) ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><Heading3 size={12}/>3</button>
-                  <button type="button" title="Heading 4" onClick={()=>editor.chain().focus().toggleHeading({level:4}).run()} className={`px-1.5 h-7 rounded flex items-center justify-center text-[11px] ${isActive('heading',{level:4}) ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>H4</button>
-                  <button type="button" title="Heading 5" onClick={()=>editor.chain().focus().toggleHeading({level:5}).run()} className={`px-1.5 h-7 rounded flex items-center justify-center text-[11px] ${isActive('heading',{level:5}) ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>H5</button>
-                  <button type="button" title="Heading 6" onClick={()=>editor.chain().focus().toggleHeading({level:6}).run()} className={`px-1.5 h-7 rounded flex items-center justify-center text-[11px] ${isActive('heading',{level:6}) ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>H6</button>
-                  <button type="button" title="Blockquote" onClick={()=>editor.chain().focus().toggleBlockquote().run()} className={`w-7 h-7 rounded flex items-center justify-center ${isActive('blockquote') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><Quote size={14}/></button>
+                  {/* Group: Text style */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <span className="hidden xl:flex items-center px-1 text-[10px] font-semibold tracking-wide text-[#9ca3af] uppercase">Format</span>
+                    <button type="button" title="Bold (Ctrl+B)" onClick={()=>editor.chain().focus().toggleBold().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('bold') ? 'bg-[#111827] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Bold size={14}/></button>
+                    <button type="button" title="Italic (Ctrl+I)" onClick={()=>editor.chain().focus().toggleItalic().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('italic') ? 'bg-[#111827] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Italic size={14}/></button>
+                    <button type="button" title="Underline (Ctrl+U)" onClick={()=>editor.chain().focus().toggleUnderline().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('underline') ? 'bg-[#111827] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><UnderlineIcon size={14}/></button>
+                    <button type="button" title="Strikethrough" onClick={()=>editor.chain().focus().toggleStrike().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('strike') ? 'bg-[#111827] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Strikethrough size={14}/></button>
+                    <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center"/>
+                    <button type="button" title="Clear formatting" onClick={()=>editor.chain().focus().unsetAllMarks().clearNodes().run()} className="w-7 h-7 rounded-[6px] hover:bg-amber-50 hover:text-amber-600 flex items-center justify-center text-[#6b7280] transition-colors"><Eraser size={14}/></button>
+                  </div>
+                  {/* Group: Headings */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm items-center">
+                    <div className="hidden lg:flex items-center gap-1.5 px-2 border-r border-[#e6e6e6] mr-1">
+                      <Type size={12} className="text-[#6b7280]"/>
+                      <select value={getHeadingLevel()} onChange={e=>{
+                        const v=e.target.value
+                        if(v==='p') editor.chain().focus().setParagraph().run()
+                        else editor.chain().focus().toggleHeading({level: Number(v) as any}).run()
+                      }} className="h-7 text-xs font-medium border-0 bg-transparent pr-2 focus:ring-0 focus:outline-none cursor-pointer">
+                        <option value="p">Paragraf</option>
+                        <option value="1">Heading 1</option>
+                        <option value="2">Heading 2</option>
+                        <option value="3">Heading 3</option>
+                        <option value="4">H4</option>
+                        <option value="5">H5</option>
+                        <option value="6">H6</option>
+                      </select>
+                    </div>
+                    {/* Mobile select */}
+                    <div className="lg:hidden flex items-center">
+                      <select value={getHeadingLevel()} onChange={e=>{
+                        const v=e.target.value
+                        if(v==='p') editor.chain().focus().setParagraph().run()
+                        else editor.chain().focus().toggleHeading({level: Number(v) as any}).run()
+                      }} className="h-7 text-xs border-0 bg-transparent px-1 focus:ring-0 focus:outline-none">
+                        <option value="p">P</option>
+                        <option value="1">H1</option>
+                        <option value="2">H2</option>
+                        <option value="3">H3</option>
+                      </select>
+                    </div>
+                    <button type="button" title="Heading 1" onClick={()=>editor.chain().focus().toggleHeading({level:1}).run()} className={`hidden sm:flex px-2 h-7 rounded-[6px] items-center justify-center gap-0.5 text-[11px] font-bold transition-colors ${isActive('heading',{level:1}) ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Heading1 size={12}/> H1</button>
+                    <button type="button" title="Heading 2" onClick={()=>editor.chain().focus().toggleHeading({level:2}).run()} className={`hidden sm:flex px-2 h-7 rounded-[6px] items-center justify-center gap-0.5 text-[11px] font-bold transition-colors ${isActive('heading',{level:2}) ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Heading2 size={12}/> H2</button>
+                    <button type="button" title="Heading 3" onClick={()=>editor.chain().focus().toggleHeading({level:3}).run()} className={`hidden md:flex px-2 h-7 rounded-[6px] items-center justify-center gap-0.5 text-[11px] font-bold transition-colors ${isActive('heading',{level:3}) ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Heading3 size={12}/> H3</button>
+                    <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center hidden sm:block"/>
+                    <button type="button" title="Blockquote" onClick={()=>editor.chain().focus().toggleBlockquote().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('blockquote') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Quote size={14}/></button>
+                  </div>
+                  {/* Group: Align */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <button type="button" title="Align left" onClick={()=>editor.chain().focus().setTextAlign('left').run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isAlignActive('left') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#6b7280]'}`}><AlignLeft size={14}/></button>
+                    <button type="button" title="Align center" onClick={()=>editor.chain().focus().setTextAlign('center').run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isAlignActive('center') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#6b7280]'}`}><AlignCenter size={14}/></button>
+                    <button type="button" title="Align right" onClick={()=>editor.chain().focus().setTextAlign('right').run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isAlignActive('right') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#6b7280]'}`}><AlignRight size={14}/></button>
+                    <button type="button" title="Justify" onClick={()=>editor.chain().focus().setTextAlign('justify').run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isAlignActive('justify') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#6b7280]'}`}><AlignJustify size={14}/></button>
+                  </div>
+                  {/* Group: Lists */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <button type="button" title="Bullet list" onClick={()=> editor.chain().focus().toggleBulletList().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('bulletList') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><List size={14}/></button>
+                    <button type="button" title="Ordered list" onClick={()=> editor.chain().focus().toggleOrderedList().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('orderedList') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><ListOrdered size={14}/></button>
+                    <div className="w-px h-5 bg-[#e6e6e6] mx-1 self-center"/>
+                    <button type="button" title="Kurangi indent" onClick={()=> editor.chain().focus().liftListItem('listItem').run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">←</button>
+                    <button type="button" title="Tambah indent" onClick={()=> editor.chain().focus().sinkListItem('listItem').run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">→</button>
+                  </div>
+                  {/* Group: Insert */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <button type="button" title="Insert table 3x3" onClick={()=>{editor.chain().focus().insertTable({rows:3, cols:3, withHeaderRow:true}).run(); showToast('Tabel 3×3 ditambahkan','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><TableIcon size={14}/></button>
+                    <button type="button" title="Atur link (modal)" onClick={openLinkModal} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('link') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Link2 size={14}/></button>
+                    <button type="button" title="Sisipkan gambar (modal)" onClick={openImageModal} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><ImageIcon size={14}/></button>
+                    <button type="button" title="Garis horizontal" onClick={()=>editor.chain().focus().setHorizontalRule().run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><Minus size={14}/></button>
+                  </div>
+                  <div className="ml-auto hidden xl:flex items-center gap-2">
+                    <span className="text-[11px] text-[#9ca3af]">Seleksi teks → gunakan toolbar</span>
+                    <span className="w-px h-4 bg-[#e6e6e6]"/>
+                    <span className="text-[11px] font-medium text-[#0075de] flex items-center gap-1"><MousePointer2 size={11}/> Klik kanan → binding</span>
+                  </div>
                 </div>
-                {/* Group: Align */}
-                <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1">
-                  <button type="button" title="Align left" onClick={()=>editor.chain().focus().setTextAlign('left').run()} className={`w-7 h-7 rounded flex items-center justify-center ${isAlignActive('left') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><AlignLeft size={14}/></button>
-                  <button type="button" title="Align center" onClick={()=>editor.chain().focus().setTextAlign('center').run()} className={`w-7 h-7 rounded flex items-center justify-center ${isAlignActive('center') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><AlignCenter size={14}/></button>
-                  <button type="button" title="Align right" onClick={()=>editor.chain().focus().setTextAlign('right').run()} className={`w-7 h-7 rounded flex items-center justify-center ${isAlignActive('right') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><AlignRight size={14}/></button>
-                  <button type="button" title="Justify" onClick={()=>editor.chain().focus().setTextAlign('justify').run()} className={`w-7 h-7 rounded flex items-center justify-center ${isAlignActive('justify') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><AlignJustify size={14}/></button>
-                </div>
-                {/* Group: Lists */}
-                <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1">
-                  <button type="button" title="Bullet list" onClick={()=> editor.chain().focus().toggleBulletList().run()} className={`w-7 h-7 rounded flex items-center justify-center ${isActive('bulletList') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><List size={14}/></button>
-                  <button type="button" title="Ordered list" onClick={()=> editor.chain().focus().toggleOrderedList().run()} className={`w-7 h-7 rounded flex items-center justify-center ${isActive('orderedList') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><ListOrdered size={14}/></button>
-                  <button type="button" title="Sintesis: turunkan indent (Tab)" onClick={()=> editor.chain().focus().sinkListItem('listItem').run()} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center text-[10px]">→</button>
-                  <button type="button" title="Naikkan indent (Shift+Tab)" onClick={()=> editor.chain().focus().liftListItem('listItem').run()} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center text-[10px]">←</button>
-                </div>
-                {/* Group: Table insert */}
-                <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1">
-                  <button type="button" title="Insert table 3x3" onClick={()=>editor.chain().focus().insertTable({rows:3, cols:3, withHeaderRow:true}).run()} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center"><TableIcon size={14}/></button>
-                </div>
-                {/* Group: Link Image HR */}
-                <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1">
-                  <button type="button" title="Atur link (modal)" onClick={openLinkModal} className={`w-7 h-7 rounded flex items-center justify-center ${isActive('link') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}><Link2 size={14}/></button>
-                  <button type="button" title="Hapus link" onClick={()=>{editor.chain().focus().unsetLink().run(); showToast('Link dihapus','info')}} disabled={!isActive('link')} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center disabled:opacity-30"><Eraser size={12}/></button>
-                  <button type="button" title="Sisipkan gambar (modal)" onClick={openImageModal} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center"><ImageIcon size={14}/></button>
-                  <button type="button" title="Horizontal rule" onClick={()=>editor.chain().focus().setHorizontalRule().run()} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center"><Minus size={14}/></button>
-                  <button type="button" title="Hard break" onClick={()=>editor.chain().focus().setHardBreak().run()} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center text-[10px]">↵</button>
-                </div>
-                <div className="ml-auto hidden lg:flex items-center gap-1.5 text-[11px] text-[#6b7280]">
-                  <span className="hidden xl:inline">Tip: seleksi teks lalu pakai toolbar • klik kanan untuk binding di posisi pointer</span>
-                  <span className="xl:hidden">Klik kanan → insert di kursor</span>
+                {/* Hint bar */}
+                <div className="px-3 py-1.5 bg-[#f6f5f4]/70 border-t border-[#e6e6e6]/60 flex items-center gap-2 text-[11px] text-[#6b7280]">
+                  <Sparkles size={11} className="text-[#0075de] shrink-0"/>
+                  <span className="hidden sm:inline">Heading H1–H6, list, tabel, link & gambar semua aktif — klik kanan di posisi kursor untuk menambah <span className="font-mono bg-white border border-[#e6e6e6] px-1 py-0.5 rounded text-[#111] text-[10px]">{"{{data}}"}</span></span>
+                  <span className="sm:hidden">Klik kanan → tambah {"{{data}}"}</span>
                 </div>
               </div>
 
-              {/* Editor area */}
+              {/* Editor area - paper like, resizable */}
               <div
                 ref={editorContainerRef}
                 onContextMenu={handleContextMenu}
-                className="relative bg-white"
+                className="relative bg-[#f6f5f4] p-3 sm:p-4"
               >
-                <div className="border-t border-[#e6e6e6]" />
-                <EditorContent editor={editor} className="min-h-[280px] max-h-[560px] overflow-y-auto focus-within:ring-2 focus-within:ring-[#0075de]/10" />
-                {/* floating hint */}
-                <div className="absolute bottom-2 right-2 hidden sm:flex items-center gap-1.5 bg-white/90 backdrop-blur border border-[#e6e6e6] rounded-full px-2.5 py-1 text-[11px] text-[#6b7280] shadow-sm">
-                  <MousePointer2 size={12} className="text-[#0075de]"/> Klik kanan untuk tambah data terikat
+                <div className="bg-white rounded-[10px] border border-[#e6e6e6] shadow-[0_1px_12px_rgba(0,0,0,0.06)] overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 bg-[#fcfcfc] border-b border-[#e6e6e6] text-[11px] text-[#6b7280]">
+                    <span className="flex items-center gap-1.5 font-medium"><FileText size={12} className="text-[#9ca3af]"/> Halaman Editor</span>
+                    <span className="flex items-center gap-2">
+                      <span className="hidden sm:inline">{editor.getText().length} karakter</span>
+                      <span className="w-px h-3 bg-[#e6e6e6] hidden sm:block"/>
+                      <span className="flex items-center gap-1"><Maximize2 size={11}/> Drag bawah untuk perbesar</span>
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <EditorContent editor={editor} style={{ minHeight: `${editorHeight}px`, maxHeight: 'none' }} className="focus-within:ring-2 focus-within:ring-[#0075de]/10 overflow-y-auto [&_.tiptap]:min-h-[240px] [&_.tiptap]:p-6" />
+                    {/* floating hint inside paper */}
+                    <div className="absolute bottom-3 right-3 hidden lg:flex items-center gap-1.5 bg-[#111827] text-white rounded-full px-3 py-1.5 text-[11px] shadow-lg">
+                      <MousePointer2 size={12} className="text-white"/> Klik kanan untuk tambah data terikat
+                    </div>
+                  </div>
+                  {/* Grip to resize editor height */}
+                  <div
+                    onMouseDown={handleEditorGripMouseDown}
+                    className="h-7 bg-[#f9fafb] hover:bg-[#eff6ff] border-t border-[#e6e6e6] flex items-center justify-center gap-2 cursor-ns-resize select-none group transition-colors"
+                    title="Drag untuk memperbesar / memperkecil tinggi editor"
+                  >
+                    <div className="w-8 h-1 rounded-full bg-[#d1d5db] group-hover:bg-[#0075de] transition-colors"/>
+                    <span className="text-[11px] font-medium text-[#6b7280] group-hover:text-[#0075de] hidden sm:inline">Tarik untuk atur tinggi</span>
+                    <MoveVertical size={12} className="text-[#9ca3af] group-hover:text-[#0075de]"/>
+                  </div>
                 </div>
               </div>
 
-              {/* Table Controls - bottom of editor, only when table active */}
+              {/* Table Operations — Redesigned Beautiful & Easy */}
               {editor && editor.isActive('table') && (
-                <div className="border-t border-[#e6e6e6] bg-[#f9fafb] p-3 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#111]"><Grid3x3 size={14} className="text-[#0075de]"/> Operasi Tabel</div>
-                  <div className="flex flex-wrap gap-2">
-                    {/* Rows */}
-                    <div className="flex gap-1 bg-white border border-[#e6e6e6] rounded-[8px] p-1 items-center">
-                      <span className="text-[11px] font-semibold px-2 flex items-center gap-1"><Rows3 size={12}/> Baris</span>
-                      <button type="button" onClick={()=>{editor.chain().focus().addRowBefore().run(); showToast('Baris ditambahkan di atas','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4]">+ Sebelum</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().addRowAfter().run(); showToast('Baris ditambahkan di bawah','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4]">+ Sesudah</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().deleteRow().run(); showToast('Baris dihapus','info')}} className="px-2.5 py-1.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100"><Trash size={12} className="inline mr-1"/>Hapus Baris</button>
-                    </div>
-                    {/* Columns */}
-                    <div className="flex gap-1 bg-white border border-[#e6e6e6] rounded-[8px] p-1 items-center">
-                      <span className="text-[11px] font-semibold px-2 flex items-center gap-1"><Columns3 size={12}/> Kolom</span>
-                      <button type="button" onClick={()=>{editor.chain().focus().addColumnBefore().run(); showToast('Kolom ditambahkan di kiri','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4]">+ Kiri</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().addColumnAfter().run(); showToast('Kolom ditambahkan di kanan','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4]">+ Kanan</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().deleteColumn().run(); showToast('Kolom dihapus','info')}} className="px-2.5 py-1.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100"><Trash size={12} className="inline mr-1"/>Hapus Kolom</button>
-                    </div>
-                    {/* Table actions */}
-                    <div className="flex gap-1 bg-white border border-[#e6e6e6] rounded-[8px] p-1 items-center">
-                      <button type="button" onClick={()=>{editor.chain().focus().deleteTable().run(); showToast('Tabel dihapus','info')}} className="px-2.5 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-1"><Trash2 size={12}/> Hapus Tabel</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().mergeCells().run(); showToast('Cell digabung','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4] flex items-center gap-1"><Combine size={12}/> Gabung Cell</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().splitCell().run(); showToast('Cell dipecah','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4] flex items-center gap-1"><Split size={12}/> Pecah Cell</button>
-                      <button type="button" onClick={()=>{/* select table via selectParentNode twice */ try{ (editor.chain().focus() as any).selectParentNode().run(); (editor.chain().focus() as any).selectParentNode().run(); showToast('Tabel dipilih (drag untuk seleksi cell)','info')}catch{ showToast('Gunakan drag untuk seleksi cell','info')}}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4]">Pilih Tabel</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().toggleHeaderRow().run(); showToast('Header baris toggled','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4]">Header Baris</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().toggleHeaderColumn().run(); showToast('Header kolom toggled','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4]">Header Kolom</button>
-                      <button type="button" onClick={()=>{editor.chain().focus().toggleHeaderCell().run(); showToast('Header cell toggled','success')}} className="px-2.5 py-1.5 text-xs border border-[#e6e6e6] rounded hover:bg-[#f6f5f4]">Header Cell</button>
-                    </div>
-                    {/* Cell styling */}
-                    <div className="flex gap-1 bg-white border border-[#e6e6e6] rounded-[8px] p-1 items-center flex-wrap">
-                      <span className="text-[11px] font-semibold px-2 flex items-center gap-1"><Palette size={12}/> Cell</span>
-                      <div className="flex items-center gap-1.5 border border-[#e6e6e6] rounded px-2 py-1">
-                        <PaintBucket size={12} className="text-[#6b7280]"/>
-                        <span className="text-[11px]">BG</span>
-                        <input type="color" value={cellBg} onChange={e=>{setCellBg(e.target.value)}} className="w-6 h-6 p-0 border-0 rounded overflow-hidden" title="Pilih warna" />
-                        <button type="button" onClick={()=>{editor.chain().focus().setCellAttribute('backgroundColor', cellBg).run(); showToast(`Background cell: ${cellBg}`,'success')}} className="px-2 py-1 text-xs bg-[#0075de] text-white rounded">Terapkan</button>
-                        <button type="button" onClick={()=>{editor.chain().focus().setCellAttribute('backgroundColor', null).run(); showToast('Background dihapus','info')}} className="px-2 py-1 text-xs border rounded">Hapus</button>
-                      </div>
-                      <select onChange={e=>{const v=e.target.value; if(v) {editor.chain().focus().setCellAttribute('verticalAlign', v).run(); showToast(`Vertical align: ${v}`,'success')}}} className="text-xs border border-[#e6e6e6] rounded px-2 py-1.5 bg-white">
-                        <option value="">Align Vertical</option>
-                        <option value="top">Top</option>
-                        <option value="middle">Middle</option>
-                        <option value="bottom">Bottom</option>
-                      </select>
-                      <select onChange={e=>{const v=e.target.value; if(v) {editor.chain().focus().setCellAttribute('borderStyle', v).run(); showToast(`Border style: ${v}`,'success')}}} className="text-xs border border-[#e6e6e6] rounded px-2 py-1.5 bg-white">
-                        <option value="">Border Style</option>
-                        <option value="solid">Solid</option>
-                        <option value="dashed">Dashed</option>
-                        <option value="dotted">Dotted</option>
-                        <option value="double">Double</option>
-                        <option value="hidden">Hidden</option>
-                      </select>
-                      <select onChange={e=>{const v=e.target.value; if(v) {editor.chain().focus().setCellAttribute('borderWidth', v).run(); showToast(`Border width: ${v}`,'success')}}} className="text-xs border border-[#e6e6e6] rounded px-2 py-1.5 bg-white">
-                        <option value="">Border Width</option>
-                        <option value="1px">1px</option>
-                        <option value="2px">2px</option>
-                        <option value="3px">3px</option>
-                        <option value="4px">4px</option>
-                      </select>
-                      <div className="flex items-center gap-1 border border-[#e6e6e6] rounded px-2 py-1">
-                        <Grid3x3 size={12} className="text-[#6b7280]"/>
-                        <input type="color" onChange={e=>{editor.chain().focus().setCellAttribute('borderColor', e.target.value).run(); showToast(`Border color: ${e.target.value}`,'success')}} className="w-6 h-6 p-0 border-0 rounded" title="Border color" defaultValue="#e6e6e6" />
-                        <span className="text-[11px]">Border Color</span>
+                <div className="border-t border-[#e6e6e6] bg-gradient-to-b from-white to-[#fcfcfc]">
+                  {/* Header bar */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e6e6e6]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-[10px] bg-[#0075de] text-white flex items-center justify-center shadow-sm"><Grid3x3 size={16}/></div>
+                      <div>
+                        <div className="text-[13px] font-bold text-[#111] flex items-center gap-2">
+                          Operasi Tabel
+                          <span className="px-2 py-0.5 rounded-full bg-[#eff6ff] border border-[#dbeafe] text-[#0075de] text-[10px] font-bold tracking-wide">AKTIF</span>
+                          <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-normal text-[#6b7280]"><MoveHorizontal size={11}/> drag tepi kolom • <MoveVertical size={11}/> drag bawah baris</span>
+                        </div>
+                        <div className="text-[11px] text-[#6b7280]">Atur baris, kolom, gabung cell, style & ukuran dengan mudah</div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" onClick={()=> setTableOpsCollapsed(!tableOpsCollapsed)} className="w-8 h-8 rounded-full bg-white border border-[#e6e6e6] hover:bg-[#f6f5f4] flex items-center justify-center transition-colors" title={tableOpsCollapsed ? "Buka panel" : "Tutup panel"}>
+                        {tableOpsCollapsed ? <ChevronDown size={14}/> : <ChevronUp size={14}/>}
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-[#6b7280] flex items-start gap-1.5">
-                    <Info size={12} className="mt-0.5 shrink-0"/>
-                    <span>Drag handle di tepi kolom untuk <b>resize lebar kolom</b>. Seleksi beberapa cell (drag) lalu <b>Gabung</b>. Klik cell lalu pilih <b>Align Vertical</b> / <b>Background</b> untuk styling. Tinggi baris menyesuaikan konten.</span>
-                  </div>
+
+                  {!tableOpsCollapsed && (
+                    <div className="p-4 space-y-4">
+                      {/* Row 1: Struktur Baris & Kolom */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Baris */}
+                        <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-7 h-7 rounded-[8px] bg-[#eff6ff] border border-[#dbeafe] text-[#0075de] flex items-center justify-center"><Rows3 size={13}/></div>
+                            <span className="text-xs font-bold text-[#111]">Baris</span>
+                            <Badge variant="secondary" className="ml-auto text-[10px]">Rows</Badge>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            <button type="button" onClick={()=>{editor.chain().focus().addRowBefore().run(); showToast('Baris ditambahkan di atas','success')}} className="h-8 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] hover:border-[#0075de]/20 flex items-center justify-center gap-1"><Plus size={11}/> Sebelum</button>
+                            <button type="button" onClick={()=>{editor.chain().focus().addRowAfter().run(); showToast('Baris ditambahkan di bawah','success')}} className="h-8 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] hover:border-[#0075de]/20 flex items-center justify-center gap-1"><Plus size={11}/> Sesudah</button>
+                            <button type="button" onClick={()=>{editor.chain().focus().deleteRow().run(); showToast('Baris dihapus','info')}} className="h-8 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-[8px] hover:bg-red-100 flex items-center justify-center gap-1"><Trash size={11}/> Hapus</button>
+                          </div>
+                          {/* Row height quick */}
+                          <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex items-center gap-2">
+                            <span className="text-[11px] font-semibold text-[#374151] flex items-center gap-1"><MoveVertical size={11}/> Tinggi Baris</span>
+                            <input value={rowHeight} onChange={e=>setRowHeight(e.target.value)} placeholder="48px" className="flex-1 h-7 text-xs border border-[#e6e6e6] rounded-[6px] px-2 bg-white" />
+                            <button type="button" onClick={applyRowHeight} className="h-7 px-3 text-xs font-medium bg-[#111827] text-white rounded-[6px] hover:bg-black">Set</button>
+                            <button type="button" onMouseDown={handleRowDragMouseDown} className="h-7 w-7 rounded-[6px] border border-[#e6e6e6] bg-white hover:bg-[#f6f5f4] flex items-center justify-center cursor-row-resize" title="Drag untuk ubah tinggi baris terpilih (row-resize)"><GripVertical size={12}/></button>
+                          </div>
+                        </div>
+                        {/* Kolom */}
+                        <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-7 h-7 rounded-[8px] bg-violet-50 border border-violet-100 text-violet-600 flex items-center justify-center"><Columns3 size={13}/></div>
+                            <span className="text-xs font-bold text-[#111]">Kolom</span>
+                            <Badge variant="secondary" className="ml-auto text-[10px]">Columns</Badge>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            <button type="button" onClick={()=>{editor.chain().focus().addColumnBefore().run(); showToast('Kolom ditambahkan di kiri','success')}} className="h-8 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11}/> Kiri</button>
+                            <button type="button" onClick={()=>{editor.chain().focus().addColumnAfter().run(); showToast('Kolom ditambahkan di kanan','success')}} className="h-8 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11}/> Kanan</button>
+                            <button type="button" onClick={()=>{editor.chain().focus().deleteColumn().run(); showToast('Kolom dihapus','info')}} className="h-8 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-[8px] hover:bg-red-100 flex items-center justify-center gap-1"><Trash size={11}/> Hapus</button>
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex items-center gap-1.5 text-[11px] text-[#6b7280]">
+                            <MoveHorizontal size={11} className="text-[#0075de]"/> Drag handle di tepi kolom (biru, cursor <span className="font-mono bg-white border px-1 rounded">col-resize</span>) untuk ubah lebar
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Aksi Tabel */}
+                      <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-7 h-7 rounded-[8px] bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center"><Layers size={13}/></div>
+                          <span className="text-xs font-bold text-[#111]">Aksi Tabel</span>
+                          <span className="text-[11px] text-[#6b7280] hidden sm:inline">— pilih cell lalu eksekusi</span>
+                          <button type="button" onClick={()=>{editor.chain().focus().deleteTable().run(); showToast('Tabel dihapus','info')}} className="ml-auto h-7 px-3 text-xs font-medium bg-red-600 text-white rounded-[8px] hover:bg-red-700 flex items-center gap-1.5"><Trash2 size={12}/> Hapus Tabel</button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button type="button" onClick={()=>{editor.chain().focus().mergeCells().run(); showToast('Cell digabung','success')}} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center gap-1.5"><Combine size={12}/> Gabung Cell</button>
+                          <button type="button" onClick={()=>{editor.chain().focus().splitCell().run(); showToast('Cell dipecah','success')}} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center gap-1.5"><Split size={12}/> Pecah Cell</button>
+                          <button type="button" onClick={()=>{try{ (editor.chain().focus() as any).selectParentNode().run(); (editor.chain().focus() as any).selectParentNode().run(); showToast('Tabel dipilih — drag untuk seleksi beberapa cell','info')}catch{ showToast('Gunakan drag untuk seleksi cell','info')}}} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4]">Pilih Tabel</button>
+                          <div className="w-px h-6 bg-[#e6e6e6] self-center mx-1"/>
+                          <button type="button" onClick={()=>{editor.chain().focus().toggleHeaderRow().run(); showToast('Header baris toggled','success')}} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4]">Header Baris</button>
+                          <button type="button" onClick={()=>{editor.chain().focus().toggleHeaderColumn().run(); showToast('Header kolom toggled','success')}} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4]">Header Kolom</button>
+                          <button type="button" onClick={()=>{editor.chain().focus().toggleHeaderCell().run(); showToast('Header cell toggled','success')}} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4]">Header Cell</button>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Gaya Cell + Border + Ukuran */}
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                        {/* Cell style: BG + Align + Height */}
+                        <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)] space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-[8px] bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center"><Brush size={13}/></div>
+                            <span className="text-xs font-bold text-[#111]">Gaya Cell</span>
+                            <Badge variant="outline" className="ml-auto text-[10px]">Cell</Badge>
+                          </div>
+                          {/* BG */}
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 border border-[#e6e6e6] rounded-[8px] px-2 py-1.5 bg-[#f9fafb] flex-1">
+                              <PaintBucket size={12} className="text-[#6b7280] shrink-0"/>
+                              <span className="text-[11px] font-medium">BG</span>
+                              <input type="color" value={cellBg} onChange={e=>setCellBg(e.target.value)} className="w-7 h-7 p-0 border-0 rounded-[6px] overflow-hidden cursor-pointer" title="Pilih warna background" />
+                              <span className="text-[11px] font-mono text-[#6b7280] hidden sm:inline">{cellBg}</span>
+                              <button type="button" onClick={()=>{editor.chain().focus().setCellAttribute('backgroundColor', cellBg).run(); showToast(`Background: ${cellBg}`,'success')}} className="ml-auto h-6 px-2.5 text-xs font-medium bg-[#0075de] text-white rounded-[6px] hover:bg-[#0063be]">Terapkan</button>
+                              <button type="button" onClick={()=>{editor.chain().focus().setCellAttribute('backgroundColor', null).run(); showToast('Background dihapus','info')}} className="h-6 px-2 text-xs border border-[#e6e6e6] rounded-[6px] bg-white hover:bg-[#f6f5f4]">Hapus</button>
+                            </div>
+                          </div>
+                          {/* Align + Height */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <select onChange={e=>{const v=e.target.value; if(v) {editor.chain().focus().setCellAttribute('verticalAlign', v).run(); showToast(`Vertical: ${v}`,'success')}}} defaultValue="" className="h-8 text-xs border border-[#e6e6e6] rounded-[8px] px-2 bg-white">
+                              <option value="" disabled>Align Vertical</option>
+                              <option value="top">Top</option>
+                              <option value="middle">Middle</option>
+                              <option value="bottom">Bottom</option>
+                            </select>
+                            <div className="flex gap-1">
+                              <input value={cellHeight} onChange={e=>setCellHeight(e.target.value)} placeholder="Tinggi cell 40px" className="flex-1 h-8 text-xs border border-[#e6e6e6] rounded-[8px] px-2 bg-white" />
+                              <button type="button" onClick={applyCellHeight} className="h-8 px-3 text-xs font-medium bg-[#111827] text-white rounded-[8px] hover:bg-black">Set</button>
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-[#6b7280] flex gap-1.5"><Info size={11} className="mt-0.5 shrink-0"/> Pilih cell dulu, lalu atur BG / align / tinggi. Tinggi bisa <span className="font-mono bg-[#f6f5f4] px-1 rounded">40px</span> atau kosongkan untuk auto.</p>
+                        </div>
+
+                        {/* Border controls */}
+                        <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)] space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-[8px] bg-[#f5f3ff] border border-violet-100 text-violet-600 flex items-center justify-center"><Palette size={13}/></div>
+                            <span className="text-xs font-bold text-[#111]">Border Cell</span>
+                            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">7 posisi</span>
+                          </div>
+                          {/* Color + Width + Style in one row */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="flex items-center gap-1.5 border border-[#e6e6e6] rounded-[8px] px-2 py-1.5 bg-white">
+                              <Grid3x3 size={12} className="text-[#6b7280] shrink-0"/>
+                              <input type="color" value={borderColor} onChange={e=>setBorderColor(e.target.value)} className="w-6 h-6 p-0 border-0 rounded-[6px] cursor-pointer" title="Border color" />
+                              <span className="text-[11px] font-medium hidden sm:inline">Warna</span>
+                            </div>
+                            <select value={borderWidth} onChange={e=>setBorderWidth(e.target.value)} className="h-8 text-xs border border-[#e6e6e6] rounded-[8px] px-2 bg-white">
+                              <option value="1px">1px</option>
+                              <option value="2px">2px</option>
+                              <option value="3px">3px</option>
+                              <option value="4px">4px</option>
+                            </select>
+                            <select value={borderStyle} onChange={e=>setBorderStyle(e.target.value)} className="h-8 text-xs border border-[#e6e6e6] rounded-[8px] px-2 bg-white">
+                              <option value="solid">Solid</option>
+                              <option value="dashed">Dashed</option>
+                              <option value="dotted">Dotted</option>
+                              <option value="double">Double</option>
+                              <option value="hidden">Hidden</option>
+                            </select>
+                          </div>
+                          {/* Preset grid 7 options */}
+                          <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                            {[
+                              { id:'none', label:'Tanpa', icon: Square, desc:'None' },
+                              { id:'left', label:'Kiri', icon: PanelLeft, desc:'Left' },
+                              { id:'right', label:'Kanan', icon: PanelRight, desc:'Right' },
+                              { id:'leftRight', label:'Kiri+Kanan', icon: Columns2, desc:'L+R' },
+                              { id:'top', label:'Atas', icon: PanelTop, desc:'Top' },
+                              { id:'bottom', label:'Bawah', icon: PanelBottom, desc:'Bottom' },
+                              { id:'outer', label:'Luar', icon: Frame, desc:'Outer' },
+                            ].map(p => (
+                              <button key={p.id} type="button" onClick={()=>applyBorderPreset(p.id)} className="flex flex-col items-center gap-1 p-2 rounded-[10px] border border-[#e6e6e6] bg-white hover:border-[#0075de] hover:bg-[#eff6ff] hover:text-[#0075de] group transition-colors">
+                                <p.icon size={16} className="text-[#6b7280] group-hover:text-[#0075de]"/>
+                                <span className="text-[10px] font-semibold leading-none">{p.label}</span>
+                                <span className="text-[9px] text-[#9ca3af] leading-none hidden sm:block">{p.desc}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-1.5">
+                            <button type="button" onClick={()=>applyBorderPreset('all')} className="flex-1 h-7 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-[#f9fafb] hover:bg-white flex items-center justify-center gap-1"><Grid3x3 size={12}/> Semua sisi</button>
+                            <button type="button" onClick={()=>applyBorderPreset('none')} className="h-7 px-3 text-xs border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200">Hapus Border</button>
+                          </div>
+                          <p className="text-[11px] text-[#6b7280]">Pilih warna → width → style → klik preset posisi. <b>Outer</b> = hanya tepi luar tabel (interior tanpa garis).</p>
+                        </div>
+                      </div>
+
+                      {/* Hint */}
+                      <div className="flex items-start gap-2 bg-[#eff6ff] border border-[#dbeafe] rounded-[10px] px-3 py-2.5 text-[11px] text-[#1e40af]">
+                        <Info size={14} className="mt-0.5 shrink-0 text-[#0075de]"/>
+                        <span><b>Tips resize:</b> Arahkan kursor ke <b>garis tepi kolom</b> (muncul garis biru, cursor <span className="font-mono bg-white border px-1 rounded">col-resize ↔</span>) lalu drag. Untuk <b>tinggi baris</b>, isi <span className="font-mono">48px</span> lalu Set, atau klik <GripVertical size={10} className="inline"/> drag bawah baris (cursor <span className="font-mono bg-white border px-1 rounded">row-resize ↕</span>). Seleksi beberapa cell → <b>Gabung</b>.</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -850,8 +1342,8 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
               {showPreview ? (
                 <div className="rounded-[10px] border border-[#e6e6e6] bg-[#f6f5f4] p-3">
                   <div className="bg-white rounded-[8px] shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-[#e6e6e6] min-h-[220px] p-0 overflow-auto">
-                    {/* Preview uses same tiptap class for 1:1 match */}
-                    <div className="tiptap p-5 min-h-[180px]" style={{fontSize:'14px', lineHeight:'1.6'}} dangerouslySetInnerHTML={{__html: previewHtml || "<p class='text-[#9ca3af] italic'>Preview kosong — ketik di editor</p>"}} />
+                    {/* Preview 1:1 dengan EditorContent - class & style identik */}
+                    <div className="tiptap prose prose-sm max-w-none p-6 min-h-[280px] leading-relaxed text-[14px] text-[#111827] prose-p:my-2 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-blockquote:border-l-4 prose-blockquote:border-[#e5e7eb] prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-[#0075de] prose-strong:font-bold prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-table:border-collapse prose-th:bg-[#f9fafb] prose-th:p-2 prose-th:border prose-td:p-2 prose-td:border prose-img:rounded-lg focus:outline-none" dangerouslySetInnerHTML={{__html: previewHtml || "<p class='text-[#9ca3af] italic'>Preview kosong — ketik di editor</p>"}} />
                   </div>
                   <div className="mt-2 flex items-center justify-between text-[11px] text-[#6b7280]">
                     <span>{form.bindings.length} binding • {previewHtml.length} chars</span>
@@ -899,7 +1391,7 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
           <CardContent>
             <div className="bg-[#f6f5f4] border border-[#e6e6e6] rounded-[10px] p-3">
               <div className="bg-white rounded-[8px] border border-[#e6e6e6] min-h-[160px] p-0 overflow-auto">
-                <div className="tiptap p-4 min-h-[140px]" dangerouslySetInnerHTML={{__html: previewHtml || "<p class='text-[#9ca3af] italic'>Preview kosong</p>"}} />
+                <div className="tiptap prose prose-sm max-w-none p-6 min-h-[180px] leading-relaxed text-[14px] text-[#111827] prose-p:my-2 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-blockquote:border-l-4 prose-blockquote:border-[#e5e7eb] prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-[#0075de] prose-strong:font-bold prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-table:border-collapse prose-th:bg-[#f9fafb] prose-th:p-2 prose-th:border prose-td:p-2 prose-td:border prose-img:rounded-lg focus:outline-none" dangerouslySetInnerHTML={{__html: previewHtml || "<p class='text-[#9ca3af] italic'>Preview kosong</p>"}} />
               </div>
             </div>
           </CardContent>
@@ -915,12 +1407,32 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
         </div>
       </div>
 
-      {/* Context Menu - scrollable fix */}
-      {contextMenu && (
+      {/* Context Menu - absolute, anti-terpotong */}
+      {contextMenu && (()=> {
+        const vw = typeof window !== 'undefined' ? window.innerWidth : 1200
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+        const POP_W = 360
+        const POP_H = 520
+        const M = 16
+        let left = contextMenu.x
+        let top = contextMenu.y
+        // horizontal: geser kiri jika melebihi viewport
+        if (left + POP_W + M > vw) left = vw - POP_W - M
+        if (left < M) left = M
+        // vertical: flip ke atas jika klik di bawah dan tidak cukup ruang bawah
+        const spaceBelow = vh - contextMenu.y
+        const spaceAbove = contextMenu.y
+        if (spaceBelow < 260 && spaceAbove > spaceBelow) {
+          top = contextMenu.y - POP_H
+        }
+        // clamp agar tidak keluar viewport
+        if (top + POP_H + M > vh) top = vh - POP_H - M
+        if (top < M) top = M
+        return (
         <div className="fixed inset-0 z-40" onClick={()=>{setContextMenu(null); savedPosRef.current=null}} onContextMenu={e=>e.preventDefault()}>
           <div
-            className="absolute bg-white border border-[#e6e6e6] rounded-[12px] shadow-2xl w-[360px] max-h-[85vh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95"
-            style={{left: Math.min(contextMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 1200)-380), top: Math.min(contextMenu.y, (typeof window !== 'undefined' ? window.innerHeight : 800)-420)}}
+            className="fixed bg-white border border-[#e6e6e6] rounded-[12px] shadow-2xl w-[360px] max-h-[85vh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95"
+            style={{left, top}}
             onClick={e=>e.stopPropagation()}
           >
             <div className="sticky top-0 bg-white rounded-t-[12px] p-4 pb-3 border-b border-[#f0f0f0] flex items-center justify-between">
@@ -975,7 +1487,8 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       <style dangerouslySetInnerHTML={{__html: `
         .tiptap p.is-editor-empty:first-child::before {
@@ -986,11 +1499,21 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
           height: 0;
           font-style: italic;
         }
-        .tiptap table { border-collapse: collapse; width: 100%; margin: 12px 0; position: relative; }
-        .tiptap table td, .tiptap table th { border: 1px solid #e6e6e6; padding: 6px 10px; min-width: 80px; position: relative; vertical-align: top; }
+        .tiptap p:empty { min-height: 1.5em; }
+        .tiptap p:empty::before { content: "\\00a0"; visibility: hidden; }
+        .tiptap table { border-collapse: collapse; width: 100%; margin: 16px 0; position: relative; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .tiptap table td, .tiptap table th { border: 1px solid #e6e6e6; padding: 8px 12px; min-width: 80px; position: relative; vertical-align: top; transition: background 0.12s; }
         .tiptap table th { background: #f9fafb; font-weight: 600; text-align: left; }
-        .tiptap .selectedCell:after { z-index: 2; position: absolute; content: ""; left: 0; right: 0; top: 0; bottom: 0; background: rgba(0,117,222,0.12); pointer-events: none; border: 1px solid #0075de; }
-        .tiptap .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: #0075de; pointer-events: none; }
+        .tiptap table tr { position: relative; }
+        .tiptap .selectedCell:after { z-index: 2; position: absolute; content: ""; left: 0; right: 0; top: 0; bottom: 0; background: rgba(0,117,222,0.12); pointer-events: none; border: 1.5px solid #0075de; border-radius: 2px; }
+        .tiptap .column-resize-handle { position: absolute; right: -4px; top: 0; bottom: 0; width: 8px; background: transparent; cursor: col-resize; pointer-events: auto; z-index: 3; }
+        .tiptap .column-resize-handle::after { content: ""; position: absolute; left: 3px; top: 0; bottom: 0; width: 2px; background: #0075de; opacity: 0; transition: opacity 0.15s; }
+        .tiptap .column-resize-handle:hover::after, .tiptap .column-resize-handle:active::after { opacity: 1; }
+        .tiptap table td:hover, .tiptap table th:hover { outline: 1px dashed rgba(0,117,222,0.15); outline-offset: -1px; }
+        .tiptap .tableWrapper { overflow-x: auto; }
+        /* Row resize handle (bottom edge of row) */
+        .tiptap table tr::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 6px; cursor: row-resize; z-index: 2; }
+        .tiptap table tr:hover::after { background: rgba(0,117,222,0.08); }
         .tiptap img { max-width: 100%; }
         .tiptap a { color: #0075de; text-decoration: underline; text-underline-offset: 2px; }
         .tiptap blockquote { border-left: 3px solid #e5e7eb; padding-left: 12px; margin-left: 0; font-style: italic; color: #4b5563; }

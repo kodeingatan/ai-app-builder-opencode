@@ -164,14 +164,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 w-full flex flex-col">
         {/* Mobile header */}
         <header className="lg:hidden h-14 bg-white border-b border-[#e6e6e6] flex items-center justify-between px-4 sticky top-0 z-30">
           <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 rounded hover:bg-[#f6f5f4]"><Menu size={20} /></button>
           <div className="flex items-center gap-2 font-bold text-sm"><div className="w-7 h-7 rounded bg-[#0075de] flex items-center justify-center text-white"><Sparkles size={14} /></div>Surat Platform</div>
           <div className="w-9" />
         </header>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 w-full min-w-0">{children}</main>
       </div>
     </div>
   )
