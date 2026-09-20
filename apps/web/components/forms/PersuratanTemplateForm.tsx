@@ -426,6 +426,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const [selectedCompId, setSelectedCompId] = useState<string>("")
   const [loading, setLoading] = useState(false)
+  const tickRef = useRef(0)
   const [tick, setTick] = useState(0)
   const savedPosRef = useRef<number | null>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
@@ -515,10 +516,12 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
       setForm(prev => (prev.contentHtml === html ? prev : { ...prev, contentHtml: html }))
+      tickRef.current++
       setTick(v => v + 1)
     },
-    onSelectionUpdate: () => setTick(v => v + 1),
-    onTransaction: () => setTick(v => v + 1),
+    onSelectionUpdate: () => { tickRef.current++ },
+    shouldRerenderOnTransaction: false,
+    onTransaction: () => { tickRef.current++ },
   })
 
   useEffect(() => {
@@ -549,7 +552,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
     const attrs = editor.getAttributes('textStyle') as any
     setFontFamily(attrs.fontFamily || '')
     setFontSize(attrs.fontSize || '')
-  }, [tick, editor])
+  }, [editor])
 
   // Preview debounced
   useEffect(() => {
@@ -585,9 +588,9 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
         })
       } catch {}
       setPreviewHtml(html)
-    }, 150)
+    }, 500)
     return () => clearTimeout(timer)
-  }, [form.contentHtml, usages, components, tick, previewData])
+  }, [form.contentHtml, usages, components, previewData])
 
   // Row height drag via bottom edge
   useEffect(() => {
@@ -1150,7 +1153,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                       <button type="button" title="Kurangi indent" onClick={() => editor.chain().focus().liftListItem('listItem').run()} className="w-8 h-8 rounded-[8px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">←</button>
                       <button type="button" title="Tambah indent" onClick={() => editor.chain().focus().sinkListItem('listItem').run()} className="w-8 h-8 rounded-[8px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">→</button>
                     </div>
-                    <SpacingDropdown editor={editor} tick={tick} />
+                    <SpacingDropdown editor={editor} />
                     <div className="flex gap-1 bg-white border border-[#e6e6e6] rounded-[12px] p-1.5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
                       <button type="button" title="Insert table 3x3" onClick={() => { editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); showToast('Tabel 3×3 ditambahkan', 'success') }} className="w-8 h-8 rounded-[8px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><TableIcon size={14} /></button>
                       <button type="button" title="Atur link (modal)" onClick={openLinkModal} className={`w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors ${isActive('link') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Link2 size={14} /></button>

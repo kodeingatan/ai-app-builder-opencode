@@ -7,25 +7,32 @@ type Props = {
   tick?: number
 }
 
-export default function SpacingDropdown({ editor, tick }: Props) {
+export default function SpacingDropdown({ editor }: Props) {
   const [open, setOpen] = useState(false)
   const [customOpen, setCustomOpen] = useState(false)
   const [customLineHeight, setCustomLineHeight] = useState("1.5")
   const [customBefore, setCustomBefore] = useState("0")
   const [customAfter, setCustomAfter] = useState("8")
+  const [, forceUpdate] = useState({})
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!editor) return
+    const handler = () => forceUpdate({})
+    editor.on('transaction', handler)
+    editor.on('selectionUpdate', handler)
+    return () => {
+      editor.off('transaction', handler)
+      editor.off('selectionUpdate', handler)
+    }
+  }, [editor])
 
   const getAttrs = () => {
     if (!editor) return {}
-    // try paragraph, then heading
     const p = editor.getAttributes('paragraph') as any
     const h = editor.getAttributes('heading') as any
-    // prefer paragraph if exists, else heading
-    const attrs = p?.lineHeight || p?.marginTop ? p : h
-    // also check if is active paragraph/heading to get correct
-    // fallback to getAttributes for current block
     const cur = editor.isActive('heading') ? h : p
-    return cur || p || {}
+    return cur || p || h || {}
   }
 
   const attrs = getAttrs()

@@ -398,6 +398,7 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
   const [bindingForm, setBindingForm] = useState<Binding>({ name:"", type:"text", width:200, height:120 })
   const [allComponents, setAllComponents] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const tickRef = useRef(0)
   const [tick, setTick] = useState(0)
   const [showPreview, setShowPreview] = useState(true)
   const savedPosRef = useRef<number | null>(null)
@@ -500,10 +501,12 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
       setForm(prev => (prev.contentHtml === html ? prev : { ...prev, contentHtml: html }))
+      tickRef.current++
       setTick(v=>v+1)
     },
-    onSelectionUpdate: () => setTick(v=>v+1),
-    onTransaction: () => setTick(v=>v+1),
+    shouldRerenderOnTransaction: false,
+    onSelectionUpdate: () => { tickRef.current++ },
+    onTransaction: () => { tickRef.current++ },
   })
 
   // Init load for edit
@@ -536,9 +539,9 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     const attrs = editor.getAttributes('textStyle') as any
     setFontFamily(attrs.fontFamily || '')
     setFontSize(attrs.fontSize || '')
-  }, [tick, editor])
+  }, [editor])
 
-  // Preview debounced - harus 1:1 dengan EditorContent (tiptap styles)
+  // Preview debounced - harus 1:1 dengan EditorContent (tiptap styles) - debounce 500ms untuk perf
   useEffect(()=>{
     const timer = setTimeout(()=>{
       let html = editor ? editor.getHTML() : form.contentHtml
@@ -555,9 +558,9 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
         }
       }
       setPreviewHtml(html)
-    }, 120)
+    }, 500)
     return ()=> clearTimeout(timer)
-  },[form.contentHtml, form.bindings, tick])
+  },[form.contentHtml, form.bindings])
 
   // Row height drag via bottom edge — cursor row-resize & drag to resize height
   useEffect(()=>{
@@ -614,14 +617,30 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     const h = el.scrollHeight || 600
     const cnt = Math.max(1, Math.ceil(h / Math.max(400, usable)))
     setPageCount(cnt)
-  }, [tick, pageSize, margins, editorHeight])
+  }, [pageSize, margins, editorHeight, form.contentHtml])
+  // ResizeObserver for pageCount (perf: not on every tick)
+  useEffect(()=>{
+    if (!editor) return
+    const el = document.querySelector('.tiptap') as HTMLElement | null
+    if (!el) return
+    const ro = new ResizeObserver(()=> {
+      const fmt = (typeof PAGE_FORMATS !== 'undefined' ? PAGE_FORMATS[pageSize] : {height:1123}) as any
+      const usable = (fmt.height || 1123) - margins.top*3.78 - margins.bottom*3.78
+      const h = el.scrollHeight || 600
+      const cnt = Math.max(1, Math.ceil(h / Math.max(400, usable)))
+      // throttle via rAF
+      requestAnimationFrame(()=> setPageCount(cnt))
+    })
+    ro.observe(el)
+    return ()=> ro.disconnect()
+  }, [editor, pageSize, margins])
   useEffect(()=>{ setHeaderDraft(headerHtml||"") }, [headerHtml])
   useEffect(()=>{
     if (!editor) return
     const isTable = editor.isActive('table')
     if (isTable && activeToolbarTab !== 'table') setActiveToolbarTab('table')
     else if (!isTable && activeToolbarTab === 'table') setActiveToolbarTab('main')
-  }, [tick, editor, activeToolbarTab])
+  }, [editor, activeToolbarTab])
   useEffect(()=>{ setFooterDraft(footerHtml||"") }, [footerHtml])
 
   // Paste from Word / doc lain — intercept, default adapt, popup 3 pilihan
@@ -1287,7 +1306,7 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
                     <button type="button" title="Kurangi indent" onClick={()=> editor.chain().focus().liftListItem('listItem').run()} className="w-8 h-8 rounded-[8px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">←</button>
                     <button type="button" title="Tambah indent" onClick={()=> editor.chain().focus().sinkListItem('listItem').run()} className="w-8 h-8 rounded-[8px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">→</button>
                   </div>
-                    <SpacingDropdown editor={editor} tick={tick} />
+                    <SpacingDropdown editor={editor} />
                   {/* Group: Insert */}
                   <div className="flex gap-1 bg-white border border-[#e6e6e6] rounded-[12px] p-1.5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
                     <button type="button" title="Insert table 3x3" onClick={()=>{editor.chain().focus().insertTable({rows:3, cols:3, withHeaderRow:true}).run(); showToast('Tabel 3×3 ditambahkan','success')}} className="w-8 h-8 rounded-[8px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><TableIcon size={14}/></button>
@@ -1651,13 +1670,13 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
 
           {/* Bindings list inline for mobile */}
           <div className="lg:hidden">
-            <BindingsPanel form={form} setForm={setForm} allComponents={allComponents} savedPosRef={savedPosRef} editor={editor} tick={tick} showToast={showToast} />
+            <BindingsPanel form={form} setForm={setForm} allComponents={allComponents} savedPosRef={savedPosRef} editor={editor} showToast={showToast} />
           </div>
         </div>
 
         {/* RIGHT SIDEBAR - Desktop */}
         <div className="hidden lg:block space-y-4 sticky top-6">
-          <BindingsPanel form={form} setForm={setForm} allComponents={allComponents} savedPosRef={savedPosRef} editor={editor} tick={tick} showToast={showToast} />
+          <BindingsPanel form={form} setForm={setForm} allComponents={allComponents} savedPosRef={savedPosRef} editor={editor} showToast={showToast} />
 
           <Card>
             <CardHeader className="pb-3">

@@ -160,7 +160,8 @@ export default function DocxEditor({
     const h = el.scrollHeight || 600
     const cnt = Math.max(1, Math.ceil(h / Math.max(400, usable)))
     setPageCount(cnt)
-  }, [tick, pageSize, margins, editorHeight])
+  }, [pageSize, margins, editorHeight])
+  // pageCount via ResizeObserver (see Component)
 
   const format = PAGE_FORMATS[pageSize] || PAGE_FORMATS.A4
 
