@@ -527,12 +527,21 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       fetch(`/api/persuratan/templates/${id}`).then(r => r.json()).then(row => {
         const html = row.contentHtml || "<p></p>"
         setForm({ name: row.name, description: row.description || "", contentHtml: html })
-        setTimeout(() => { if (editor) editor.commands.setContent(html || "<p></p>") }, 100)
         try { setUsages(row.componentsJson ? JSON.parse(row.componentsJson) : []) } catch { setUsages([]) }
         setLoading(false)
       }).catch(() => setLoading(false))
     }
-  }, [mode, id, editor])
+  }, [mode, id])
+
+  // Sync editor content when editor is ready (avoid null commands error)
+  useEffect(() => {
+    if (editor && mode === "edit" && id && form.contentHtml && form.contentHtml !== "<p>Tulis template di sini... klik kanan untuk insert component</p>") {
+      const current = editor.getHTML()
+      if (current === "<p></p>" && form.contentHtml !== "<p></p>") {
+        editor.commands.setContent(form.contentHtml)
+      }
+    }
+  }, [editor, form.contentHtml, mode, id])
 
   // Sync font family/size from selection
   useEffect(() => {

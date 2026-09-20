@@ -515,15 +515,20 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
         try{ bindings=row.bindingsJson?JSON.parse(row.bindingsJson):[] }catch{}
         const html = row.contentHtml || "<p></p>"
         setForm({ name: row.name, isLooping: !!row.isLooping, contentHtml: html, bindings })
-        setTimeout(()=>{
-          if (editor) {
-            editor.commands.setContent(html || "<p></p>")
-          }
-        }, 100)
         setLoading(false)
       }).catch(()=>setLoading(false))
     }
-  },[mode,id, editor])
+  },[mode,id])
+
+  // Sync editor content when editor is ready (avoid null commands error)
+  useEffect(() => {
+    if (editor && mode === "edit" && id && form.contentHtml && form.contentHtml !== "<p></p>") {
+      const current = editor.getHTML()
+      if (current === "<p></p>" && form.contentHtml !== "<p></p>") {
+        editor.commands.setContent(form.contentHtml)
+      }
+    }
+  }, [editor, form.contentHtml, mode, id])
 
   // Sync font family/size from selection
   useEffect(()=>{

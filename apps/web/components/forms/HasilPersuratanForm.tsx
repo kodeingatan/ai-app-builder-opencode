@@ -162,7 +162,7 @@ export default function HasilPersuratanForm({ mode, id, administrationId: propAd
                 <Select value={String(s.templateId)} onChange={e=>{
                   const next=[...form.stepsData]; const t=adminDetail?.steps?.find((x:any)=> String(x.templateId)===e.target.value); next[idx]={...next[idx], templateId: Number(e.target.value), templateName: t?.templateName}; setForm({...form, stepsData: next})
                 }}>
-                  {(adminDetail?.steps||[]).map((t:any)=><option key={t.templateId} value={t.templateId}>{t.templateName}</option>)}
+                  {(adminDetail?.steps||[]).map((t:any, tIdx:number)=><option key={`${t.templateId}-${tIdx}`} value={t.templateId}>{t.templateName}</option>)}
                 </Select>
               </div>
               <div className="mt-2">
