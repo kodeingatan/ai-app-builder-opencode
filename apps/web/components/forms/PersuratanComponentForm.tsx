@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
@@ -23,12 +24,13 @@ import FontFamily from "@tiptap/extension-font-family"
 import { SpacingExtension } from "@/lib/tiptap/spacing"
 import SpacingDropdown from "@/components/common/SpacingDropdown"
 import { Node, mergeAttributes, Extension } from "@tiptap/core"
+import { PageBreak, Footnote, HeaderNode, FooterNode, PAGE_FORMATS } from "@/lib/tiptap/docx"
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Table as TableIcon, Link2, Image as ImageIcon, Undo, Redo, Quote, Heading1, Heading2, Heading3,
   Minus, Eraser, X, Plus, Sparkles, Eye, Boxes, Trash2, Copy, Info, FileText, Settings2, LayoutTemplate, MousePointer2,
   Palette, Pipette, Rows3, Columns3, Trash, Combine, Split, ArrowUp, ArrowDown, MinusSquare, PaintBucket, Grid3x3, Type, Highlighter,
-  Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, Maximize2, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, SlidersHorizontal, Brush, Layers
+  Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, Maximize2, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, SlidersHorizontal, Brush, Layers, Ruler, ZoomIn, ZoomOut, Download, Settings, Check
 } from "lucide-react"
 import PasteChoicePopup from "@/components/common/PasteChoicePopup"
 import { keepStyleHtml, adaptToEditorHtml, plainToHtml, isWordHtml } from "@/lib/tiptap/paste"
@@ -412,6 +414,20 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
   const [rowHeight, setRowHeight] = useState('')
   const [editorHeight, setEditorHeight] = useState(380)
   const [tableOpsCollapsed, setTableOpsCollapsed] = useState(false)
+  const [pageSize, setPageSize] = useState<'A4'|'Letter'|'A5'|'A3'>('A4')
+  const [zoom, setZoom] = useState(90)
+  const [showRuler, setShowRuler] = useState(true)
+  const [showSettings, setShowSettings] = useState(false)
+  const [headerHtml, setHeaderHtml] = useState("")
+  const [footerHtml, setFooterHtml] = useState("")
+  const [showHeaderEdit, setShowHeaderEdit] = useState(false)
+  const [showFooterEdit, setShowFooterEdit] = useState(false)
+  const [headerDraft, setHeaderDraft] = useState("")
+  const [footerDraft, setFooterDraft] = useState("")
+  const [margins, setMargins] = useState({ top: 20, bottom: 20, left: 25, right: 25 })
+  const [pageGap, setPageGap] = useState(20)
+  const [background, setBackground] = useState("#ffffff")
+  const [pageCount, setPageCount] = useState(1)
   const isDraggingEditorRef = useRef(false)
   const startYRef = useRef(0)
   const startHRef = useRef(0)
@@ -456,6 +472,10 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
       FontFamily.configure({ types: ['textStyle'] }),
       FontSize,
       SpacingExtension,
+      PageBreak,
+      Footnote,
+      HeaderNode,
+      FooterNode,
       TextAlign.configure({ types: ['heading','paragraph'] }),
       Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { class: 'text-[#0075de] underline underline-offset-2 cursor-pointer' } }),
       CustomImage.configure({ inline: false, allowBase64: true }),
@@ -576,6 +596,20 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     dom.addEventListener('mousedown', onMouseDown)
     return ()=> dom.removeEventListener('mousedown', onMouseDown)
   }, [editor])
+
+  // Docx pagination & header/footer
+  useEffect(()=>{
+    if (!editor) return
+    const el = document.querySelector('.tiptap') as HTMLElement | null
+    if (!el) return
+    const fmt = PAGE_FORMATS[pageSize] || PAGE_FORMATS.A4
+    const usable = fmt.height - margins.top*3.78 - margins.bottom*3.78
+    const h = el.scrollHeight || 600
+    const cnt = Math.max(1, Math.ceil(h / Math.max(400, usable)))
+    setPageCount(cnt)
+  }, [tick, pageSize, margins, editorHeight])
+  useEffect(()=>{ setHeaderDraft(headerHtml||"") }, [headerHtml])
+  useEffect(()=>{ setFooterDraft(footerHtml||"") }, [footerHtml])
 
   // Paste from Word / doc lain — intercept, default adapt, popup 3 pilihan
   useEffect(()=>{
@@ -1248,6 +1282,22 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
                     <button type="button" title="Sisipkan gambar (modal)" onClick={openImageModal} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><ImageIcon size={14}/></button>
                     <button type="button" title="Garis horizontal" onClick={()=>editor.chain().focus().setHorizontalRule().run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><Minus size={14}/></button>
                   </div>
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                      <button type="button" title="Sisipkan batas halaman (Page Break)" onClick={() => (editor?.chain().focus() as any).setPageBreak().run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><span className="text-[11px] font-mono">↵</span></button>
+                      <button type="button" title="Footnote" onClick={() => (editor?.chain().focus() as any).insertContent({ type: 'footnote', attrs: { content: 'Catatan kaki', number: 1 } }).run()} className="w-7 h-7 rounded-[6px] hover:bg-amber-50 flex items-center justify-center text-amber-600"><span className="text-[11px]">¹</span></button>
+                      <button type="button" title="Edit Header" onClick={() => setShowHeaderEdit(true)} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#0075de]"><FileText size={12} /></button>
+                      <button type="button" title="Edit Footer" onClick={() => setShowFooterEdit(true)} className="w-7 h-7 rounded-[6px] hover:bg-emerald-50 flex items-center justify-center text-emerald-600"><Layers size={12} /></button>
+                    </div>
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                      <select value={pageSize} onChange={e => setPageSize(e.target.value as any)} className="h-7 text-xs border-0 bg-transparent pr-1 cursor-pointer"><option value="A4">A4</option><option value="Letter">Letter</option><option value="A5">A5</option><option value="A3">A3</option></select>
+                      <span className="w-px h-4 bg-[#e6e6e6] mx-1 self-center" />
+                      <button onClick={() => setShowRuler(!showRuler)} className={`px-2 h-7 rounded text-xs flex items-center gap-1 ${showRuler ? "bg-[#0075de] text-white" : "hover:bg-[#f6f5f4] text-[#6b7280]"}`}><Ruler size={12} /> Ruler</button>
+                      <span className="w-px h-4 bg-[#e6e6e6] mx-1 self-center" />
+                      <button onClick={() => setZoom(Math.max(40, zoom - 10))} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><ZoomOut size={12} /></button>
+                      <span className="text-xs font-mono w-10 text-center">{zoom}%</span>
+                      <button onClick={() => setZoom(Math.min(200, zoom + 10))} className="w-7 h-7 rounded hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><ZoomIn size={12} /></button>
+                      <button onClick={() => setZoom(100)} className="px-1.5 h-7 rounded hover:bg-[#f6f5f4] text-[11px] text-[#6b7280]"><Maximize2 size={12} /></button>
+                    </div>
                   <div className="ml-auto hidden xl:flex items-center gap-2">
                     <span className="text-[11px] text-[#9ca3af]">Seleksi teks → gunakan toolbar</span>
                     <span className="w-px h-4 bg-[#e6e6e6]"/>
@@ -1263,37 +1313,107 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
               </div>
 
               {/* Editor area - paper like, resizable */}
+              {showSettings && (
+                <div className="border border-[#e6e6e6] border-t-0 bg-white p-4 grid md:grid-cols-3 gap-4">
+                  <div className="space-y-3">
+                    <div className="text-xs font-bold flex items-center gap-1.5"><Settings size={12} className="text-[#0075de]" /> Page Format</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-[11px]">Page size</Label><select value={pageSize} onChange={e => setPageSize(e.target.value as any)} className="w-full h-7 text-xs border border-[#e6e6e6] rounded-[6px] px-2 bg-white"><option value="A4">A4</option><option value="A5">A5</option><option value="A3">A3</option><option value="Letter">Letter</option></select></div>
+                      <div><Label className="text-[11px]">Orientation</Label><select value="portrait" onChange={() => {}} className="w-full h-7 text-xs border border-[#e6e6e6] rounded-[6px] px-2 bg-white"><option>Portrait</option><option>Landscape</option></select></div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div><Label className="text-[11px]">Top</Label><Input value={margins.top} onChange={(e: any) => setMargins({ ...margins, top: Number(e.target.value) || 0 })} className="h-7 text-xs" type="number" /></div>
+                      <div><Label className="text-[11px]">Bottom</Label><Input value={margins.bottom} onChange={(e: any) => setMargins({ ...margins, bottom: Number(e.target.value) || 0 })} className="h-7 text-xs" type="number" /></div>
+                      <div><Label className="text-[11px]">Left</Label><Input value={margins.left} onChange={(e: any) => setMargins({ ...margins, left: Number(e.target.value) || 0 })} className="h-7 text-xs" type="number" /></div>
+                      <div><Label className="text-[11px]">Right</Label><Input value={margins.right} onChange={(e: any) => setMargins({ ...margins, right: Number(e.target.value) || 0 })} className="h-7 text-xs" type="number" /></div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1"><Label className="text-[11px]">Page gap (px)</Label><Input value={pageGap} onChange={(e: any) => setPageGap(Number(e.target.value) || 20)} className="h-7 text-xs" /></div>
+                      <div className="flex-1"><Label className="text-[11px]">Background</Label><div className="flex gap-1 mt-1"><input type="color" value={background} onChange={(e: any) => setBackground(e.target.value)} className="w-7 h-7 rounded" /><span className="text-[11px] font-mono">{background}</span></div></div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-xs font-bold flex items-center gap-1.5"><FileText size={12} className="text-[#0075de]" /> Header & Footer</div>
+                    <div><Label className="text-[11px]">Header (double-click page header)</Label><Textarea value={headerHtml} onChange={(e: any) => setHeaderHtml(e.target.value)} placeholder="Header HTML — gunakan {page} {total}" className="min-h-[60px] text-xs font-mono" /></div>
+                    <div><Label className="text-[11px]">Footer</Label><Textarea value={footerHtml} onChange={(e: any) => setFooterHtml(e.target.value)} placeholder="Footer HTML — {page} of {total}" className="min-h-[60px] text-xs font-mono" /></div>
+                    <div className="flex gap-1 flex-wrap"><Badge variant="secondary" className="text-[11px]">Different first page</Badge><Badge variant="secondary" className="text-[11px]">Odd/even</Badge><Badge variant="secondary" className="text-[11px]">{pageCount} pages</Badge></div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-xs font-bold flex items-center gap-1.5"><Layers size={12} className="text-[#0075de]" /> Export & Collaboration</div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" onClick={() => { const html = editor.getHTML(); const w = window.open("", "_blank"); if (w) { w.document.write(`<html><head><title>${form.name}</title></head><body>${html}</body></html>`); w.document.close(); w.print() } }}><Download size={14} /> Export DOCX</Button>
+                      <Button size="sm" variant="outline" onClick={() => { const html = editor.getHTML(); const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); w.print() } }}><FileText size={14} /> Export PDF</Button>
+                    </div>
+                    <div className="text-[11px] text-[#6b7280]">Collaboration mock — header/footer/footnotes ikut sync. Dark/light ready.</div>
+                  </div>
+                </div>
+              )}
               <div
                 ref={editorContainerRef}
                 onContextMenu={handleContextMenu}
                 className="relative bg-[#f6f5f4] p-3 sm:p-4"
               >
-                <div className="bg-white rounded-[10px] border border-[#e6e6e6] shadow-[0_1px_12px_rgba(0,0,0,0.06)] overflow-hidden">
-                  <div className="flex items-center justify-between px-3 py-2 bg-[#fcfcfc] border-b border-[#e6e6e6] text-[11px] text-[#6b7280]">
-                    <span className="flex items-center gap-1.5 font-medium"><FileText size={12} className="text-[#9ca3af]"/> Halaman Editor</span>
-                    <span className="flex items-center gap-2">
-                      <span className="hidden sm:inline">{editor.getText().length} karakter</span>
-                      <span className="w-px h-3 bg-[#e6e6e6] hidden sm:block"/>
-                      <span className="flex items-center gap-1"><Maximize2 size={11}/> Drag bawah untuk perbesar</span>
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <EditorContent editor={editor} style={{ minHeight: `${editorHeight}px`, maxHeight: 'none' }} className="focus-within:ring-2 focus-within:ring-[#0075de]/10 overflow-y-auto [&_.tiptap]:min-h-[240px] [&_.tiptap]:p-6" />
-                    {/* floating hint inside paper */}
-                    <div className="absolute bottom-3 right-3 hidden lg:flex items-center gap-1.5 bg-[#111827] text-white rounded-full px-3 py-1.5 text-[11px] shadow-lg">
-                      <MousePointer2 size={12} className="text-white"/> Klik kanan untuk tambah data terikat
+                {showRuler && (
+                  <div className="bg-[#f3f4f6] border border-[#e6e6e6] border-b-0 rounded-t-[10px] h-6 flex items-center px-4 overflow-hidden select-none">
+                    <div className="flex-1 flex items-end h-full max-w-[794px] mx-auto relative">
+                      {Array.from({ length: 20 }).map((_, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center">
+                          <span className="text-[7px] text-[#9ca3af] font-mono">{i}</span>
+                          <div className="w-px h-2 bg-[#d1d5db] mt-0.5" />
+                        </div>
+                      ))}
+                      <div className="absolute left-0 right-0 top-0 h-px bg-[#0075de]/30" />
                     </div>
                   </div>
-                  {/* Grip to resize editor height */}
-                  <div
-                    onMouseDown={handleEditorGripMouseDown}
-                    className="h-7 bg-[#f9fafb] hover:bg-[#eff6ff] border-t border-[#e6e6e6] flex items-center justify-center gap-2 cursor-ns-resize select-none group transition-colors"
-                    title="Drag untuk memperbesar / memperkecil tinggi editor"
-                  >
-                    <div className="w-8 h-1 rounded-full bg-[#d1d5db] group-hover:bg-[#0075de] transition-colors"/>
-                    <span className="text-[11px] font-medium text-[#6b7280] group-hover:text-[#0075de] hidden sm:inline">Tarik untuk atur tinggi</span>
-                    <MoveVertical size={12} className="text-[#9ca3af] group-hover:text-[#0075de]"/>
-                  </div>
+                )}
+                <div className="bg-[#e8ecef] p-4 md:p-6 flex flex-col items-center gap-6 overflow-auto" style={{ background, minHeight: 520 }} >
+                  {Array.from({ length: pageCount }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white shadow-[0_2px_16px_rgba(0,0,0,0.12)] flex flex-col relative"
+                      style={{
+                        width: (PAGE_FORMATS[pageSize] || PAGE_FORMATS.A4).width,
+                        minHeight: (PAGE_FORMATS[pageSize] || PAGE_FORMATS.A4).height - 40,
+                        paddingTop: margins.top * 3.78,
+                        paddingBottom: margins.bottom * 3.78,
+                        paddingLeft: margins.left * 3.78,
+                        paddingRight: margins.right * 3.78,
+                        transform: `scale(${zoom / 100})`,
+                        transformOrigin: "top center",
+                        marginBottom: pageGap,
+                      }}
+                    >
+                      <div onDoubleClick={() => setShowHeaderEdit(true)} className="absolute top-0 left-0 right-0 h-[36px] border-b border-dashed border-[#0075de]/20 bg-[#0075de]/[0.02] flex items-center justify-between px-4 text-[10px] text-[#0075de] cursor-pointer hover:bg-[#0075de]/10">
+                        <span className="font-mono flex items-center gap-1"><FileText size={10} /> HEADER {idx === 0 ? "(First)" : ""} — double-click</span>
+                        <span className="font-mono" dangerouslySetInnerHTML={{ __html: headerHtml.replace("{page}", String(idx + 1)).replace("{total}", String(pageCount)) || "<span style='color:#9ca3af'>Header kosong</span>" }} />
+                      </div>
+                      <div className="absolute -top-6 left-0 right-0 flex justify-center">
+                        <span className="bg-white border border-[#e6e6e6] rounded-full px-2 py-0.5 text-[10px] font-mono text-[#6b7280] shadow-sm">Page {idx + 1} of {pageCount}</span>
+                      </div>
+                      <div className="flex-1 pt-8 pb-8">
+                        {idx === 0 ? (
+                          <EditorContent editor={editor} className="min-h-[400px] [&_.tiptap]:min-h-[360px] [&_.tiptap]:p-2 focus-within:ring-2 focus-within:ring-[#0075de]/10" />
+                        ) : (
+                          <div className="tiptap prose prose-sm max-w-none p-2 text-[14px] opacity-60">
+                            <div className="border-2 border-dashed border-[#e6e6e6] rounded-[8px] p-6 text-center text-[#9ca3af] text-xs">Page {idx + 1} — overflow dari page 1. Sisipkan Page Break untuk paksa pindah halaman.</div>
+                          </div>
+                        )}
+                      </div>
+                      <div onDoubleClick={() => setShowFooterEdit(true)} className="absolute bottom-0 left-0 right-0 h-[32px] border-t border-dashed border-emerald-200 bg-emerald-50/50 flex items-center justify-between px-4 text-[10px] text-emerald-700 cursor-pointer hover:bg-emerald-50">
+                        <span className="font-mono flex items-center gap-1"><Layers size={10} /> FOOTER — double-click</span>
+                        <span className="font-mono" dangerouslySetInnerHTML={{ __html: footerHtml.replace("{page}", String(idx + 1)).replace("{total}", String(pageCount)) || "<span style='color:#9ca3af'>Footer kosong</span>" }} />
+                      </div>
+                      <div className="absolute bottom-[32px] left-0 right-0 h-6 border-t border-amber-200 bg-amber-50/30 flex items-center px-4 text-[10px] text-amber-700">Footnotes — area di atas footer (auto-number)</div>
+                    </div>
+                  ))}
+                </div>
+                <div onMouseDown={handleEditorGripMouseDown} className="h-7 bg-[#f9fafb] hover:bg-[#eff6ff] border border-t-0 border-[#e6e6e6] rounded-b-[10px] flex items-center justify-center gap-2 cursor-ns-resize select-none group">
+                  <div className="w-8 h-1 rounded-full bg-[#d1d5db] group-hover:bg-[#0075de]" />
+                  <span className="text-[11px] font-medium text-[#6b7280] group-hover:text-[#0075de] hidden sm:inline">Tarik untuk atur tinggi</span>
+                  <MoveVertical size={12} className="text-[#9ca3af] group-hover:text-[#0075de]" />
+                </div>
+                <div className="absolute bottom-10 right-4 hidden lg:flex items-center gap-1.5 bg-[#111827] text-white rounded-full px-3 py-1.5 text-[11px] shadow-lg">
+                  <MousePointer2 size={12} className="text-white"/> Klik kanan untuk tambah data terikat
                 </div>
               </div>
 
@@ -1671,6 +1791,28 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
         </div>
         )
       })()}
+
+      {/* Header/Footer edit modals — DOCX clone */}
+      {showHeaderEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowHeaderEdit(false)} />
+          <div className="relative bg-white rounded-[12px] w-full max-w-lg shadow-xl p-5 border border-[#e6e6e6]">
+            <div className="font-bold text-sm mb-3 flex items-center gap-2"><FileText size={14} className="text-[#0075de]" /> Edit Header</div>
+            <Textarea value={headerDraft} onChange={(e: any) => setHeaderDraft(e.target.value)} placeholder="Header HTML — gunakan {page} {total}" className="min-h-[100px] font-mono text-xs" />
+            <div className="flex justify-end gap-2 mt-3"><Button variant="outline" size="sm" onClick={() => setShowHeaderEdit(false)}>Batal</Button><Button size="sm" onClick={() => { setHeaderHtml(headerDraft); setShowHeaderEdit(false) }}><Check size={14} /> Simpan</Button></div>
+          </div>
+        </div>
+      )}
+      {showFooterEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowFooterEdit(false)} />
+          <div className="relative bg-white rounded-[12px] w-full max-w-lg shadow-xl p-5 border border-[#e6e6e6]">
+            <div className="font-bold text-sm mb-3 flex items-center gap-2"><Layers size={14} className="text-emerald-600" /> Edit Footer</div>
+            <Textarea value={footerDraft} onChange={(e: any) => setFooterDraft(e.target.value)} placeholder="Footer HTML — {page} of {total}" className="min-h-[100px] font-mono text-xs" />
+            <div className="flex justify-end gap-2 mt-3"><Button variant="outline" size="sm" onClick={() => setShowFooterEdit(false)}>Batal</Button><Button size="sm" onClick={() => { setFooterHtml(footerDraft); setShowFooterEdit(false) }}><Check size={14} /> Simpan</Button></div>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         .tiptap p.is-editor-empty:first-child::before {
