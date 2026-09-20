@@ -1,4 +1,4 @@
-> Last Backup: 2026-09-18 — via /knowledge:backup
+> Last Backup: 2026-09-20 — via /knowledge:backup
 > Source: apps/web/* — prisma/schema.prisma (25 models), app/*, lib/*
 > Scope: apps/web — untuk root lihat ../../docs/
 
@@ -565,6 +565,9 @@ Badge Pill, Empty-State Card, Toast (sonner), Auth Card, Modal Card (`Dialog`), 
 ---
 
 ## Change Log
+
+### 2026-09-20 — Knowledge Backup (Global Tables 13 tipe + persuratan stabil)
+- **Discovery:** `prisma/schema.prisma` 25 models (spec) + `app/globals.css` 98 baris tokens `hsl(210 100% 44%)` ~ `#0075de`, `#f6f5f4` `#e6e6e6` `Inter` `radius 12px` `.detail-view` `grid gap:12px`, Office Doc paper `#e8ecef` + `shadow-[0_2px_16px_rgba(0,0,0,0.12),0_1px_4px_rgba(0,0,0,0.08)]` di `components/forms/PersuratanTemplateForm.tsx` (`bg-[#e8ecef]` + paper shadow), `components/layout/AppLayout.tsx` 4 grup, `next.config.ts` rewrites `/builder`→`/generated/surat-platform/builder`. Update header `Last Backup: 2026-09-20`.
 
 ### 2026-09-18 — Knowledge Backup (Global Tables 13 tipe + Office Doc paper)
 

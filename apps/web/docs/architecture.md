@@ -1,4 +1,4 @@
-> Last Backup: 2026-09-18 — via /knowledge:backup
+> Last Backup: 2026-09-20 — via /knowledge:backup
 > Source: apps/web/* — prisma/schema.prisma (25 models), app/*, lib/*
 > Scope: apps/web — untuk root lihat ../../docs/
 
@@ -469,6 +469,9 @@ Lihat `docs/design-system.md` — token kanonis `#0075de` HSL 210 100% 44%, canv
 ---
 
 ## Change Log
+
+### 2026-09-20 — Knowledge Backup (Global Tables 13 tipe + persuratan stabil)
+- **Discovery:** `prisma/schema.prisma` 25 models (RBAC 18 + Global Tables 2 + Persuratan 5) + urgensi `dyn_*` + real 19 vs spec 25 konflikt dicatat — `lib/services/global-tables.service.ts` 451 (13 tipe `dyn_*`), `lib/renderer/operationEngine.ts` 161 (`++` `""` `* / + -`), `app/global-tables/page.tsx` GUI 13 tipe, `app/dyn/[table]/page.tsx` search/options/order, `app/components-persuratan` 259 + `app/templates-persuratan` 328 + `app/administrasi-persuratan` 175 + `app/hasil-persuratan` 238, Office Doc paper `#e8ecef` + `shadow-[0_2px_16px_rgba(0,0,0,0.12)]` di `components/forms/PersuratanTemplateForm.tsx`, `components/layout/AppLayout.tsx` 4 grup, `next.config.ts` rewrites, `app/globals.css` tokens `#0075de` HSL 210 100% 44%, `.env` `file:./dev.db`, `prisma7.config.ts`, `middleware.ts` missing (konflik). Update header `Last Backup: 2026-09-20`.
 
 ### 2026-09-18 — Knowledge Backup (Global Tables 13 tipe + Persuratan stabil)
 - **Discovery:** `prisma/schema.prisma` 19 models real (vs spec 25), `lib/services/global-tables.service.ts` 451 (13 tipe), `lib/renderer/operationEngine.ts` 161 (`++` `""` `* / + -`), `app/global-tables/page.tsx` 412, `app/dyn/[table]/page.tsx` 520, `app/components-persuratan` 259, `app/templates-persuratan` 328, `app/administrasi-persuratan` 175, `app/hasil-persuratan` 238, `app/generated/surat-platform/builder` Office Doc (`#e8ecef` paper shadow), `components/layout/AppLayout.tsx` 4 grup, `next.config.ts` rewrites, `app/globals.css` tokens, `.env` `file:./dev.db`, `prisma7.config.ts`, `middleware.ts` **missing** (konflik). **Update architecture:** layer Dynamic & Persuratan, flow Global Tables (meta→CREATE TABLE dyn_*→listData search isSearchable/order isOrderable→createData computeOperation→INSERT), flow Persuratan 4 tahap, project structure real paths, API endpoints `app/api/global-tables`, `app/api/dyn`, `app/api/persuratan`, `app/api/generated/surat-platform`, sidebar 4 grup, rewrites, ERD 19 models + dyn_* dynamic, tech stack real (Next 16.3.5, Prisma 7.10, Zod 4.6), Design System Office Doc paper, Table/PageShell kanonis.

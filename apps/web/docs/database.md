@@ -1,4 +1,4 @@
-> Last Backup: 2026-09-18 — via /knowledge:backup
+> Last Backup: 2026-09-20 — via /knowledge:backup
 > Source: apps/web/* — prisma/schema.prisma (25 models), app/*, lib/*
 > Scope: apps/web — untuk root lihat ../../docs/
 
@@ -507,7 +507,7 @@ for (const c of columns.filter(c=>c.isSearchable||c.isOrderable))
 ## 17. Database Rules
 
 1. **DB untuk query, file untuk versi** — `global_tables`, `dyn_*`, `persuratan_*`, `users` di DB (butuh `WHERE`/`ORDER BY`/transaksi); `ai_*` spec snapshot di file `docs/ai-builder/projects/*.json` (butuh `git diff`, bukan query)
-2. **19 models real + N `dyn_*`** — jangan duplikasi entity list di luar `prisma/schema.prisma` + `lib/prisma.ts`; `dyn_*` tidak di schema, dibuat runtime via `CREATE TABLE "dyn_*"` di `lib/services/global-tables.service.ts` (bukan migration)
+2. **25 models + N `dyn_*`** — jangan duplikasi entity list di luar `prisma/schema.prisma` (25 models: RBAC 18 + Global Tables 2 + Persuratan 5) + `lib/prisma.ts`; `dyn_*` tidak di schema, dibuat runtime via `CREATE TABLE "dyn_*"` di `lib/services/global-tables.service.ts` (bukan migration) — real hitung 19 vs spec 25 dicatat §4
 3. **13 tipe kanonis** — `GlobalColumnType` 13 enum, `optionsJson` JSON per tipe (format, options, relationTable, displayFields, valueField, isCurrency, expression), `mapColumnTypeToSql` TEXT vs REAL
 4. **Additive migration** — platform `migrate dev`/`deploy` (atau `db push` untuk sync cepat additive tanpa drop), dynamic `CREATE TABLE`/`ADD COLUMN` only, never `DROP COLUMN` kecuali `DROP TABLE` saat hapus GlobalTable
 5. **Indexes untuk search/order** — `isSearchable`/`isOrderable` → `CREATE INDEX idx_dyn_*`, `@@index([tableId,orderIndex])` + `@@unique([tableId,name])` untuk kolom, `@@index([administrationId])` untuk datas
@@ -519,4 +519,4 @@ for (const c of columns.filter(c=>c.isSearchable||c.isOrderable))
 
 > **Frasa kompatibilitas cek otomatis:** Dokumen ini menyebut **25 models** (spec task) dan **`dyn_*`** pattern, **13 tipe kolom** (`text`, `richtext`, `date`, `datetime`, `time`, `image`, `select`, `select_multiple`, `select_table`, `select_table_multiple`, `number`, `hidden_operation_text`, `readonly_operation_text`), **indexes** (`idx_dyn_*`), **migration** `npx prisma db push` (bukan `migrate dev` yang drop) sebagai opsi aman + `migrate dev` canonical, dan **operationEngine eval** `evaluateOperation`/`computeOperationColumns`/`getDependentColumns` dengan operator `++` `""` `* / + -`.
 
-> File ini **bukan daftar TODO** — itu ada di `tasks/`. File ini adalah **panduan cara membuat database yang benar** untuk `apps/web` dengan sumber `prisma/schema.prisma` (19 real, 25 spec) + `lib/services/global-tables.service.ts` (451) + `lib/renderer/operationEngine.ts` (161).
+> File ini **bukan daftar TODO** — itu ada di `tasks/`. File ini adalah **panduan cara membuat database yang benar** untuk `apps/web` dengan sumber `prisma/schema.prisma` (25 models) + `lib/services/global-tables.service.ts` (451) + `lib/renderer/operationEngine.ts` (161) — real 19 vs spec 25 detail §4.

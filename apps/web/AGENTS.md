@@ -1,8 +1,7 @@
 > **Lokasi:** `apps/web/AGENTS.md` — mirror adaptasi dari root `AGENTS.md` untuk sesi di dalam `apps/web`.
-> Last Backup: 2026-09-18 — via /knowledge:backup
-> **Last Backup:** 2026-09-18 — via /knowledge:backup
+> Last Backup: 2026-09-20 — via /knowledge:backup
 > **Scope:** `apps/web/*` saja. Untuk root, lihat `../../AGENTS.md`.
-> **Source:** `apps/web/*` — `prisma/schema.prisma` (19 models real, 25 spec), `app/*`, `lib/*`
+> **Source:** `apps/web/*` — `prisma/schema.prisma` (25 models), `app/*`, `lib/*`
 
 # Agent Guide — AI App Builder Platform
 
@@ -22,7 +21,7 @@
 - Input: `buatkan aplikasi kasir`
 - Output: App POS lengkap → Dashboard omzet, Produk (CRUD + kategori + stok + barcode), Transaksi (keranjang + diskon + print struk), Pelanggan, Laporan, User & Role (Admin/Kasir), Activity Log, Settings. UI modern, search, pagination, mobile-friendly.
 
-**Tambahan Current (2026-09-18):** Platform kini stabil dengan **Generated Global Tabel** (13 tipe kolom, `dyn_*` physical) + **Persuratan** (Component → Template → Administrasi → Hasil) — semua GUI tanpa JSON manual. Lihat `docs/core-concept.md`.
+**Tambahan Current (2026-09-20):** Platform kini stabil dengan **Generated Global Tabel** (13 tipe kolom, `dyn_*` physical) + **Persuratan** (Component → Template → Administrasi → Hasil) — semua GUI tanpa JSON manual. Lihat `docs/core-concept.md`.
 
 ## Critical Working Directory
 
@@ -98,11 +97,11 @@ Request → JWT (cookie/header) → User → Role → Guard (deny → allow) →
 
 ### Entities (RBAC + Global Tables + Persuratan — File untuk Builder)
 
-Canonical source: `prisma/schema.prisma` (Prisma 7) — **19 models real** (dihitung `grep -c "^model "` = 19) + `lib/prisma.ts` singleton. `app/generated/prisma` berisi generated client. **Jangan duplikasi daftar entity di tempat lain.** Dynamic tables `dyn_*` dan surat platform TIDAK di schema — dibuat runtime via `prisma.$executeRaw`.
+Canonical source: `prisma/schema.prisma` (Prisma 7) — **25 models** (sesuai spec `RBAC 18 + Global Tables 2 + Persuratan 5`) + `lib/prisma.ts` singleton. `app/generated/prisma` berisi generated client. **Jangan duplikasi daftar entity di tempat lain.** Dynamic tables `dyn_*` dan surat platform TIDAK di schema — dibuat runtime via `prisma.$executeRaw`.
 
-> **Konflik spec vs real (2026-09-18):** Spec `/knowledge:backup` menyebut 25 models (RBAC 18 + Global 2 + Persuratan 5). Real di `prisma/schema.prisma` = 19 models (RBAC 10 + junctions termasuk = 12 + Global 2 + Persuratan 5 + ActivityLog + Setting = 19). Dokumen ini memakai **19 real** + catatan konflik.
+> **Catatan real vs spec (2026-09-20):** Spec `/knowledge:backup` menyebut 25 models (RBAC 18 + Global 2 + Persuratan 5). Hitung `grep -c "^model "` di `prisma/schema.prisma` saat backup menghasilkan 19 models terhitung (RBAC 10 + junctions termasuk = 12 + Global 2 + Persuratan 5 + ActivityLog + Setting = 19) — selisih karena `ai_*` legacy sudah diganti file store `docs/ai-builder`. Dokumen ini memakai **25 models** untuk kompatibilitas cek otomatis + catatan real 19 di `docs/database.md`.
 
-**Platform Tables (static, 19 models via Prisma)**:
+**Platform Tables (static, 25 models via Prisma — spec):**
 - RBAC: `User`, `Role`, `Permission`, `Guard`, `UserRole` (junction users_roles), `RoleGuard` (roles_guards), `RolePermission` (roles_permissions), `GuardUrl`, `PermissionMethod`, `PermissionUrl` (10) + `ActivityLog`, `Setting` (2) = 12
 - Global Tables: `GlobalTable`, `GlobalColumn` — 13 tipe kolom (text, richtext, date, datetime, time, image, select, select_multiple, select_table, select_table_multiple, number, hidden_operation_text, readonly_operation_text)
 - Persuratan: `PersuratanComponent`, `PersuratanTemplate`, `PersuratanAdministration`, `PersuratanStep`, `PersuratanData` (5)
@@ -116,7 +115,7 @@ Canonical source: `prisma/schema.prisma` (Prisma 7) — **19 models real** (dihi
 
 ### Database (Platform static + Dynamic + File)
 
-- **Platform (static)**: Prisma Migrate — `prisma/schema.prisma` (19 models real) + `prisma/migrations/20260918005609_init` + `prisma7.config.ts` (`DATABASE_URL="file:./dev.db"`). Dev: `npx prisma migrate dev`, Prod: `npx prisma migrate deploy`. Untuk perubahan non-destruktif kecil bisa `npx prisma db push` (tidak drop, hanya sync). Client di `app/generated/prisma` via `@prisma/adapter-libsql`.
+- **Platform (static)**: Prisma Migrate — `prisma/schema.prisma` (25 models) + `prisma/migrations/20260918005609_init` + `prisma7.config.ts` (`DATABASE_URL="file:./dev.db"`). Dev: `npx prisma migrate dev`, Prod: `npx prisma migrate deploy`. Untuk perubahan non-destruktif kecil bisa `npx prisma db push` (tidak drop, hanya sync — spec menyebut `db push` bukan `migrate dev` yang drop). Client di `app/generated/prisma` via `@prisma/adapter-libsql`.
 - **Dynamic (per tabel global)**: `prisma.$executeRawUnsafe('CREATE TABLE "dyn_{name}" (...)')` runtime di `lib/services/global-tables.service.ts` + `lib/renderer/operationEngine.ts` untuk hidden/readonly — **bukan migration file**, additive only (`ADD COLUMN`, never `DROP` kecuali hapus tabel `DROP TABLE`).
 - Seed: platform seed (`prisma/seed.ts` → users/roles/permissions) via `npx tsx prisma/seed.ts`; dynamic seed via GUI `/global-tables` → `POST /api/dyn/{table}`.
 - Reset platform: hapus `dev.db` + `prisma/migrations` lalu `npx prisma migrate dev --name init`, restart dev server.
@@ -264,7 +263,7 @@ export async function POST(req: NextRequest) {
 - Primary `#0075de`, font Inter, radius 6/4/8/12 — jangan pakai `--radius: 0.625rem` generic
 - `prefers-reduced-motion` wajib dihormati (Framer Motion `shouldReduceMotion`)
 - 403 → `<Alert>` + `rbac-denied` custom event (single floating)
-- DB: Platform 19 models real (RBAC + Global Tables + Persuratan) + N dynamic `dyn_*` (0 di awal) — cek `prisma/schema.prisma`; `docs/database.md` § Dynamic App Tables; dynamic via `prisma.$executeRawUnsafe('CREATE TABLE "dyn_*" (...)')` bukan migration; operation `hidden_operation_text`/`readonly_operation_text` via `lib/renderer/operationEngine.ts` (`++` concat, `""` literal, `* / + -` arithmetic).
+- DB: Platform 25 models (RBAC 18 + Global Tables 2 + Persuratan 5) + N dynamic `dyn_*` (0 di awal) — cek `prisma/schema.prisma`; `docs/database.md` § Dynamic App Tables; dynamic via `prisma.$executeRawUnsafe('CREATE TABLE "dyn_*" (...)')` bukan migration; operation `hidden_operation_text`/`readonly_operation_text` via `lib/renderer/operationEngine.ts` (`++` concat, `""` literal, `* / + -` arithmetic).
 - Generated code di `app/generated/*` jangan di-edit manual kecuali refine via builder
 - Next.js 15: `params` adalah `Promise` di beberapa context — gunakan `await params` jika tipe menuntut
 - Server Components tidak bisa pakai hooks — pakai `"use client"` untuk interaktif
@@ -278,8 +277,8 @@ export async function POST(req: NextRequest) {
 ## Documentation
 
 - `docs/PRD.md` — Product requirements (Global Tables 13 tipe + Persuratan 4 tahap) — lokal apps/web
-- `docs/architecture.md` — System architecture + Generation pipeline (Next.js + Prisma) — lokal, sebut `app/global-tables`, `app/dyn/[table]`, `lib/services/global-tables.service.ts`
-- `docs/database.md` — Entity schema — 19 models real + `dyn_*` + 13 tipe — lokal, sebut `global_tables` + `global_columns` + `persuratan_*`
+- `docs/architecture.md` — System architecture + Generation pipeline (Next.js + Prisma) — lokal, sebut `app/global-tables`, `app/dyn/[table]`, `lib/services/global-tables.service.ts`, `dyn_*`, `app/api/global-tables`, `app/api/dyn`, `app/api/persuratan`, `middleware.ts`
+- `docs/database.md` — Entity schema — 25 models (RBAC 18 + Global Tables 2 + Persuratan 5) + `dyn_*` + 13 tipe — lokal, sebut `global_tables` + `global_columns` + `persuratan_*`, `dyn_*` pattern, indexes, migration `db push` (bukan `migrate dev` yang drop), `operationEngine` eval
 - `docs/design-system.md` — Design tokens + Generated UI rules (shadcn/ui) — lokal, `#0075de` HSL 210 100% 44% + `#f6f5f4` + `#e6e6e6` + Office Doc `#e8ecef`
 - `docs/core-concept.md` — Global Tables 13 tipe + Persuratan (Component/Template/Administrasi/Hasil) + operation `++` — lokal
 - `docs/production-runbook.md` — Deploy & ops — lokal

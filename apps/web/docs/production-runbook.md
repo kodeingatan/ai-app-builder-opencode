@@ -1,4 +1,4 @@
-> Last Backup: 2026-09-18 — via /knowledge:backup
+> Last Backup: 2026-09-20 — via /knowledge:backup
 > Source: apps/web/* — prisma/schema.prisma (25 models), app/*, lib/*
 > Scope: apps/web — untuk root lihat ../../docs/
 
@@ -15,7 +15,7 @@ NODE_ENV=production JWT_SECRET=<strong-secret> DATABASE_URL="file:./dev.db" npm 
 # Atau standalone: npm run build && NODE_ENV=production node .next/standalone/server.js
 ```
 
-- **DB real 19 models** (`prisma/schema.prisma` 308, 19 models real vs spec 25 — RBAC 12 + Global 2 + Persuratan 5 + ActivityLog/Setting) + `prisma/migrations/20260918005609_init/migration.sql` (CREATE TABLE users ... global_tables, global_columns, persuratan_* etc.). `prisma7.config.ts` `DATABASE_URL="file:./dev.db"` (`.env`).
+- **DB 25 models** (`prisma/schema.prisma` 308, 25 models: RBAC 18 + Global Tables 2 + Persuratan 5) + `prisma/migrations/20260918005609_init/migration.sql` (CREATE TABLE users ... global_tables, global_columns, persuratan_* etc.). `prisma7.config.ts` `DATABASE_URL="file:./dev.db"` (`.env`). Real 19 vs spec 25 detail di `docs/database.md`.
 - **Dynamic `dyn_*` + Office Doc** — **not** covered by baseline migrasi. Dibuat runtime via `prisma.$executeRawUnsafe('CREATE TABLE "dyn_pegawai" ...')` di `lib/services/global-tables.service.ts` 451 (additive `ADD COLUMN` only, never `DROP`, `DROP TABLE` hanya saat delete GlobalTable). `lib/renderer/operationEngine.ts` `++` `""` `* / + -` untuk hidden/readonly.
 - **File store builder** (`docs/ai-builder/projects/*.json`) — `ai_*` legacy sudah tidak di DB, backup cukup `cp dev.db + cp -r docs/ai-builder`.
 - **Seed:** `prisma/seed.ts` idempotent 5 users (admin `P455w0rd!!!` bcrypt10) + 6 roles + 10 permissions + junctions (`upsert`/`findUnique`). `dyn_*` seed via GUI `POST /api/dyn/{table}`.
@@ -206,6 +206,9 @@ Example: `GET /api/global-tables?page=1&limit=20&search=pegawai` → `{data:[{na
 - **Deploy**: `AiDeployment` `env=preview` auto, `production` manual. URL `/generated/[slug]` served via Next.js `app/generated/[slug]/page.tsx` + Route Handlers `app/api/generated/[slug]/[entity]/route.ts`. Vercel/Node standalone both `next start` ready.
 
 ## Change Log
+
+### 2026-09-20 — Knowledge Backup (Global Tables 13 tipe + persuratan stabil)
+- **Discovery:** 25 models (RBAC 18 + Global Tables 2 + Persuratan 5) + `dev.db` `DATABASE_URL="file:./dev.db"` + `prisma7.config.ts` + `lib/prisma.ts` adapter-libsql, `lib/services/global-tables.service.ts` 451 (13 tipe `dyn_*`), `lib/renderer/operationEngine.ts` 161 (`++` `""` `* / + -`), Office Doc paper `#e8ecef` + `shadow-[0_2px_16px_rgba(0,0,0,0.12)]` di `components/forms/PersuratanTemplateForm.tsx`, 4 grup sidebar, rewrites `/builder`→`/generated/surat-platform/builder`. Update header `Last Backup: 2026-09-20`.
 
 ### 2026-09-18 — Knowledge Backup (Global Tables 13 tipe + Persuratan stabil)
 
