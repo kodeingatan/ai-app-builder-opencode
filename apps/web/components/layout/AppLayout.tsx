@@ -1,17 +1,13 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, FileText, Database, Component, Files, Users, Palette, Eye, Sparkles, ChevronRight, Menu, X, Table, Layers, FileStack, ClipboardList, Boxes, Settings } from "lucide-react"
+import { LayoutDashboard, Database, Files, Sparkles, ChevronRight, Menu, X, Table, FileStack, ClipboardList, Boxes } from "lucide-react"
 import { useState } from "react"
 
 const navGroups = [
   {
     label: "Platform",
-    items: [
-      { label: "Dashboard", href: "/", icon: LayoutDashboard },
-      { label: "Template Builder", href: "/builder", icon: Palette },
-      { label: "Preview", href: "/preview", icon: Eye },
-    ],
+    items: [{ label: "Dashboard", href: "/", icon: LayoutDashboard }],
   },
   {
     label: "Global Tabel",
@@ -29,28 +25,11 @@ const navGroups = [
       { label: "Hasil Surat", href: "/hasil-persuratan", icon: Files },
     ],
   },
-  {
-    label: "Manajemen Lama",
-    items: [
-      { label: "Templates (old)", href: "/templates", icon: FileText },
-      { label: "Documents (old)", href: "/documents", icon: Files },
-      { label: "Data Sources", href: "/data-sources", icon: Database },
-      { label: "Components (old)", href: "/components", icon: Component },
-      { label: "Employees", href: "/employees", icon: Users },
-    ],
-  },
 ]
 
-// alias -> canonical mapping for active state + keep old /generated/surat-platform/* working
+// alias -> canonical (persuratan-centric, legacy hidden)
 const aliasToCanonical: Record<string, string> = {
   "/": "/generated/surat-platform",
-  "/builder": "/generated/surat-platform/builder",
-  "/preview": "/generated/surat-platform/preview",
-  "/templates": "/generated/surat-platform/templates",
-  "/documents": "/generated/surat-platform/documents",
-  "/data-sources": "/generated/surat-platform/data-sources",
-  "/components": "/generated/surat-platform/components",
-  "/employees": "/generated/surat-platform/employees",
   "/global-tables": "/global-tables",
   "/dyn": "/dyn",
   "/components-persuratan": "/components-persuratan",
@@ -58,9 +37,6 @@ const aliasToCanonical: Record<string, string> = {
   "/administrasi-persuratan": "/administrasi-persuratan",
   "/hasil-persuratan": "/hasil-persuratan",
 }
-const canonicalToAlias: Record<string, string> = Object.fromEntries(
-  Object.entries(aliasToCanonical).map(([k, v]) => [v, k])
-)
 
 function isActive(pathname: string | null, href: string) {
   if (!pathname) return false
@@ -124,8 +100,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="p-4 border-t border-[#e6e6e6]">
           <div className="rounded-[12px] bg-[#0075de] p-4 text-white">
-            <div className="text-xs font-semibold mb-1 flex items-center gap-1.5"><Sparkles size={12} /> AI Builder Active</div>
-            <div className="text-[11px] opacity-90 leading-relaxed">Template → Layout → Component → Data Source → Loop → Condition</div>
+            <div className="text-xs font-semibold mb-1 flex items-center gap-1.5"><Sparkles size={12} /> Persuratan Flow</div>
+            <div className="text-[11px] opacity-90 leading-relaxed">Component → Template → Administrasi → Hasil Surat</div>
           </div>
         </div>
       </aside>

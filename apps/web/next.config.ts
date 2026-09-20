@@ -3,30 +3,24 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   async redirects() {
     return [
-      // base url / langsung ke dashboard surat - mempermudah akses user
-      // page.tsx sudah redirect, ini backup untuk edge / prefetch
-      // (keep /generated/surat-platform tetap jalan sebagai canonical)
+      { source: "/builder", destination: "/templates-persuratan", permanent: false },
+      { source: "/builder/:path*", destination: "/templates-persuratan", permanent: false },
+      { source: "/preview", destination: "/templates-persuratan", permanent: false },
+      { source: "/preview/:path*", destination: "/templates-persuratan", permanent: false },
+      { source: "/templates", destination: "/templates-persuratan", permanent: false },
+      { source: "/templates/:path*", destination: "/templates-persuratan", permanent: false },
+      { source: "/documents", destination: "/hasil-persuratan", permanent: false },
+      { source: "/documents/:path*", destination: "/hasil-persuratan", permanent: false },
+      { source: "/components", destination: "/components-persuratan", permanent: false },
+      { source: "/components/:path*", destination: "/components-persuratan", permanent: false },
+      { source: "/data-sources", destination: "/global-tables", permanent: false },
+      { source: "/data-sources/:path*", destination: "/global-tables", permanent: false },
+      { source: "/employees", destination: "/global-tables", permanent: false },
+      { source: "/employees/:path*", destination: "/global-tables", permanent: false },
     ];
   },
   async rewrites() {
-    return [
-      // short alias di root -> canonical. User cukup buka / di browser
-      // wildcard :path* agar detail /templates/123 juga ikut ter-alias
-      { source: "/builder", destination: "/generated/surat-platform/builder" },
-      { source: "/builder/:path*", destination: "/generated/surat-platform/builder/:path*" },
-      { source: "/preview", destination: "/generated/surat-platform/preview" },
-      { source: "/preview/:path*", destination: "/generated/surat-platform/preview/:path*" },
-      { source: "/templates", destination: "/generated/surat-platform/templates" },
-      { source: "/templates/:path*", destination: "/generated/surat-platform/templates/:path*" },
-      { source: "/documents", destination: "/generated/surat-platform/documents" },
-      { source: "/documents/:path*", destination: "/generated/surat-platform/documents/:path*" },
-      { source: "/employees", destination: "/generated/surat-platform/employees" },
-      { source: "/employees/:path*", destination: "/generated/surat-platform/employees/:path*" },
-      { source: "/components", destination: "/generated/surat-platform/components" },
-      { source: "/components/:path*", destination: "/generated/surat-platform/components/:path*" },
-      { source: "/data-sources", destination: "/generated/surat-platform/data-sources" },
-      { source: "/data-sources/:path*", destination: "/generated/surat-platform/data-sources/:path*" },
-    ];
+    return [];
   },
 };
 
