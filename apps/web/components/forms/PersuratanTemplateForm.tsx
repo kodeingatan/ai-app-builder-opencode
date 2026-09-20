@@ -618,7 +618,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
     return () => dom.removeEventListener('mousedown', onMouseDown)
   }, [editor])
 
-  // Paste from Word / doc lain — intercept, default adapt, popup 3 pilihan
+  // Paste from Word / doc lain — intercept, default adapt, popup 3 pilihan (tetap sampai user pilih)
   useEffect(()=>{
     if (!editor) return
     const dom = editor.view.dom as HTMLElement
@@ -631,6 +631,8 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       const isExternalStyled = !!html && (isWordHtml(html) || /style=|font-family|font-size|color:/i.test(html) || html.includes('mso-'))
       if (hasHtml && !isExternalStyled && !/<(table|ul|ol)/i.test(html) && html.length < 800) return
       e.preventDefault()
+      e.stopPropagation()
+      ;(e as any).stopImmediatePropagation?.()
       const from = editor.state.selection.from
       const keep = hasHtml ? keepStyleHtml(html) : plainToHtml(text)
       const adapt = hasHtml ? adaptToEditorHtml(html) : plainToHtml(text)
@@ -653,18 +655,20 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       }
       setPasteCoords(coords)
       setPastePopup(true)
-      if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current)
-      pasteTimerRef.current = setTimeout(()=> setPastePopup(false), 6000)
-      const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') { setPastePopup(false); window.removeEventListener('keydown', onKey) } }
-      window.addEventListener('keydown', onKey)
-      setTimeout(()=> window.removeEventListener('keydown', onKey), 6000)
     }
-    dom.addEventListener('paste', onPaste as any)
+    dom.addEventListener('paste', onPaste as any, true)
     return ()=> {
-      dom.removeEventListener('paste', onPaste as any)
-      if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current)
+      dom.removeEventListener('paste', onPaste as any, true)
     }
   }, [editor])
+
+  // Esc untuk tutup popup paste
+  useEffect(()=>{
+    if (!pastePopup) return
+    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setPastePopup(false) }
+    window.addEventListener('keydown', onKey)
+    return ()=> window.removeEventListener('keydown', onKey)
+  }, [pastePopup])
 
   const applyPasteChoice = (choice: 'keep'|'adapt'|'plain') => {
     if (!editor || !pasteRangeRef.current || !pasteDataRef.current) { setPastePopup(false); return }
@@ -674,15 +678,17 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
     if (choice === 'keep') htmlChoice = data.keep
     else if (choice === 'plain') htmlChoice = data.plain
     try {
-      editor.chain().focus().setTextSelection({ from, to } as any).deleteSelection().insertContent(htmlChoice).run()
+      editor.chain().focus().deleteRange({ from, to } as any).insertContentAt(from, htmlChoice).run()
       setTick(v=>v+1)
       setForm(prev=> ({ ...prev, contentHtml: editor.getHTML() }))
       showToast(choice==='keep' ? 'Paste: style asli dipertahankan' : choice==='plain' ? 'Paste: hanya text' : 'Paste: disesuaikan dengan editor', 'success')
-    } catch {}
+    } catch (err) {
+      console.error('applyPasteChoice error', err)
+      showToast('Gagal menerapkan pilihan paste', 'error')
+    }
     setPastePopup(false)
     pasteRangeRef.current = null
     pasteDataRef.current = null
-    if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current)
   }
 
   const handleContextMenu = (e: React.MouseEvent) => {
