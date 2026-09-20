@@ -20,6 +20,8 @@ import TableCell from "@tiptap/extension-table-cell"
 import Placeholder from "@tiptap/extension-placeholder"
 import { TextStyle } from "@tiptap/extension-text-style"
 import FontFamily from "@tiptap/extension-font-family"
+import { SpacingExtension } from "@/lib/tiptap/spacing"
+import SpacingDropdown from "@/components/common/SpacingDropdown"
 import { Node, mergeAttributes, Extension } from "@tiptap/core"
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify,
@@ -453,6 +455,7 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
       TextStyle,
       FontFamily.configure({ types: ['textStyle'] }),
       FontSize,
+      SpacingExtension,
       TextAlign.configure({ types: ['heading','paragraph'] }),
       Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { class: 'text-[#0075de] underline underline-offset-2 cursor-pointer' } }),
       CustomImage.configure({ inline: false, allowBase64: true }),
@@ -1237,6 +1240,7 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
                     <button type="button" title="Kurangi indent" onClick={()=> editor.chain().focus().liftListItem('listItem').run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">←</button>
                     <button type="button" title="Tambah indent" onClick={()=> editor.chain().focus().sinkListItem('listItem').run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">→</button>
                   </div>
+                    <SpacingDropdown editor={editor} tick={tick} />
                   {/* Group: Insert */}
                   <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
                     <button type="button" title="Insert table 3x3" onClick={()=>{editor.chain().focus().insertTable({rows:3, cols:3, withHeaderRow:true}).run(); showToast('Tabel 3×3 ditambahkan','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><TableIcon size={14}/></button>
