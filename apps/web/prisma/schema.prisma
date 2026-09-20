@@ -207,6 +207,7 @@ model PersuratanComponent {
   name        String   @unique
   isLooping   Boolean  @default(false)
   contentHtml String   // richtext with binding placeholders like {{data.nama}}
+  contentJson String?  // ProseMirror JSON string — source of truth untuk block model, outline, wordCount
   bindingsJson String? // JSON: [{name, type: text|image|component, componentId?, width?, height?}]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -219,8 +220,12 @@ model PersuratanTemplate {
   name        String   @unique
   description String?
   contentHtml String   // richtext with component placeholders
+  contentJson String?  // ProseMirror JSON string — block model
   // componentsJson: [{componentId, dataMapping: {bindingName: {source: "administrasi"|"tabel"|"manual", value: "..."}}, loopConfig?: {table, selectedRowIds[]}}]
   componentsJson String? 
+  // Page Engine (Template only — Components tidak punya kertas)
+  // pageConfigJson: {paper:'A4'|'Letter'|'Legal'|'Custom', orientation:'portrait'|'landscape', margins:{top,right,bottom,left}, isPageless:boolean, zoom:number, headerHtml?, footerHtml?, watermark?:{text,opacity,rotation}}
+  pageConfigJson String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

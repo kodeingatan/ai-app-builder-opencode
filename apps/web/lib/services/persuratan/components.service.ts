@@ -16,7 +16,7 @@ export const PersuratanComponentsService = {
     return rows[0]??null
   },
   async create(d:any){
-    await prisma.$executeRawUnsafe(`INSERT INTO "${TABLE}" (name, isLooping, contentHtml, bindingsJson, updatedAt) VALUES (?,?,?,?, CURRENT_TIMESTAMP)`, d.name, d.isLooping?1:0, d.contentHtml, d.bindingsJson??null)
+    await prisma.$executeRawUnsafe(`INSERT INTO "${TABLE}" (name, isLooping, contentHtml, contentJson, bindingsJson, updatedAt) VALUES (?,?,?,?,?, CURRENT_TIMESTAMP)`, d.name, d.isLooping?1:0, d.contentHtml, d.contentJson??null, d.bindingsJson??null)
     const rows:any=await prisma.$queryRawUnsafe(`SELECT * FROM "${TABLE}" WHERE name=? ORDER BY id DESC LIMIT 1`, d.name)
     return rows[0]
   },
@@ -25,6 +25,7 @@ export const PersuratanComponentsService = {
     if(d.name!==undefined){ sets.push(`name=?`); vals.push(d.name)}
     if(d.isLooping!==undefined){ sets.push(`isLooping=?`); vals.push(d.isLooping?1:0)}
     if(d.contentHtml!==undefined){ sets.push(`contentHtml=?`); vals.push(d.contentHtml)}
+    if(d.contentJson!==undefined){ sets.push(`contentJson=?`); vals.push(d.contentJson)}
     if(d.bindingsJson!==undefined){ sets.push(`bindingsJson=?`); vals.push(d.bindingsJson)}
     if(!sets.length) return this.findOne(id)
     sets.push(`updatedAt=CURRENT_TIMESTAMP`)

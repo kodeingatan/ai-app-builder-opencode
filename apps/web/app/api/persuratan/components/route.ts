@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { PersuratanComponentsService } from "@/lib/services/persuratan/components.service"
 import { z } from "zod"
-const CreateSchema = z.object({ name: z.string().min(1), isLooping: z.boolean().optional(), contentHtml: z.string().min(1), bindingsJson: z.string().optional().nullable() })
+const CreateSchema = z.object({ name: z.string().min(1), isLooping: z.boolean().optional(), contentHtml: z.string().min(1), contentJson: z.string().optional().nullable(), bindingsJson: z.string().optional().nullable() })
 export async function GET(req: NextRequest){
   const q=Object.fromEntries(req.nextUrl.searchParams)
   const r=await PersuratanComponentsService.findAll({ page: Number(q.page)||1, limit: Number(q.limit)||20, search: q.search })

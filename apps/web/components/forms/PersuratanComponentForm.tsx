@@ -12,23 +12,33 @@ import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
 import TextAlign from "@tiptap/extension-text-align"
 import Link from "@tiptap/extension-link"
-import Image from "@tiptap/extension-image"
 import { Table } from "@tiptap/extension-table"
-import TableRow from "@tiptap/extension-table-row"
-import TableHeader from "@tiptap/extension-table-header"
-import TableCell from "@tiptap/extension-table-cell"
 import Placeholder from "@tiptap/extension-placeholder"
 import { TextStyle } from "@tiptap/extension-text-style"
 import FontFamily from "@tiptap/extension-font-family"
+import Highlight from "@tiptap/extension-highlight"
+import Color from "@tiptap/extension-color"
+import TaskList from "@tiptap/extension-task-list"
+import TaskItem from "@tiptap/extension-task-item"
+import CharacterCount from "@tiptap/extension-character-count"
+import Subscript from "@tiptap/extension-subscript"
+import Superscript from "@tiptap/extension-superscript"
 import { SpacingExtension } from "@/lib/tiptap/spacing"
 import SpacingDropdown from "@/components/common/SpacingDropdown"
-import { Node, mergeAttributes, Extension } from "@tiptap/core"
+import { FontSize } from "@/lib/tiptap/extensions/fontSize"
+import { InlineBinding } from "@/lib/tiptap/extensions/inlineBinding"
+import { ComponentBinding } from "@/lib/tiptap/extensions/componentBinding"
+import { CustomImage } from "@/lib/tiptap/extensions/customImage"
+import { CustomTableCell, CustomTableHeader, CustomTableRow } from "@/lib/tiptap/extensions/customTable"
+import { EditorCanvas } from "@/components/editor/EditorCanvas"
+import { EditorStatusBar } from "@/components/editor/EditorStatusBar"
+import { FindBar } from "@/components/editor/FindBar"
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Table as TableIcon, Link2, Image as ImageIcon, Undo, Redo, Quote, Heading1, Heading2, Heading3,
   Minus, Eraser, X, Plus, Sparkles, Eye, Boxes, Trash2, Copy, Info, FileText, Settings2, LayoutTemplate, MousePointer2,
   Palette, Pipette, Rows3, Columns3, Trash, Combine, Split, ArrowUp, ArrowDown, MinusSquare, PaintBucket, Grid3x3, Type, Highlighter,
-  Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, Maximize2, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, SlidersHorizontal, Brush, Layers
+  Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, Maximize2, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, SlidersHorizontal, Brush, Layers, Search, ListChecks
 } from "lucide-react"
 import PasteChoicePopup from "@/components/common/PasteChoicePopup"
 import { keepStyleHtml, adaptToEditorHtml, plainToHtml, isWordHtml } from "@/lib/tiptap/paste"
@@ -68,328 +78,11 @@ const FONT_SIZES = [
   { label: "48", value: "48px" },
 ]
 
-const FontSize = Extension.create({
-  name: 'fontSize',
-  addOptions() { return { types: ['textStyle'] } },
-  addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          fontSize: {
-            default: null,
-            parseHTML: (element: HTMLElement) => element.style.fontSize || null,
-            renderHTML: (attributes: any) => {
-              if (!attributes.fontSize) return {}
-              return { style: `font-size: ${attributes.fontSize}` }
-            },
-          },
-        },
-      },
-    ]
-  },
-  addCommands() {
-    return {
-      setFontSize: (fontSize: string) => ({ commands }: any) => {
-        return commands.setMark('textStyle', { fontSize })
-      },
-      unsetFontSize: () => ({ commands }: any) => {
-        return commands.setMark('textStyle', { fontSize: null }).removeEmptyTextStyle()
-      },
-    } as any
-  },
-})
 
-// --- Custom Inline Binding (pill) ---
-const InlineBinding = Node.create({
-  name: 'inlineBinding',
-  group: 'inline',
-  inline: true,
-  atom: true,
-  selectable: true,
-  draggable: true,
-  addAttributes() {
-    return {
-      name: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.getAttribute('data-binding'),
-        renderHTML: (attrs: any) => ({ 'data-binding': attrs.name })
-      }
-    }
-  },
-  parseHTML() { return [{ tag: 'span[data-binding]' }] },
-  renderHTML({ node, HTMLAttributes }: any) {
-    return ['span', mergeAttributes(HTMLAttributes, {
-      'data-binding': node.attrs.name,
-      'class': 'inline-flex items-center gap-1 bg-[#dbeafe] border border-dashed border-[#3b82f6] px-2 py-0.5 rounded-full text-xs font-mono text-[#1e40af] select-none whitespace-nowrap align-baseline mx-0.5',
-      'style': 'background:#dbeafe;border:1px dashed #3b82f6;padding:2px 6px;border-radius:9999px;font-size:12px;display:inline-flex;align-items:center;font-family:ui-monospace,monospace;',
-      'contenteditable': 'false',
-    }), `{{${node.attrs.name}}}`]
-  },
-})
-
-// --- Custom Component Block ---
-const ComponentBinding = Node.create({
-  name: 'componentBinding',
-  group: 'block',
-  atom: true,
-  selectable: true,
-  draggable: true,
-  addAttributes() {
-    return {
-      name: { default: null, parseHTML: (el: HTMLElement) => el.getAttribute('data-binding'), renderHTML: (attrs: any) => ({ 'data-binding': attrs.name }) },
-      componentId: { default: null, parseHTML: (el: HTMLElement) => el.getAttribute('data-component') ? Number(el.getAttribute('data-component')) : null, renderHTML: (attrs: any) => attrs.componentId ? { 'data-component': String(attrs.componentId) } : {} },
-      componentName: { default: null }
-    }
-  },
-  parseHTML() { return [{ tag: 'div[data-component]' }, { tag: 'div[data-binding][style*="dashed"]' }] },
-  renderHTML({ node, HTMLAttributes }: any) {
-    const compLabel = node.attrs.componentName ? `Component: ${node.attrs.componentName}` : (node.attrs.componentId ? `Component #${node.attrs.componentId}` : 'Component')
-    return ['div', mergeAttributes(HTMLAttributes, {
-      'data-binding': node.attrs.name,
-      ...(node.attrs.componentId ? { 'data-component': String(node.attrs.componentId) } : {}),
-      'class': 'my-3 rounded-[10px] border-2 border-dashed border-[#8b5cf6] bg-[#f5f3ff] p-3 select-none',
-      'style': 'border:2px dashed #8b5cf6;background:#f5f3ff;padding:12px;border-radius:10px;margin:12px 0;',
-      'contenteditable': 'false',
-    }),
-      ['div', { 'class': 'flex items-center gap-2 text-[11px] font-semibold tracking-wide text-[#6d28d9] uppercase' }, `${compLabel} · {{${node.attrs.name}}}`],
-      ['div', { 'class': 'mt-1 text-xs text-[#4c1d95] font-mono bg-white/70 border border-violet-200 rounded px-2 py-1 inline-block' }, `{{${node.attrs.name}}}`]
-    ]
-  }
-})
-
-// --- Custom Image with data-binding support ---
-const CustomImage = Image.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      'data-binding': {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.getAttribute('data-binding'),
-        renderHTML: (attrs: any) => attrs['data-binding'] ? { 'data-binding': attrs['data-binding'] } : {}
-      },
-      width: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.width ? parseInt(el.style.width) : (el.getAttribute('width') ? Number(el.getAttribute('width')) : null),
-        renderHTML: (attrs: any) => attrs.width ? { width: String(attrs.width) } : {}
-      },
-      height: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.height ? parseInt(el.style.height) : (el.getAttribute('height') ? Number(el.getAttribute('height')) : null),
-        renderHTML: (attrs: any) => attrs.height ? { height: String(attrs.height) } : {}
-      }
-    }
-  },
-  parseHTML() {
-    return [
-      {
-        tag: 'img[data-binding]',
-        getAttrs: (el: HTMLElement) => {
-          const binding = el.getAttribute('data-binding')
-          const styleW = el.style.width ? parseInt(el.style.width as string) : null
-          const styleH = el.style.height ? parseInt(el.style.height as string) : null
-          const src = el.getAttribute('src') || ''
-          const isTemplate = src?.startsWith('{{')
-          return {
-            src: isTemplate ? `https://via.placeholder.com/${styleW||200}x${styleH||120}?text=${encodeURIComponent(binding||'img')}` : src,
-            'data-binding': binding,
-            alt: el.getAttribute('alt') || `{{${binding}}}`,
-            width: styleW || 200,
-            height: styleH || 120,
-          }
-        }
-      },
-      { tag: 'img[src]:not([data-binding])' }
-    ]
-  },
-  renderHTML({ HTMLAttributes }: any) {
-    const binding = HTMLAttributes['data-binding']
-    if (binding) {
-      const w = HTMLAttributes.width || 200
-      const h = HTMLAttributes.height || 120
-      return ['img', mergeAttributes(HTMLAttributes, {
-        src: `{{${binding}}}`,
-        alt: `{{${binding}}}`,
-        'data-binding': binding,
-        style: `width:${w}px; height:${h}px; border:1px dashed #3b82f6; background:#eff6ff; display:inline-block; border-radius:8px; object-fit:cover;`,
-        class: 'rounded-[8px] border border-dashed border-[#3b82f6] bg-[#eff6ff] mx-1 align-middle'
-      })]
-    }
-    return ['img', mergeAttributes(HTMLAttributes, { class: 'rounded-[8px] max-w-full' })]
-  }
-})
-
-// Helpers for border position rendering
-function buildBorderPositionStyle(attrs: any): string {
-  const pos = attrs.borderPosition
-  if (!pos || pos === 'all') return ''
-  const color = attrs.borderColor || '#e6e6e6'
-  const width = attrs.borderWidth || '1px'
-  const style = attrs.borderStyle || 'solid'
-  const bw = `${width} ${style} ${color}`
-  // For collapsed tables, hiding a side = border-style hidden/none for that side
-  switch (pos) {
-    case 'none': return 'border: none !important; border-style: hidden !important'
-    case 'left': return `border-left: ${bw}; border-top: none !important; border-right: none !important; border-bottom: none !important`
-    case 'right': return `border-right: ${bw}; border-top: none !important; border-left: none !important; border-bottom: none !important`
-    case 'leftRight': return `border-left: ${bw}; border-right: ${bw}; border-top: none !important; border-bottom: none !important`
-    case 'top': return `border-top: ${bw}; border-left: none !important; border-right: none !important; border-bottom: none !important`
-    case 'bottom': return `border-bottom: ${bw}; border-top: none !important; border-left: none !important; border-right: none !important`
-    case 'topBottom': return `border-top: ${bw}; border-bottom: ${bw}; border-left: none !important; border-right: none !important`
-    case 'topLeft': return `border-top: ${bw}; border-left: ${bw}; border-right: none !important; border-bottom: none !important`
-    case 'topRight': return `border-top: ${bw}; border-right: ${bw}; border-left: none !important; border-bottom: none !important`
-    case 'bottomLeft': return `border-bottom: ${bw}; border-left: ${bw}; border-top: none !important; border-right: none !important`
-    case 'bottomRight': return `border-bottom: ${bw}; border-right: ${bw}; border-top: none !important; border-left: none !important`
-    case 'leftTopBottom': return `border-left: ${bw}; border-top: ${bw}; border-bottom: ${bw}; border-right: none !important`
-    case 'rightTopBottom': return `border-right: ${bw}; border-top: ${bw}; border-bottom: ${bw}; border-left: none !important`
-    case 'leftRightTop': return `border-left: ${bw}; border-right: ${bw}; border-top: ${bw}; border-bottom: none !important`
-    case 'leftRightBottom': return `border-left: ${bw}; border-right: ${bw}; border-bottom: ${bw}; border-top: none !important`
-    case 'outer': return `border: ${bw}` // outer handled via per-cell edge logic; fallback is all
-    default: return ''
-  }
-}
-
-// --- Custom Table Cell with background, verticalAlign, borders, height ---
-const CustomTableCell = TableCell.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      backgroundColor: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.backgroundColor || el.getAttribute('data-bg-color') || null,
-        renderHTML: (attrs: any) => {
-          if (!attrs.backgroundColor) return {}
-          return { 'data-bg-color': attrs.backgroundColor, style: `background-color: ${attrs.backgroundColor}` }
-        },
-      },
-      verticalAlign: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.verticalAlign || el.getAttribute('data-valign') || null,
-        renderHTML: (attrs: any) => {
-          if (!attrs.verticalAlign) return {}
-          return { 'data-valign': attrs.verticalAlign, style: `vertical-align: ${attrs.verticalAlign}` }
-        },
-      },
-      borderColor: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.borderColor || el.getAttribute('data-border-color') || null,
-        renderHTML: (attrs: any) => {
-          // When borderPosition controls sides, suppress individual color to avoid conflict — borderPosition will render it
-          if (attrs.borderPosition && attrs.borderPosition !== 'all') return { 'data-border-color': attrs.borderColor } as any
-          return attrs.borderColor ? { 'data-border-color': attrs.borderColor, style: `border-color: ${attrs.borderColor}` } : {}
-        }
-      },
-      borderWidth: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.borderWidth || el.getAttribute('data-border-width') || null,
-        renderHTML: (attrs: any) => {
-          if (attrs.borderPosition && attrs.borderPosition !== 'all') return attrs.borderWidth ? { 'data-border-width': attrs.borderWidth } as any : {}
-          return attrs.borderWidth ? { 'data-border-width': attrs.borderWidth, style: `border-width: ${attrs.borderWidth}` } : {}
-        }
-      },
-      borderStyle: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.borderStyle || el.getAttribute('data-border-style') || null,
-        renderHTML: (attrs: any) => {
-          if (attrs.borderPosition && attrs.borderPosition !== 'all') return attrs.borderStyle ? { 'data-border-style': attrs.borderStyle } as any : {}
-          return attrs.borderStyle ? { 'data-border-style': attrs.borderStyle, style: `border-style: ${attrs.borderStyle}` } : {}
-        }
-      },
-      borderPosition: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.getAttribute('data-border-position') || null,
-        renderHTML: (attrs: any) => {
-          if (!attrs.borderPosition) return {}
-          const style = buildBorderPositionStyle(attrs)
-          if (!style) return { 'data-border-position': attrs.borderPosition }
-          return { 'data-border-position': attrs.borderPosition, style }
-        }
-      },
-      height: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.height || el.getAttribute('data-height') || null,
-        renderHTML: (attrs: any) => attrs.height ? { 'data-height': attrs.height, style: `height: ${attrs.height}` } : {}
-      },
-    }
-  }
-})
-
-const CustomTableHeader = TableHeader.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      backgroundColor: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.backgroundColor || el.getAttribute('data-bg-color') || null,
-        renderHTML: (attrs: any) => {
-          if (!attrs.backgroundColor) return {}
-          return { 'data-bg-color': attrs.backgroundColor, style: `background-color: ${attrs.backgroundColor}` }
-        },
-      },
-      verticalAlign: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.verticalAlign || el.getAttribute('data-valign') || null,
-        renderHTML: (attrs: any) => attrs.verticalAlign ? { 'data-valign': attrs.verticalAlign, style: `vertical-align: ${attrs.verticalAlign}` } : {}
-      },
-      borderColor: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.borderColor || el.getAttribute('data-border-color') || null,
-        renderHTML: (attrs: any) => {
-          if (attrs.borderPosition && attrs.borderPosition !== 'all') return { 'data-border-color': attrs.borderColor } as any
-          return attrs.borderColor ? { 'data-border-color': attrs.borderColor, style: `border-color: ${attrs.borderColor}` } : {}
-        }
-      },
-      borderWidth: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.borderWidth || el.getAttribute('data-border-width') || null,
-        renderHTML: (attrs: any) => {
-          if (attrs.borderPosition && attrs.borderPosition !== 'all') return attrs.borderWidth ? { 'data-border-width': attrs.borderWidth } as any : {}
-          return attrs.borderWidth ? { 'data-border-width': attrs.borderWidth, style: `border-width: ${attrs.borderWidth}` } : {}
-        }
-      },
-      borderStyle: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.borderStyle || el.getAttribute('data-border-style') || null,
-        renderHTML: (attrs: any) => {
-          if (attrs.borderPosition && attrs.borderPosition !== 'all') return attrs.borderStyle ? { 'data-border-style': attrs.borderStyle } as any : {}
-          return attrs.borderStyle ? { 'data-border-style': attrs.borderStyle, style: `border-style: ${attrs.borderStyle}` } : {}
-        }
-      },
-      borderPosition: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.getAttribute('data-border-position') || null,
-        renderHTML: (attrs: any) => {
-          if (!attrs.borderPosition) return {}
-          const style = buildBorderPositionStyle(attrs)
-          if (!style) return { 'data-border-position': attrs.borderPosition }
-          return { 'data-border-position': attrs.borderPosition, style }
-        }
-      },
-      height: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.height || el.getAttribute('data-height') || null,
-        renderHTML: (attrs: any) => attrs.height ? { 'data-height': attrs.height, style: `height: ${attrs.height}` } : {}
-      },
-    }
-  }
-})
-
-const CustomTableRow = TableRow.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      height: {
-        default: null,
-        parseHTML: (el: HTMLElement) => el.style.height || el.getAttribute('data-row-height') || null,
-        renderHTML: (attrs: any) => attrs.height ? { 'data-row-height': attrs.height, style: `height: ${attrs.height}` } : {}
-      },
-    }
-  }
-})
 
 export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"edit"; id?: string }) {
   const router = useRouter()
-  const [form, setForm] = useState({ name:"", isLooping:false, contentHtml:"<p></p>", bindings: [] as Binding[] })
+  const [form, setForm] = useState({ name:"", isLooping:false, contentHtml:"<p></p>", contentJson:"", bindings: [] as Binding[] })
   const [previewHtml, setPreviewHtml] = useState("")
   const [contextMenu, setContextMenu] = useState<{x:number,y:number}|null>(null)
   const [bindingForm, setBindingForm] = useState<Binding>({ name:"", type:"text", width:200, height:120 })
@@ -397,6 +90,10 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
   const [loading, setLoading] = useState(false)
   const [tick, setTick] = useState(0)
   const [showPreview, setShowPreview] = useState(true)
+  const [findOpen, setFindOpen] = useState(false)
+  const [saved, setSaved] = useState(true)
+  const [textColor, setTextColor] = useState('#111827')
+  const [highlightColor, setHighlightColor] = useState('#fff59d')
   const savedPosRef = useRef<number | null>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -454,6 +151,10 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
       Underline.configure({}),
       TextStyle,
       FontFamily.configure({ types: ['textStyle'] }),
+      Color.configure({ types: ['textStyle'] }),
+      Highlight.configure({ multicolor: true }),
+      Subscript,
+      Superscript,
       FontSize,
       SpacingExtension,
       TextAlign.configure({ types: ['heading','paragraph'] }),
@@ -463,6 +164,9 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
       CustomTableRow,
       CustomTableHeader,
       CustomTableCell,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      CharacterCount,
       Placeholder.configure({ placeholder: 'Ketik konten di sini… gunakan klik kanan untuk menambah data terikat tepat di posisi kursor' }),
       InlineBinding,
       ComponentBinding,
@@ -477,7 +181,10 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
-      setForm(prev => (prev.contentHtml === html ? prev : { ...prev, contentHtml: html }))
+      let json = ""
+      try { json = JSON.stringify(editor.getJSON()) } catch {}
+      setForm(prev => (prev.contentHtml === html && prev.contentJson === json ? prev : { ...prev, contentHtml: html, contentJson: json }))
+      setSaved(false)
       setTick(v=>v+1)
     },
     onSelectionUpdate: () => setTick(v=>v+1),
@@ -492,10 +199,17 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
         let bindings:Binding[]=[]
         try{ bindings=row.bindingsJson?JSON.parse(row.bindingsJson):[] }catch{}
         const html = row.contentHtml || "<p></p>"
-        setForm({ name: row.name, isLooping: !!row.isLooping, contentHtml: html, bindings })
+        const json = row.contentJson || ""
+        setForm({ name: row.name, isLooping: !!row.isLooping, contentHtml: html, contentJson: json, bindings })
         setTimeout(()=>{
           if (editor) {
-            editor.commands.setContent(html || "<p></p>")
+            try {
+              if (json) editor.commands.setContent(JSON.parse(json))
+              else editor.commands.setContent(html || "<p></p>")
+            } catch {
+              editor.commands.setContent(html || "<p></p>")
+            }
+            setSaved(true)
           }
         }, 100)
         setLoading(false)
@@ -503,13 +217,34 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     }
   },[mode,id, editor])
 
-  // Sync font family/size from selection
+  // Sync font family/size/color from selection
   useEffect(()=>{
     if (!editor) return
     const attrs = editor.getAttributes('textStyle') as any
     setFontFamily(attrs.fontFamily || '')
     setFontSize(attrs.fontSize || '')
+    if (attrs.color) setTextColor(attrs.color)
+    const hl = editor.getAttributes('highlight') as any
+    if (hl?.color) setHighlightColor(hl.color)
   }, [tick, editor])
+
+  // Keyboard shortcuts — Find (Ctrl+F), Clear formatting (Ctrl+\), Bold/Italic reuse via editor
+  useEffect(()=>{
+    if (!editor) return
+    const dom = editor.view.dom as HTMLElement
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        setFindOpen(o => !o)
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
+        e.preventDefault()
+        editor.chain().focus().unsetAllMarks().clearNodes().run()
+      }
+    }
+    dom.addEventListener('keydown', onKey)
+    return ()=> dom.removeEventListener('keydown', onKey)
+  }, [editor])
 
   // Preview debounced - harus 1:1 dengan EditorContent (tiptap styles)
   useEffect(()=>{
@@ -750,12 +485,16 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
 
   const handleSubmit=async()=>{
     let latestHtml = form.contentHtml
-    if (editor) latestHtml = editor.getHTML()
+    let latestJson = form.contentJson
+    if (editor) {
+      latestHtml = editor.getHTML()
+      try { latestJson = JSON.stringify(editor.getJSON()) } catch {}
+    }
     if(!form.name.trim()){
       showToast('Nama component wajib diisi', 'error')
       return
     }
-    const payload={ name: form.name.trim(), isLooping: form.isLooping, contentHtml: latestHtml, bindingsJson: JSON.stringify(form.bindings) }
+    const payload={ name: form.name.trim(), isLooping: form.isLooping, contentHtml: latestHtml, contentJson: latestJson, bindingsJson: JSON.stringify(form.bindings) }
     const url=mode==="edit" ? `/api/persuratan/components/${id}`:`/api/persuratan/components`
     const method=mode==="edit"?"PUT":"POST"
     try{
@@ -1157,6 +896,12 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
               <p className="text-[11px] text-[#6b7280] mt-1">Toolbar lengkap — heading H1-H6, list, tabel, link, gambar semua aktif. Klik kanan di posisi kursor untuk menambah <span className="font-mono bg-[#f6f5f4] px-1 py-0.5 rounded text-[#111]">{`{{data}}`}</span> tepat di pointer terbaru.</p>
             </CardHeader>
             <CardContent className="p-0">
+              {/* FindBar — Ctrl+F */}
+              {findOpen && (
+                <div className="p-2 bg-white border-b border-[#e6e6e6]">
+                  <FindBar editor={editor} open={findOpen} onClose={()=>setFindOpen(false)} />
+                </div>
+              )}
               {/* Toolbar - Redesigned: lebih rapi, berlabel, grouping jelas */}
               <div className="sticky top-0 z-10 bg-gradient-to-b from-[#fcfcfc] to-[#f9fafb] border-y border-[#e6e6e6]">
                 {/* Top row - main formatting */}
@@ -1241,6 +986,26 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
                     <button type="button" title="Tambah indent" onClick={()=> editor.chain().focus().sinkListItem('listItem').run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280] text-[11px] font-mono">→</button>
                   </div>
                     <SpacingDropdown editor={editor} tick={tick} />
+                  {/* Group: Text Color & Highlight */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm items-center">
+                    <div className="flex items-center gap-1">
+                      <input type="color" value={textColor} onChange={e=>{setTextColor(e.target.value); (editor.chain().focus() as any).setColor(e.target.value).run()}} className="w-7 h-7 rounded-[6px] border border-[#e6e6e6] p-0.5 cursor-pointer" title="Warna teks" />
+                      <input type="color" value={highlightColor} onChange={e=>{setHighlightColor(e.target.value)}} className="w-7 h-7 rounded-[6px] border border-[#e6e6e6] p-0.5 cursor-pointer" title="Warna highlight" />
+                    </div>
+                    <button type="button" title="Highlight (Ctrl+Shift+H)" onClick={()=>editor.chain().focus().toggleHighlight({ color: highlightColor }).run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('highlight') ? 'bg-amber-400 text-white shadow-sm' : 'hover:bg-amber-50 text-[#374151]'}`}><Highlighter size={14}/></button>
+                    <button type="button" title="Hapus warna" onClick={()=>{editor.chain().focus().unsetColor().run(); editor.chain().focus().unsetHighlight().run()}} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><Eraser size={12}/></button>
+                  </div>
+                  {/* Group: Checklist & Super/Sub */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <button type="button" title="Checklist" onClick={()=>{try{(editor.chain().focus() as any).toggleTaskList().run()}catch{editor.chain().focus().toggleBulletList().run()}}} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('taskList') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><ListChecks size={14}/></button>
+                    <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center"/>
+                    <button type="button" title="Superscript (Ctrl+.)" onClick={()=>{try{(editor.chain().focus() as any).toggleSuperscript().run()}catch{}}} className={`w-7 h-7 rounded-[6px] flex items-center justify-center text-xs font-bold transition-colors ${isActive('superscript') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>x²</button>
+                    <button type="button" title="Subscript (Ctrl+,)" onClick={()=>{try{(editor.chain().focus() as any).toggleSubscript().run()}catch{}}} className={`w-7 h-7 rounded-[6px] flex items-center justify-center text-xs font-bold transition-colors ${isActive('subscript') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>x₂</button>
+                  </div>
+                  {/* Group: Find */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <button type="button" title="Find & Replace (Ctrl+F)" onClick={()=>setFindOpen(!findOpen)} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${findOpen ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Search size={14}/></button>
+                  </div>
                   {/* Group: Insert */}
                   <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
                     <button type="button" title="Insert table 3x3" onClick={()=>{editor.chain().focus().insertTable({rows:3, cols:3, withHeaderRow:true}).run(); showToast('Tabel 3×3 ditambahkan','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><TableIcon size={14}/></button>
@@ -1262,38 +1027,43 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
                 </div>
               </div>
 
-              {/* Editor area - paper like, resizable */}
+              {/* Editor area — Component = continuous, tanpa kertas (sesuai spec pengecualian) */}
               <div
                 ref={editorContainerRef}
                 onContextMenu={handleContextMenu}
-                className="relative bg-[#f6f5f4] p-3 sm:p-4"
+                className="p-3 sm:p-4 bg-[#f6f5f4]"
               >
-                <div className="bg-white rounded-[10px] border border-[#e6e6e6] shadow-[0_1px_12px_rgba(0,0,0,0.06)] overflow-hidden">
-                  <div className="flex items-center justify-between px-3 py-2 bg-[#fcfcfc] border-b border-[#e6e6e6] text-[11px] text-[#6b7280]">
-                    <span className="flex items-center gap-1.5 font-medium"><FileText size={12} className="text-[#9ca3af]"/> Halaman Editor</span>
-                    <span className="flex items-center gap-2">
-                      <span className="hidden sm:inline">{editor.getText().length} karakter</span>
-                      <span className="w-px h-3 bg-[#e6e6e6] hidden sm:block"/>
-                      <span className="flex items-center gap-1"><Maximize2 size={11}/> Drag bawah untuk perbesar</span>
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <EditorContent editor={editor} style={{ minHeight: `${editorHeight}px`, maxHeight: 'none' }} className="focus-within:ring-2 focus-within:ring-[#0075de]/10 overflow-y-auto [&_.tiptap]:min-h-[240px] [&_.tiptap]:p-6" />
-                    {/* floating hint inside paper */}
-                    <div className="absolute bottom-3 right-3 hidden lg:flex items-center gap-1.5 bg-[#111827] text-white rounded-full px-3 py-1.5 text-[11px] shadow-lg">
-                      <MousePointer2 size={12} className="text-white"/> Klik kanan untuk tambah data terikat
+                <EditorCanvas variant="continuous">
+                  <div className="bg-white overflow-hidden">
+                    <div className="flex items-center justify-between px-3 py-2 bg-[#fcfcfc] border-b border-[#e6e6e6] text-[11px] text-[#6b7280]">
+                      <span className="flex items-center gap-1.5 font-medium"><FileText size={12} className="text-[#9ca3af]"/> Fragment Editor — tanpa kertas</span>
+                      <span className="flex items-center gap-2">
+                        <span className="hidden sm:inline-flex items-center gap-1"><Boxes size={11}/> Component</span>
+                        <span className="w-px h-3 bg-[#e6e6e6] hidden sm:block"/>
+                        <span className="flex items-center gap-1"><Maximize2 size={11}/> Drag bawah untuk perbesar</span>
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <EditorContent editor={editor} style={{ minHeight: `${editorHeight}px`, maxHeight: 'none' }} className="focus-within:ring-2 focus-within:ring-[#0075de]/10 overflow-y-auto [&_.tiptap]:min-h-[240px] [&_.tiptap]:p-6" />
+                      {/* floating hint inside paper */}
+                      <div className="absolute bottom-3 right-3 hidden lg:flex items-center gap-1.5 bg-[#111827] text-white rounded-full px-3 py-1.5 text-[11px] shadow-lg">
+                        <MousePointer2 size={12} className="text-white"/> Klik kanan untuk tambah data terikat
+                      </div>
+                    </div>
+                    {/* Grip to resize editor height */}
+                    <div
+                      onMouseDown={handleEditorGripMouseDown}
+                      className="h-7 bg-[#f9fafb] hover:bg-[#eff6ff] border-t border-[#e6e6e6] flex items-center justify-center gap-2 cursor-ns-resize select-none group transition-colors"
+                      title="Drag untuk memperbesar / memperkecil tinggi editor"
+                    >
+                      <div className="w-8 h-1 rounded-full bg-[#d1d5db] group-hover:bg-[#0075de] transition-colors"/>
+                      <span className="text-[11px] font-medium text-[#6b7280] group-hover:text-[#0075de] hidden sm:inline">Tarik untuk atur tinggi</span>
+                      <MoveVertical size={12} className="text-[#9ca3af] group-hover:text-[#0075de]"/>
                     </div>
                   </div>
-                  {/* Grip to resize editor height */}
-                  <div
-                    onMouseDown={handleEditorGripMouseDown}
-                    className="h-7 bg-[#f9fafb] hover:bg-[#eff6ff] border-t border-[#e6e6e6] flex items-center justify-center gap-2 cursor-ns-resize select-none group transition-colors"
-                    title="Drag untuk memperbesar / memperkecil tinggi editor"
-                  >
-                    <div className="w-8 h-1 rounded-full bg-[#d1d5db] group-hover:bg-[#0075de] transition-colors"/>
-                    <span className="text-[11px] font-medium text-[#6b7280] group-hover:text-[#0075de] hidden sm:inline">Tarik untuk atur tinggi</span>
-                    <MoveVertical size={12} className="text-[#9ca3af] group-hover:text-[#0075de]"/>
-                  </div>
+                </EditorCanvas>
+                <div className="mt-3">
+                  <EditorStatusBar editor={editor} variant="continuous" saved={saved} />
                 </div>
               </div>
 

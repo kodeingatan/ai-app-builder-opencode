@@ -16,7 +16,7 @@ export const PersuratanTemplatesService={
     return rows[0]??null
   },
   async create(d:any){
-    await prisma.$executeRawUnsafe(`INSERT INTO "${TABLE}" (name, description, contentHtml, componentsJson, updatedAt) VALUES (?,?,?,?, CURRENT_TIMESTAMP)`, d.name, d.description??null, d.contentHtml, d.componentsJson??null)
+    await prisma.$executeRawUnsafe(`INSERT INTO "${TABLE}" (name, description, contentHtml, contentJson, pageConfigJson, componentsJson, updatedAt) VALUES (?,?,?,?,?,?, CURRENT_TIMESTAMP)`, d.name, d.description??null, d.contentHtml, d.contentJson??null, d.pageConfigJson??null, d.componentsJson??null)
     const rows:any=await prisma.$queryRawUnsafe(`SELECT * FROM "${TABLE}" WHERE name=? ORDER BY id DESC LIMIT 1`, d.name)
     return rows[0]
   },
@@ -25,6 +25,8 @@ export const PersuratanTemplatesService={
     if(d.name!==undefined){sets.push(`name=?`); vals.push(d.name)}
     if(d.description!==undefined){sets.push(`description=?`); vals.push(d.description)}
     if(d.contentHtml!==undefined){sets.push(`contentHtml=?`); vals.push(d.contentHtml)}
+    if(d.contentJson!==undefined){sets.push(`contentJson=?`); vals.push(d.contentJson)}
+    if(d.pageConfigJson!==undefined){sets.push(`pageConfigJson=?`); vals.push(d.pageConfigJson)}
     if(d.componentsJson!==undefined){sets.push(`componentsJson=?`); vals.push(d.componentsJson)}
     if(!sets.length) return this.findOne(id)
     sets.push(`updatedAt=CURRENT_TIMESTAMP`)
