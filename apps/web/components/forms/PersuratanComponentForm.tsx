@@ -18,7 +18,9 @@ import TableRow from "@tiptap/extension-table-row"
 import TableHeader from "@tiptap/extension-table-header"
 import TableCell from "@tiptap/extension-table-cell"
 import Placeholder from "@tiptap/extension-placeholder"
-import { Node, mergeAttributes } from "@tiptap/core"
+import { TextStyle } from "@tiptap/extension-text-style"
+import FontFamily from "@tiptap/extension-font-family"
+import { Node, mergeAttributes, Extension } from "@tiptap/core"
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Table as TableIcon, Link2, Image as ImageIcon, Undo, Redo, Quote, Heading1, Heading2, Heading3,
@@ -29,6 +31,70 @@ import {
 
 type Binding = { name: string, type: "text"|"image"|"component", componentId?: number, width?: number, height?: number }
 type Toast = { id:number, message:string, type:'success'|'error'|'info' }
+
+const FONT_FAMILIES = [
+  { label: "Default (Inter)", value: "" },
+  { label: "Inter", value: "Inter" },
+  { label: "Arial", value: "Arial" },
+  { label: "Helvetica", value: "Helvetica" },
+  { label: "Times New Roman", value: '"Times New Roman"' },
+  { label: "Georgia", value: "Georgia" },
+  { label: "Courier New", value: '"Courier New"' },
+  { label: "Verdana", value: "Verdana" },
+  { label: "Tahoma", value: "Tahoma" },
+  { label: "Trebuchet MS", value: '"Trebuchet MS"' },
+  { label: "Comic Sans MS", value: '"Comic Sans MS"' },
+]
+
+const FONT_SIZES = [
+  { label: "Default", value: "" },
+  { label: "8", value: "8px" },
+  { label: "9", value: "9px" },
+  { label: "10", value: "10px" },
+  { label: "11", value: "11px" },
+  { label: "12", value: "12px" },
+  { label: "14", value: "14px" },
+  { label: "16", value: "16px" },
+  { label: "18", value: "18px" },
+  { label: "20", value: "20px" },
+  { label: "24", value: "24px" },
+  { label: "28", value: "28px" },
+  { label: "32", value: "32px" },
+  { label: "36", value: "36px" },
+  { label: "48", value: "48px" },
+]
+
+const FontSize = Extension.create({
+  name: 'fontSize',
+  addOptions() { return { types: ['textStyle'] } },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (element: HTMLElement) => element.style.fontSize || null,
+            renderHTML: (attributes: any) => {
+              if (!attributes.fontSize) return {}
+              return { style: `font-size: ${attributes.fontSize}` }
+            },
+          },
+        },
+      },
+    ]
+  },
+  addCommands() {
+    return {
+      setFontSize: (fontSize: string) => ({ commands }: any) => {
+        return commands.setMark('textStyle', { fontSize })
+      },
+      unsetFontSize: () => ({ commands }: any) => {
+        return commands.setMark('textStyle', { fontSize: null }).removeEmptyTextStyle()
+      },
+    } as any
+  },
+})
 
 // --- Custom Inline Binding (pill) ---
 const InlineBinding = Node.create({
@@ -336,6 +402,8 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
   const [borderColor, setBorderColor] = useState('#e6e6e6')
   const [borderWidth, setBorderWidth] = useState('1px')
   const [borderStyle, setBorderStyle] = useState('solid')
+  const [fontFamily, setFontFamily] = useState('')
+  const [fontSize, setFontSize] = useState('')
   const [cellHeight, setCellHeight] = useState('')
   const [rowHeight, setRowHeight] = useState('')
   const [editorHeight, setEditorHeight] = useState(380)
@@ -375,6 +443,9 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
         underline: false,
       }),
       Underline.configure({}),
+      TextStyle,
+      FontFamily.configure({ types: ['textStyle'] }),
+      FontSize,
       TextAlign.configure({ types: ['heading','paragraph'] }),
       Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { class: 'text-[#0075de] underline underline-offset-2 cursor-pointer' } }),
       CustomImage.configure({ inline: false, allowBase64: true }),
@@ -421,6 +492,14 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
       }).catch(()=>setLoading(false))
     }
   },[mode,id, editor])
+
+  // Sync font family/size from selection
+  useEffect(()=>{
+    if (!editor) return
+    const attrs = editor.getAttributes('textStyle') as any
+    setFontFamily(attrs.fontFamily || '')
+    setFontSize(attrs.fontSize || '')
+  }, [tick, editor])
 
   // Preview debounced - harus 1:1 dengan EditorContent (tiptap styles)
   useEffect(()=>{
@@ -1006,6 +1085,17 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
                     <button type="button" title="Strikethrough" onClick={()=>editor.chain().focus().toggleStrike().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('strike') ? 'bg-[#111827] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Strikethrough size={14}/></button>
                     <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center"/>
                     <button type="button" title="Clear formatting" onClick={()=>editor.chain().focus().unsetAllMarks().clearNodes().run()} className="w-7 h-7 rounded-[6px] hover:bg-amber-50 hover:text-amber-600 flex items-center justify-center text-[#6b7280] transition-colors"><Eraser size={14}/></button>
+                  </div>
+                  {/* Group: Font Family & Size */}
+                  <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm items-center">
+                    <span className="hidden xl:flex items-center px-1 text-[10px] font-semibold tracking-wide text-[#9ca3af] uppercase">Font</span>
+                    <select value={fontFamily} onChange={e=>{ const v=e.target.value; setFontFamily(v); if(v) (editor.chain().focus() as any).setFontFamily(v).run(); else (editor.chain().focus() as any).unsetFontFamily().run() }} className="h-7 text-xs border-0 bg-transparent pr-1 focus:ring-0 focus:outline-none cursor-pointer max-w-[110px]" title="Font Family">
+                      {FONT_FAMILIES.map(f=> <option key={f.label} value={f.value} style={{fontFamily: f.value || undefined}}>{f.label}</option>)}
+                    </select>
+                    <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center"/>
+                    <select value={fontSize} onChange={e=>{ const v=e.target.value; setFontSize(v); if(v) (editor.chain().focus() as any).setFontSize(v).run(); else (editor.chain().focus() as any).unsetFontSize().run() }} className="h-7 text-xs border-0 bg-transparent pr-1 focus:ring-0 focus:outline-none cursor-pointer w-[68px]" title="Font Size">
+                      {FONT_SIZES.map(f=> <option key={f.label} value={f.value}>{f.label}{f.value ? ` (${f.value})` : ''}</option>)}
+                    </select>
                   </div>
                   {/* Group: Headings */}
                   <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm items-center">
