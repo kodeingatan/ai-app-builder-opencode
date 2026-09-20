@@ -28,6 +28,8 @@ import {
   Palette, Pipette, Rows3, Columns3, Trash, Combine, Split, ArrowUp, ArrowDown, MinusSquare, PaintBucket, Grid3x3, Type, Highlighter,
   Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, Maximize2, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, SlidersHorizontal, Brush, Layers
 } from "lucide-react"
+import PasteChoicePopup from "@/components/common/PasteChoicePopup"
+import { keepStyleHtml, adaptToEditorHtml, plainToHtml, isWordHtml } from "@/lib/tiptap/paste"
 
 type Binding = { name: string, type: "text"|"image"|"component", componentId?: number, width?: number, height?: number }
 type Toast = { id:number, message:string, type:'success'|'error'|'info' }
@@ -414,6 +416,11 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
   const isDraggingRowRef = useRef(false)
   const rowDragStartY = useRef(0)
   const rowDragStartH = useRef(0)
+  const [pastePopup, setPastePopup] = useState(false)
+  const [pasteCoords, setPasteCoords] = useState<{ x: number; y: number } | null>(null)
+  const pasteRangeRef = useRef<{ from: number; to: number } | null>(null)
+  const pasteDataRef = useRef<{ html: string; text: string; keep: string; adapt: string; plain: string } | null>(null)
+  const pasteTimerRef = useRef<any>(null)
 
   const showToast = (message:string, type:Toast['type']='error')=>{
     const id = Date.now() + Math.random()
@@ -566,6 +573,83 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
     dom.addEventListener('mousedown', onMouseDown)
     return ()=> dom.removeEventListener('mousedown', onMouseDown)
   }, [editor])
+
+  // Paste from Word / doc lain — intercept, default adapt, popup 3 pilihan
+  useEffect(()=>{
+    if (!editor) return
+    const dom = editor.view.dom as HTMLElement
+    const onPaste = (e: ClipboardEvent) => {
+      const html = e.clipboardData?.getData('text/html') || ''
+      const text = e.clipboardData?.getData('text/plain') || ''
+      if (!html && !text) return
+      const hasHtml = !!html && /<(p|h\d|span|div|table|ul|ol|strong|em)/i.test(html)
+      if (!hasHtml && text.length < 20) return
+      const isExternalStyled = !!html && (isWordHtml(html) || /style=|font-family|font-size|color:/i.test(html) || html.includes('mso-'))
+      // internal copy Tiptap sederhana tanpa style -> biarkan default, jangan tampilkan popup
+      if (hasHtml && !isExternalStyled && !/<(table|ul|ol)/i.test(html) && html.length < 800) return
+      e.preventDefault()
+      const from = editor.state.selection.from
+      // siapkan 3 varian
+      const keep = hasHtml ? keepStyleHtml(html) : plainToHtml(text)
+      const adapt = hasHtml ? adaptToEditorHtml(html) : plainToHtml(text)
+      const plain = plainToHtml(text)
+      // default insert adapt
+      const trBefore = editor.state.selection.to
+      editor.chain().focus().insertContent(adapt).run()
+      const to = editor.state.selection.to
+      pasteRangeRef.current = { from, to }
+      pasteDataRef.current = { html, text, keep, adapt, plain }
+      // coords dekat kursor
+      let coords = { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+      try {
+        const view = editor.view
+        const pos = view.coordsAtPos(to)
+        coords = { x: pos.left, y: pos.top }
+      } catch {}
+      // fallback ke selection rect
+      if (!coords.x) {
+        const sel = window.getSelection()
+        if (sel && sel.rangeCount) {
+          const r = sel.getRangeAt(0).getBoundingClientRect()
+          coords = { x: r.left, y: r.bottom }
+        }
+      }
+      setPasteCoords(coords)
+      setPastePopup(true)
+      if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current)
+      pasteTimerRef.current = setTimeout(()=> { setPastePopup(false) }, 6000)
+      const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') { setPastePopup(false); window.removeEventListener('keydown', onKey) } }
+      window.addEventListener('keydown', onKey)
+      setTimeout(()=> window.removeEventListener('keydown', onKey), 6000)
+    }
+    dom.addEventListener('paste', onPaste as any)
+    return ()=> {
+      dom.removeEventListener('paste', onPaste as any)
+      if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current)
+    }
+  }, [editor])
+
+  const applyPasteChoice = (choice: 'keep'|'adapt'|'plain') => {
+    if (!editor || !pasteRangeRef.current || !pasteDataRef.current) { setPastePopup(false); return }
+    const { from, to } = pasteRangeRef.current
+    const data = pasteDataRef.current
+    let htmlChoice = data.adapt
+    if (choice === 'keep') htmlChoice = data.keep
+    else if (choice === 'plain') htmlChoice = data.plain
+    try {
+      const tr = editor.state.tr
+      // deleterange yang baru di-insert (from..to) lalu insert pilihan
+      // gunakan chain untuk undo-friendly
+      editor.chain().focus().setTextSelection({ from, to } as any).deleteSelection().insertContent(htmlChoice).run()
+      setTick(v=>v+1)
+      setForm(prev=> ({ ...prev, contentHtml: editor.getHTML() }))
+      showToast(choice==='keep' ? 'Paste: style asli dipertahankan' : choice==='plain' ? 'Paste: hanya text' : 'Paste: disesuaikan dengan editor', 'success')
+    } catch {}
+    setPastePopup(false)
+    pasteRangeRef.current = null
+    pasteDataRef.current = null
+    if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current)
+  }
 
   const handleContextMenu=(e:React.MouseEvent)=>{
     e.preventDefault()
@@ -939,6 +1023,8 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
 
   return (
     <div className="min-h-[calc(100vh-120px)]">
+      {/* Paste Choice Popup */}
+      <PasteChoicePopup open={pastePopup} coords={pasteCoords} onClose={()=>setPastePopup(false)} onChoose={applyPasteChoice} />
       {/* Toasts */}
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t=>(
