@@ -40,50 +40,50 @@ export default async function PrismaDemoPage() {
   }
 
   return (
-    <main className="p-8 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold mb-2">Prisma SQLite Demo</h1>
-      <p className="text-sm text-muted-foreground mb-6">
+    <main className="p-4 max-w-5xl mx-auto">
+      <h1 className="text-lg font-bold mb-2">Prisma SQLite Demo</h1>
+      <p className="text-[13px] text-muted-foreground mb-4">
         Server Component langsung memanggil <code>prisma.user.findMany()</code> — tidak perlu API Route. DB: <code>file:./dev.db</code> |{" "}
         <code>prisma/schema.prisma</code> | <code>lib/prisma.ts</code> singleton.
       </p>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="rounded-lg border p-4">
-          <div className="text-2xl font-bold">{stats.users}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div className="rounded-lg border p-3">
+          <div className="text-lg font-bold">{stats.users}</div>
           <div className="text-xs text-muted-foreground">Users</div>
         </div>
-        <div className="rounded-lg border p-4">
-          <div className="text-2xl font-bold">{stats.roles}</div>
+        <div className="rounded-lg border p-3">
+          <div className="text-lg font-bold">{stats.roles}</div>
           <div className="text-xs text-muted-foreground">Roles</div>
         </div>
-        <div className="rounded-lg border p-4">
-          <div className="text-2xl font-bold">{stats.permissions}</div>
+        <div className="rounded-lg border p-3">
+          <div className="text-lg font-bold">{stats.permissions}</div>
           <div className="text-xs text-muted-foreground">Permissions</div>
         </div>
-        <div className="rounded-lg border p-4">
-          <div className="text-2xl font-bold">{stats.projects}</div>
+        <div className="rounded-lg border p-3">
+          <div className="text-lg font-bold">{stats.projects}</div>
           <div className="text-xs text-muted-foreground">Projects (file)</div>
         </div>
       </div>
 
-      <h2 className="text-lg font-semibold mb-3">Daftar Pengguna</h2>
+      <h2 className="text-[15px] font-semibold mb-3">Daftar Pengguna</h2>
       <div className="rounded-lg border overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-[13px]">
           <thead className="bg-muted">
             <tr>
-              <th className="text-left p-3">ID</th>
-              <th className="text-left p-3">Username</th>
-              <th className="text-left p-3">Email</th>
-              <th className="text-left p-3">Name</th>
+              <th className="text-left p-2.5">ID</th>
+              <th className="text-left p-2.5">Username</th>
+              <th className="text-left p-2.5">Email</th>
+              <th className="text-left p-2.5">Name</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => (
               <tr key={user.id} className="border-t">
-                <td className="p-3">{user.id}</td>
-                <td className="p-3 font-medium">{user.username}</td>
-                <td className="p-3">{user.email}</td>
-                <td className="p-3">
+                <td className="p-2.5">{user.id}</td>
+                <td className="p-2.5 font-medium">{user.username}</td>
+                <td className="p-2.5">{user.email}</td>
+                <td className="p-2.5">
                   {user.firstName} {user.lastName}
                 </td>
               </tr>
@@ -92,7 +92,7 @@ export default async function PrismaDemoPage() {
         </table>
       </div>
 
-      <div className="mt-6 rounded-lg bg-muted p-4 text-sm">
+      <div className="mt-3 rounded-lg bg-muted p-3 text-[13px]">
         <div className="font-semibold mb-1">Tips:</div>
         <ul className="list-disc list-inside space-y-1 text-muted-foreground">
           <li>

@@ -50,38 +50,60 @@
   border-color: hsl(var(--border));
 }
 
+html {
+  font-size: 14px;
+}
+
 body {
   background: #f6f5f4;
   color: hsl(var(--foreground));
   font-family: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-/* Detail view pattern */
+/* Small-scale UI: compact defaults */
+button, input, select, textarea {
+  font-size: 13px;
+}
+
+/* Detail view pattern — compact */
 .detail-view {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 .detail-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 0;
+  gap: 2px;
+  padding: 6px 0;
   border-bottom: 1px solid #e6e6e6;
 }
 .detail-field:last-child {
   border-bottom: none;
 }
 .detail-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #6b7280;
 }
 .detail-value {
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.5;
   color: #111827;
+}
+
+/* Compact card helper */
+.compact-card {
+  border-radius: 8px !important;
+}
+
+/* Compact table helper — applied globally to DataTable tables */
+table {
+  border-collapse: collapse;
 }
 
 /* Scrollbar */

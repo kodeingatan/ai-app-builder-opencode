@@ -40,9 +40,9 @@ export default function GlobalTablesPage(){
   return (
     <PageShell title="Generated Global Tabel" description="Kelola tabel dinamis — atur nama tabel, nama tampilan, dan kolom (13 tipe) dengan antarmuka visual. Tabel yang dibuat otomatis menjadi menu dan halaman browse." breadcrumbs={[{label:"Global Tabel"}]} actions={<Link href="/global-tables/new"><Button><Plus size={16}/> Buat Tabel Baru</Button></Link>}>
       <div className="grid md:grid-cols-3 gap-3">
-        <Card className="bg-[#0075de] text-white border-none"><CardContent className="p-4"><div className="text-xs opacity-80">Total Tabel</div><div className="text-2xl font-bold">{total}</div><div className="text-[11px] opacity-70">dyn_* physical tables</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-[#6b7280]">Tipe Kolom</div><div className="text-sm font-bold">13 tipe</div><div className="text-[11px] text-[#6b7280]">text → readonly-operation</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-[#6b7280]">Fitur Browse</div><div className="text-sm font-bold">search • options • order</div><div className="text-[11px] text-[#6b7280]">Hanya kolom yang di-check</div></CardContent></Card>
+        <Card className="bg-[#0075de] text-white border-none"><CardContent className="p-3"><div className="text-xs opacity-80">Total Tabel</div><div className="text-lg font-bold">{total}</div><div className="text-[11px] opacity-70">dyn_* physical tables</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-xs text-[#6b7280]">Tipe Kolom</div><div className="text-[13px] font-bold">13 tipe</div><div className="text-[11px] text-[#6b7280]">text → readonly-operation</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-xs text-[#6b7280]">Fitur Browse</div><div className="text-[13px] font-bold">search • options • order</div><div className="text-[11px] text-[#6b7280]">Hanya kolom yang di-check</div></CardContent></Card>
       </div>
 
       <DataTable data={data} total={total} page={page} limit={10} totalPages={Math.ceil(total/10)} onPageChange={handlePage} onSearch={handleSearch} searchPlaceholder="Cari nama tabel..." loading={loading}
@@ -63,15 +63,15 @@ export default function GlobalTablesPage(){
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30" onClick={()=>setDetail(null)} />
-          <div className="relative bg-white rounded-[12px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between"><div className="font-bold text-sm">{detail.displayName} ({detail.name})</div><button onClick={()=>setDetail(null)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={16}/></button></div>
-            <div className="p-6">
+          <div className="relative bg-white rounded-[8px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="sticky top-0 bg-white border-b p-3 flex items-center justify-between"><div className="font-bold text-[13px]">{detail.displayName} ({detail.name})</div><button onClick={()=>setDetail(null)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={14}/></button></div>
+            <div className="p-3">
               <div className="detail-view">
                 <div className="detail-field"><span className="detail-label">Status</span><span className="detail-value">{detail.status}</span></div>
                 <div className="detail-field"><span className="detail-label">Deskripsi</span><span className="detail-value">{detail.description||"-"}</span></div>
                 <div className="detail-field"><span className="detail-label">Physical Table</span><span className="detail-value font-mono">dyn_{detail.name}</span></div>
               </div>
-              <div className="mt-4 flex justify-end gap-2">
+              <div className="mt-3 flex justify-end gap-2">
                 <Link href={`/dyn/${detail.name}`}><Button size="sm">Browse Data</Button></Link>
                 <Button size="sm" variant="outline" onClick={()=>setDetail(null)}>Tutup</Button>
               </div>

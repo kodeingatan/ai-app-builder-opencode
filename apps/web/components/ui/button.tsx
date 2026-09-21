@@ -14,16 +14,16 @@ const variantClasses = {
 }
 
 const sizeClasses = {
-  default: "h-9 px-4 py-2",
-  sm: "h-8 rounded-full px-3 text-xs",
-  lg: "h-10 rounded-full px-8",
-  icon: "h-9 w-9",
+  default: "h-7 px-3 py-1 text-[13px]",
+  sm: "h-6 rounded-full px-2.5 text-xs",
+  lg: "h-8 rounded-full px-4 text-[13px]",
+  icon: "h-7 w-7",
 }
 
 export function Button({ className = "", variant = "default", size = "default", ...props }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(210_100%_44%)] disabled:pointer-events-none disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(210_100%_44%)] disabled:pointer-events-none disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     />
   )

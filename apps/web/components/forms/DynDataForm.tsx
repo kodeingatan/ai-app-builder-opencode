@@ -166,7 +166,7 @@ export default function DynDataForm({ tableName, mode, id }: { tableName: string
   if(!meta) return <div className="p-8 text-center text-sm text-[#6b7280]">Tabel {tableName} tidak ditemukan</div>
 
   return (
-    <div className="space-y-5 bg-white rounded-[12px] border border-[#e6e6e6] p-6">
+    <div className="space-y-3 bg-white rounded-[8px] border border-[#e6e6e6] p-3">
       <div className="flex items-center justify-between">
         <div className="font-bold text-sm">{mode==="edit" ? "Edit Data" : "Tambah Data"} — {meta.displayName} <span className="font-mono text-xs text-[#6b7280]">dyn_{tableName}</span></div>
         {loadingData && <span className="text-xs text-[#6b7280]">Memuat data...</span>}
@@ -189,7 +189,7 @@ export default function DynDataForm({ tableName, mode, id }: { tableName: string
               <span className="ml-auto text-[11px] font-mono text-[#9ca3af]">{col.type}</span>
             </Label>
 
-            {col.type==="text" && <Input value={val} onChange={e=>handleChange(col.name, e.target.value)} placeholder={col.defaultValue||`Masukkan ${col.displayName}`} className="h-9 text-sm mt-1" />}
+            {col.type==="text" && <Input value={val} onChange={e=>handleChange(col.name, e.target.value)} placeholder={col.defaultValue||`Masukkan ${col.displayName}`} className="h-7 text-[13px] mt-1" />}
 
             {col.type==="richtext" && (
               <div className="mt-1 border border-[#e6e6e6] rounded-[8px] overflow-hidden">
@@ -199,19 +199,19 @@ export default function DynDataForm({ tableName, mode, id }: { tableName: string
                   <button type="button" className="w-7 h-7 rounded hover:bg-white flex items-center justify-center text-xs underline" title="Underline" onClick={()=>handleChange(col.name, (val||"")+"<u>underline</u>")}>U</button>
                   <span className="text-[11px] text-[#6b7280] ml-2">Inline Styles | Block Styles | Lists | Table | Link | Image</span>
                 </div>
-                <Textarea value={val} onChange={e=>handleChange(col.name, e.target.value)} placeholder="Richtext HTML..." className="min-h-[100px] font-mono text-xs border-0 rounded-none" />
+                <Textarea value={val} onChange={e=>handleChange(col.name, e.target.value)} placeholder="Richtext HTML..." className="min-h-[80px] font-mono text-xs border-0 rounded-none" />
                 <div className="bg-[#f6f5f4] px-2 py-1 text-[11px] text-[#6b7280]">Preview: <span dangerouslySetInnerHTML={{__html: val||"<span class='text-[#9ca3af]'>empty</span>"}} /></div>
               </div>
             )}
 
-            {col.type==="date" && <Input type="date" value={val} onChange={e=>handleChange(col.name, e.target.value)} className="h-9 text-sm mt-1" />}
-            {col.type==="datetime" && <Input type="datetime-local" value={val} onChange={e=>handleChange(col.name, e.target.value)} className="h-9 text-sm mt-1" />}
-            {col.type==="time" && <Input type="time" value={val} onChange={e=>handleChange(col.name, e.target.value)} className="h-9 text-sm mt-1" />}
+            {col.type==="date" && <Input type="date" value={val} onChange={e=>handleChange(col.name, e.target.value)} className="h-7 text-[13px] mt-1" />}
+            {col.type==="datetime" && <Input type="datetime-local" value={val} onChange={e=>handleChange(col.name, e.target.value)} className="h-7 text-[13px] mt-1" />}
+            {col.type==="time" && <Input type="time" value={val} onChange={e=>handleChange(col.name, e.target.value)} className="h-7 text-[13px] mt-1" />}
             {(col.type==="date"||col.type==="datetime"||col.type==="time") && <div className="text-[11px] text-[#6b7280] mt-1">Format display: {opts.format|| (col.type==="date"?"m-d-Y":col.type==="datetime"?"m-d-Y H:i:s":"H:i:s")}</div>}
 
             {col.type==="image" && (
               <div className="mt-1">
-                <Input value={val} onChange={e=>handleChange(col.name, e.target.value)} placeholder="https:// atau /uploads/image.jpg" className="h-9 text-sm" />
+                <Input value={val} onChange={e=>handleChange(col.name, e.target.value)} placeholder="https:// atau /uploads/image.jpg" className="h-7 text-[13px]" />
                 <div className="mt-2 flex items-center gap-2">
                   <Input type="file" accept="image/*" onChange={e=>{
                     const f=e.target.files?.[0]
@@ -220,19 +220,19 @@ export default function DynDataForm({ tableName, mode, id }: { tableName: string
                       handleChange(col.name, url)
                     }
                   }} className="text-xs" />
-                  {val && <img src={val} alt="preview" className="w-16 h-16 object-cover rounded border" />}
+                  {val && <img src={val} alt="preview" className="w-12 h-12 object-cover rounded border" />}
                 </div>
               </div>
             )}
 
             {col.type==="select" && (
-              <Select value={val} onChange={e=>handleChange(col.name, e.target.value)} className="h-9 text-sm mt-1">
+              <Select value={val} onChange={e=>handleChange(col.name, e.target.value)} className="h-7 text-[13px] mt-1">
                 <option value="">-- pilih --</option>
                 {(opts.options||[]).map((o:any)=><option key={o.value} value={o.value}>{o.label}</option>)}
               </Select>
             )}
             {col.type==="select_multiple" && (
-              <div className="mt-1 border border-[#e6e6e6] rounded-[8px] p-2 bg-[#fafafa] max-h-[120px] overflow-y-auto">
+              <div className="mt-1 border border-[#e6e6e6] rounded-[8px] p-2 bg-[#fafafa] max-h-[110px] overflow-y-auto">
                 {(opts.options||[]).map((o:any)=>{
                   const arr = Array.isArray(val) ? val : []
                   const checked = arr.includes(o.value)
@@ -261,7 +261,7 @@ export default function DynDataForm({ tableName, mode, id }: { tableName: string
                   <span className="text-xs text-[#6b7280] self-center">{Array.isArray(val)?`${val.length} terpilih`: val?`Terpilih: ${val}`:"Belum pilih"}</span>
                 </div>
                 {showRelationFor===col.name && (
-                  <Card className="mt-3">
+                  <Card className="mt-2">
                     <CardHeader className="pb-2"><CardTitle className="text-xs flex items-center justify-between"><span>Tabel {opts.relationTable}</span><Button type="button" size="sm" variant="ghost" onClick={()=>setShowRelationFor(null)}><X size={12}/></Button></CardTitle>
                       <div className="flex gap-2 mt-2">
                         <Input value={relationSearch[col.name]||""} onChange={e=>setRelationSearch({...relationSearch, [col.name]: e.target.value})} placeholder="Searching all..." className="h-7 text-xs flex-1" />
@@ -307,7 +307,7 @@ export default function DynDataForm({ tableName, mode, id }: { tableName: string
                           </tbody>
                         </table>
                       </div>
-                      {col.type==="select_table_multiple" && <div className="p-3 border-t flex justify-end"><Button type="button" size="sm" onClick={()=>setShowRelationFor(null)}>Selesai ({Array.isArray(val)?val.length:0} terpilih)</Button></div>}
+                      {col.type==="select_table_multiple" && <div className="p-2.5 border-t flex justify-end"><Button type="button" size="sm" onClick={()=>setShowRelationFor(null)}>Selesai ({Array.isArray(val)?val.length:0} terpilih)</Button></div>}
                     </CardContent>
                   </Card>
                 )}
@@ -316,14 +316,14 @@ export default function DynDataForm({ tableName, mode, id }: { tableName: string
 
             {col.type==="number" && (
               <div className="mt-1">
-                <Input type="number" value={val} onChange={e=>handleChange(col.name, e.target.value)} placeholder="123" className="h-9 text-sm" />
+                <Input type="number" value={val} onChange={e=>handleChange(col.name, e.target.value)} placeholder="123" className="h-7 text-[13px]" />
                 {opts.isCurrency && <div className="mt-2 text-sm">Preview: <span className="font-bold">Rp {Number(String(val).replace(/[^0-9.-]/g,"")||0).toLocaleString("id-ID")}</span> <span className="text-[11px] text-[#6b7280]">realtime</span></div>}
               </div>
             )}
 
             {col.type==="readonly_operation_text" && (
               <div className="mt-1">
-                <Input value={computedVal} readOnly className="h-9 text-sm bg-amber-50 border-amber-200 font-mono" />
+                <Input value={computedVal} readOnly className="h-7 text-[13px] bg-amber-50 border-amber-200 font-mono" />
                 <div className="text-[11px] text-amber-800 mt-1">Otomatis: <code className="bg-white px-1 rounded border font-mono">{opts.expression}</code> → <span className="font-bold">{computedVal}</span> (readonly, tidak bisa diedit)</div>
               </div>
             )}
@@ -331,7 +331,7 @@ export default function DynDataForm({ tableName, mode, id }: { tableName: string
         )
       })}
 
-      <div className="sticky bottom-0 bg-white border-t border-[#e6e6e6] -mx-6 -mb-6 p-4 flex justify-end gap-2 rounded-b-[12px]">
+      <div className="sticky bottom-0 bg-white border-t border-[#e6e6e6] -mx-3 -mb-3 p-2.5 flex justify-end gap-1.5 rounded-b-[8px]">
         <Button type="button" variant="outline" onClick={()=>router.push(`/dyn/${tableName}`)}>Batal</Button>
         <Button type="button" onClick={handleSubmit}>{mode==="edit"?"Update":"Simpan"}</Button>
       </div>

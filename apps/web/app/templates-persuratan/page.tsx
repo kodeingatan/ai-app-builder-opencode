@@ -26,21 +26,21 @@ export default function TemplatesPersuratanPage(){
   const handleDelete=async(id:number)=>{ if(!confirm("Hapus template?")) return; await fetch(`/api/persuratan/templates/${id}`,{method:"DELETE"}); load(page,search)}
 
   return (
-    <PageShell title="Template Administrasi Persuratan" description="Kelola template — buat, atur komponen, pratinjau formulir, dan cetak PDF." breadcrumbs={[{label:"Persuratan"},{label:"Templates"}]} actions={<Link href="/templates-persuratan/new"><Button><Plus size={16}/> Buat Template</Button></Link>}>
+    <PageShell title="Template Administrasi Persuratan" description="Kelola template — buat, atur komponen, pratinjau formulir, dan cetak PDF." breadcrumbs={[{label:"Persuratan"},{label:"Templates"}]} actions={<Link href="/templates-persuratan/new"><Button><Plus size={14}/> Buat Template</Button></Link>}>
       <DataTable data={data} total={total} page={page} limit={10} totalPages={Math.ceil(total/10)} onPageChange={(p)=>{setPage(p); load(p,search)}} onSearch={(s)=>{setSearch(s); setPage(1); load(1,s)}} searchPlaceholder="Cari template..." loading={loading}
         columns={[
-          {key:"name", header:"Nama", render:(r)=><div className="flex items-center gap-2"><div className="w-8 h-8 rounded bg-amber-100 flex items-center justify-center text-amber-700"><FileStack size={14}/></div><div><div className="font-bold text-xs">{r.name}</div><div className="text-[11px] text-[#6b7280]">{r.description||"-"}</div></div></div>},
+          {key:"name", header:"Nama", render:(r)=><div className="flex items-center gap-2"><div className="w-7 h-7 rounded bg-amber-100 flex items-center justify-center text-amber-700"><FileStack size={12}/></div><div><div className="font-bold text-xs">{r.name}</div><div className="text-[11px] text-[#6b7280]">{r.description||"-"}</div></div></div>},
           {key:"components", header:"Components", render:(r)=>{ try{ const j=JSON.parse(r.componentsJson||"[]"); return <Badge variant="secondary">{j.length} comp</Badge>}catch{return "-"}}},
-          {key:"actions", header:"Aksi", render:(r)=><div className="flex gap-1"><button onClick={()=>setDetail(r)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><Eye size={14}/></button><Link href={`/templates-persuratan/${r.id}/edit`} className="p-1.5 hover:bg-[#f6f5f4] rounded inline-flex"><Pencil size={14}/></Link><button onClick={()=>handleDelete(r.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded"><Trash2 size={14}/></button></div>}
+          {key:"actions", header:"Aksi", render:(r)=><div className="flex gap-1"><button onClick={()=>setDetail(r)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><Eye size={12}/></button><Link href={`/templates-persuratan/${r.id}/edit`} className="p-1.5 hover:bg-[#f6f5f4] rounded inline-flex"><Pencil size={12}/></Link><button onClick={()=>handleDelete(r.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded"><Trash2 size={12}/></button></div>}
         ]}
       />
 
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30" onClick={()=>setDetail(null)} />
-          <div className="relative bg-white rounded-[12px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between"><div className="font-bold text-sm">{detail.name}</div><button onClick={()=>setDetail(null)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={16}/></button></div>
-            <div className="p-6">
+          <div className="relative bg-white rounded-[8px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="sticky top-0 bg-white border-b p-2.5 flex items-center justify-between"><div className="font-bold text-sm">{detail.name}</div><button onClick={()=>setDetail(null)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={14}/></button></div>
+            <div className="p-3">
               <div className="detail-view">
                 <div className="detail-field"><span className="detail-label">Deskripsi</span><span className="detail-value">{detail.description||"-"}</span></div>
                 <div className="detail-field"><span className="detail-label">Content</span><div className="detail-value border rounded p-3 bg-[#fafafa]" dangerouslySetInnerHTML={{__html: detail.contentHtml}} /></div>

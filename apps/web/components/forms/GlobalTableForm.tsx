@@ -175,9 +175,9 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
   if(loading) return <div className="p-8 text-center text-sm text-[#6b7280]">Memuat data...</div>
 
   return (
-    <div className="space-y-6">
-      <Card className="border-dashed"><CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Settings size={14}/> Konfigurasi Tabel</CardTitle></CardHeader>
-        <CardContent className="grid md:grid-cols-2 gap-4">
+    <div className="space-y-3">
+      <Card className="border-dashed"><CardHeader className="pb-3"><CardTitle className="text-[13px] flex items-center gap-1.5"><Settings size={14}/> Konfigurasi Tabel</CardTitle></CardHeader>
+        <CardContent className="grid md:grid-cols-2 gap-2.5">
           <div><Label>Nama Tabel *</Label><Input value={tableForm.name} onChange={e=>setTableForm({...tableForm, name: toSnake(e.target.value)})} placeholder="pegawai" className="font-mono" disabled={mode==="edit"} /><div className="text-[11px] text-[#6b7280] mt-1">snake_case, akan jadi <code className="bg-[#f6f5f4] px-1 rounded border">dyn_{toSnake(tableForm.name)||"nama"}</code>{mode==="edit" && <span className="text-amber-600"> — tidak bisa diubah saat edit</span>}</div></div>
           <div><Label>Nama Tampilan *</Label><Input value={tableForm.displayName} onChange={e=>setTableForm({...tableForm, displayName:e.target.value})} placeholder="Data Pegawai" /></div>
           <div className="md:col-span-2"><Label>Deskripsi</Label><Textarea value={tableForm.description} onChange={e=>setTableForm({...tableForm, description:e.target.value})} placeholder="Deskripsi tabel..." rows={2}/></div>
@@ -186,17 +186,17 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
       </Card>
 
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <div><div className="font-bold text-sm flex items-center gap-2"><ListOrdered size={16}/> Daftar Kolom — {columns.length} kolom</div><div className="text-xs text-[#6b7280]">Tambah sesuai kebutuhan, 13 tipe tersedia</div></div>
+        <div className="flex items-center justify-between mb-2">
+          <div><div className="font-bold text-[13px] flex items-center gap-1.5"><ListOrdered size={16}/> Daftar Kolom — {columns.length} kolom</div><div className="text-xs text-[#6b7280]">Tambah sesuai kebutuhan, 13 tipe tersedia</div></div>
           <Button size="sm" onClick={addColumn}><Plus size={14}/> Tambah Kolom</Button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2.5">
           {columns.map((col, idx)=>(
             <Card key={idx} className="border-[#e6e6e6] overflow-hidden">
-              <div className="bg-[#f9fafb] border-b border-[#e6e6e6] px-4 py-2 flex items-center justify-between">
+              <div className="bg-[#f9fafb] border-b border-[#e6e6e6] px-2.5 py-1.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-full bg-[#0075de] text-white flex items-center justify-center text-xs font-bold">{idx+1}</span>
+                  <span className="w-6 h-6 rounded-full bg-[#0075de] text-white flex items-center justify-center text-[11px] font-bold">{idx+1}</span>
                   <span className="font-mono text-xs font-bold">{col.name || `kolom_${idx+1}`}</span>
                   <Badge variant="secondary" className="text-[11px]">{col.type}</Badge>
                   {col.isRequired && <Badge variant="destructive" className="text-[10px]">required</Badge>}
@@ -207,16 +207,16 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
                   <button onClick={()=>removeColumn(idx)} className="p-1.5 rounded hover:bg-red-50 text-red-600"><Trash2 size={14}/></button>
                 </div>
               </div>
-              <CardContent className="p-4 space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div><Label>Nama Kolom *</Label><Input value={col.name} onChange={e=>updateColumn(idx,{name: toSnake(e.target.value)})} placeholder="nama_column" className="font-mono h-8 text-xs" /></div>
-                  <div><Label>Nama Tampilan *</Label><Input value={col.displayName} onChange={e=>updateColumn(idx,{displayName:e.target.value})} placeholder="Nama Kolom" className="h-8 text-xs" /></div>
+              <CardContent className="p-2.5 space-y-2.5">
+                <div className="grid md:grid-cols-2 gap-2.5">
+                  <div><Label>Nama Kolom *</Label><Input value={col.name} onChange={e=>updateColumn(idx,{name: toSnake(e.target.value)})} placeholder="nama_column" className="font-mono h-7 text-[13px]" /></div>
+                  <div><Label>Nama Tampilan *</Label><Input value={col.displayName} onChange={e=>updateColumn(idx,{displayName:e.target.value})} placeholder="Nama Kolom" className="h-7 text-[13px]" /></div>
                 </div>
 
                 <div><Label>Tipe Kolom *</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 mt-1">
                     {columnTypeOptions.map(o=>(
-                      <button key={o.value} onClick={()=>updateColumn(idx,{type:o.value})} className={`p-2 rounded-[8px] border text-left ${col.type===o.value?"bg-[#0075de] text-white border-[#0075de]":"bg-white hover:border-[#0075de]/30 border-[#e6e6e6]"}`}>
+                      <button key={o.value} onClick={()=>updateColumn(idx,{type:o.value})} className={`p-1.5 rounded-[8px] border text-left ${col.type===o.value?"bg-[#0075de] text-white border-[#0075de]":"bg-white hover:border-[#0075de]/30 border-[#e6e6e6]"}`}>
                         <div className="flex items-center gap-1.5"><o.icon size={12}/><span className="text-xs font-bold">{o.label}</span></div>
                         <div className={`text-[11px] ${col.type===o.value?"text-white/80":"text-[#6b7280]"}`}>{o.desc}</div>
                       </button>
@@ -225,21 +225,21 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
                 </div>
 
                 {(col.type==="date"||col.type==="datetime"||col.type==="time") && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-[8px] p-3">
+                  <div className="bg-amber-50 border border-amber-200 rounded-[8px] p-2.5">
                     <Label className="text-xs">Format Tampilan</Label>
-                    <Input value={col.format||""} onChange={e=>updateColumn(idx,{format:e.target.value})} placeholder={col.type==="date"?"m-d-Y":col.type==="datetime"?"m-d-Y H:i:s":"H:i:s"} className="h-8 text-xs font-mono mt-1" />
+                    <Input value={col.format||""} onChange={e=>updateColumn(idx,{format:e.target.value})} placeholder={col.type==="date"?"m-d-Y":col.type==="datetime"?"m-d-Y H:i:s":"H:i:s"} className="h-7 text-[13px] font-mono mt-1" />
                     <div className="text-[11px] text-amber-800 mt-1">Default: {col.type==="date"?"m-d-Y":col.type==="datetime"?"m-d-Y H:i:s":"H:i:s"} — akan dipakai saat render tabel</div>
                   </div>
                 )}
 
                 {(col.type==="select"||col.type==="select_multiple") && (
-                  <div className="bg-violet-50 border border-violet-200 rounded-[8px] p-3">
+                  <div className="bg-violet-50 border border-violet-200 rounded-[8px] p-2.5">
                     <Label className="text-xs">Daftar Pilihan (Nilai & Label)</Label>
                     {(col.options||[]).map((opt,oi)=>(
-                      <div key={oi} className="flex gap-2 mt-2">
-                        <Input value={opt.value} onChange={e=>{ const no=[...(col.options||[])]; no[oi]={...no[oi], value:e.target.value}; updateColumn(idx,{options:no})}} placeholder="value" className="h-8 text-xs flex-1" />
-                        <Input value={opt.label} onChange={e=>{ const no=[...(col.options||[])]; no[oi]={...no[oi], label:e.target.value}; updateColumn(idx,{options:no})}} placeholder="label" className="h-8 text-xs flex-1" />
-                        <button onClick={()=>{ const no=(col.options||[]).filter((_,i)=>i!==oi); updateColumn(idx,{options:no})}} className="p-2 hover:bg-white rounded"><Trash2 size={12}/></button>
+                      <div key={oi} className="flex gap-1.5 mt-1.5">
+                        <Input value={opt.value} onChange={e=>{ const no=[...(col.options||[])]; no[oi]={...no[oi], value:e.target.value}; updateColumn(idx,{options:no})}} placeholder="value" className="h-7 text-[13px] flex-1" />
+                        <Input value={opt.label} onChange={e=>{ const no=[...(col.options||[])]; no[oi]={...no[oi], label:e.target.value}; updateColumn(idx,{options:no})}} placeholder="label" className="h-7 text-[13px] flex-1" />
+                        <button onClick={()=>{ const no=(col.options||[]).filter((_,i)=>i!==oi); updateColumn(idx,{options:no})}} className="p-1.5 hover:bg-white rounded"><Trash2 size={12}/></button>
                       </div>
                     ))}
                     <Button size="sm" variant="outline" className="mt-2" onClick={()=>updateColumn(idx,{options:[...(col.options||[]), {value:`opsi${(col.options?.length||0)+1}`, label:`Opsi ${(col.options?.length||0)+1}`} ]})}><Plus size={12}/> Tambah Option</Button>
@@ -247,7 +247,7 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
                 )}
 
                 {(col.type==="select_table"||col.type==="select_table_multiple") && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-[8px] p-3 space-y-3">
+                  <div className="bg-blue-50 border border-blue-200 rounded-[8px] p-2.5 space-y-3">
                     <div><Label>Tabel Relasi</Label>
                       <Select value={col.relationTable||""} onChange={e=>updateColumn(idx,{relationTable:e.target.value})}>
                         <option value="">-- pilih tabel --</option>
@@ -257,7 +257,7 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
                     {col.relationTable && (
                       <>
                         <div><Label>Kolom yang Ditampilkan</Label>
-                          <div className="flex flex-wrap gap-2 mt-1">
+                          <div className="flex flex-wrap gap-1.5 mt-1">
                             {(availableColumns[col.relationTable]||[]).map((c:any)=>(
                               <label key={c.name} className={`px-2 py-1 rounded-full border text-xs flex items-center gap-1 cursor-pointer ${col.displayFields?.includes(c.name)?"bg-[#0075de] text-white border-[#0075de]":"bg-white border-[#e6e6e6]"}`}>
                                 <input type="checkbox" checked={!!col.displayFields?.includes(c.name)} onChange={e=>{
@@ -284,15 +284,15 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
                 )}
 
                 {col.type==="number" && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-[8px] p-3">
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!col.isCurrency} onChange={e=>updateColumn(idx,{isCurrency:e.target.checked})} /> Format Mata Uang IDR</label>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-[8px] p-2.5">
+                    <label className="flex items-center gap-1.5 text-[13px]"><input type="checkbox" checked={!!col.isCurrency} onChange={e=>updateColumn(idx,{isCurrency:e.target.checked})} /> Format Mata Uang IDR</label>
                     <div className="text-[11px] text-emerald-800 mt-1">Jika dicentang, label akan menampilkan format IDR realtime saat input: contoh 1000000 → Rp 1.000.000</div>
-                    {col.isCurrency && <div className="mt-2 p-2 bg-white border rounded text-xs">Preview: <span className="font-mono font-bold">Rp {Number(1234567).toLocaleString("id-ID")}</span></div>}
+                    {col.isCurrency && <div className="mt-1.5 p-1.5 bg-white border rounded text-xs">Preview: <span className="font-mono font-bold">Rp {Number(1234567).toLocaleString("id-ID")}</span></div>}
                   </div>
                 )}
 
                 {(col.type==="hidden_operation_text"||col.type==="readonly_operation_text") && (
-                  <div className="bg-gray-900 text-white rounded-[8px] p-3">
+                  <div className="bg-gray-900 text-white rounded-[8px] p-2.5">
                     <Label className="text-xs text-white">Rumus Otomatis</Label>
                     <Textarea value={col.expression||""} onChange={e=>updateColumn(idx,{expression:e.target.value})} placeholder={`"hasil dari "++nama_kolom1++" * "++nama_kolom2++" = "++ nama_kolom1 * nama_kolom2`} className="font-mono text-xs mt-2 bg-white text-black min-h-[80px]" />
                     <div className="text-[11px] text-gray-300 mt-2 leading-relaxed">
@@ -302,9 +302,9 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
                   </div>
                 )}
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div><Label>Nilai Default</Label><Input value={col.defaultValue||""} onChange={e=>updateColumn(idx,{defaultValue:e.target.value})} placeholder="opsional" className="h-8 text-xs" /></div>
-                  <div className="flex flex-col gap-2">
+                <div className="grid md:grid-cols-2 gap-2.5">
+                  <div><Label>Nilai Default</Label><Input value={col.defaultValue||""} onChange={e=>updateColumn(idx,{defaultValue:e.target.value})} placeholder="opsional" className="h-7 text-[13px]" /></div>
+                  <div className="flex flex-col gap-1.5">
                     <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={!!col.isRequired} onChange={e=>updateColumn(idx,{isRequired:e.target.checked})} /> Wajib Diisi</label>
                     <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={!!col.isOrderable} onChange={e=>updateColumn(idx,{isOrderable:e.target.checked})} /> Dapat Diurutkan</label>
                     <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={!!col.isSearchable} onChange={e=>updateColumn(idx,{isSearchable:e.target.checked})} /> Dapat Dicari</label>
@@ -316,7 +316,7 @@ export default function GlobalTableForm({ mode, id }: { mode: "create"|"edit"; i
         </div>
       </div>
 
-      <div className="sticky bottom-0 bg-white border border-[#e6e6e6] p-4 flex justify-between items-center rounded-[12px] mt-6">
+      <div className="sticky bottom-0 bg-white border border-[#e6e6e6] p-2.5 flex justify-between items-center rounded-[8px] mt-3">
         <div className="text-xs text-[#6b7280]">GUI — tidak perlu JSON manual. Kolom akan jadi physical table <code className="bg-[#f6f5f4] px-1 rounded border">dyn_{toSnake(tableForm.name)||"..."}</code></div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={()=>router.push("/global-tables")}>Batal</Button>

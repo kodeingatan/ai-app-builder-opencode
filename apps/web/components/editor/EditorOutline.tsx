@@ -55,8 +55,8 @@ export function EditorOutline({ editor, className }: EditorOutlineProps) {
 
   if (items.length === 0) {
     return (
-      <div className={`rounded-[12px] border border-dashed border-[#e6e6e6] bg-[#fafafa] p-4 ${className || ""}`}>
-        <div className="flex items-center gap-2 text-xs font-semibold text-[#6b7280] mb-2">
+      <div className={`rounded-[8px] border border-dashed border-[#e6e6e6] bg-[#fafafa] p-2.5 ${className || ""}`}>
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#6b7280] mb-1.5">
           <ListTree size={14} /> Outline
         </div>
         <p className="text-[11px] text-[#9ca3af] leading-relaxed">
@@ -67,8 +67,8 @@ export function EditorOutline({ editor, className }: EditorOutlineProps) {
   }
 
   return (
-    <div className={`rounded-[12px] border border-[#e6e6e6] bg-white overflow-hidden ${className || ""}`}>
-      <div className="px-4 py-3 border-b border-[#e6e6e6] flex items-center gap-2">
+    <div className={`rounded-[8px] border border-[#e6e6e6] bg-white overflow-hidden ${className || ""}`}>
+      <div className="px-2.5 py-2 border-b border-[#e6e6e6] flex items-center gap-1.5">
         <ListTree size={14} className="text-[#0075de]" />
         <span className="text-xs font-bold tracking-wide uppercase text-[#374151]">Outline</span>
         <span className="ml-auto text-[11px] bg-[#f6f5f4] border border-[#e6e6e6] px-1.5 py-0.5 rounded-full font-mono">{items.length}</span>

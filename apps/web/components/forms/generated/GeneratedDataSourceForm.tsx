@@ -39,18 +39,18 @@ export default function GeneratedDataSourceForm({ mode, id }: { mode:"create"|"e
   }
   if(loading) return <div className="p-8 text-center text-sm text-[#6b7280]">Memuat...</div>
   return (
-    <div className="space-y-4 bg-white rounded-[12px] border border-[#e6e6e6] p-6">
+    <div className="space-y-2.5 bg-white rounded-[8px] border border-[#e6e6e6] p-3">
       <div><Label>Nama</Label><Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Employee" /></div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2.5">
         <div><Label>Tipe</Label><Select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="entity">entity</option><option value="api">api</option><option value="custom_query">custom_query</option><option value="static">static</option></Select></div>
         <div><Label>Entity</Label><Input value={form.entity} onChange={e=>setForm({...form,entity:e.target.value})} placeholder="employees" /></div>
       </div>
-      <div><Label>Config JSON</Label><Textarea className="font-mono text-xs min-h-[140px]" value={form.config_json} onChange={e=>setForm({...form,config_json:e.target.value})} placeholder='{"query":"SELECT * FROM \"surat_platform_employees\" WHERE department = {{department}}"}' />
+      <div><Label>Config JSON</Label><Textarea className="font-mono text-xs min-h-[110px]" value={form.config_json} onChange={e=>setForm({...form,config_json:e.target.value})} placeholder='{"query":"SELECT * FROM \"surat_platform_employees\" WHERE department = {{department}}"}' />
         {form.type==="custom_query" && <div className="text-[11px] text-[#6b7280] mt-1">Gunakan <code className="bg-[#f6f5f4] px-1 rounded border">{"{{department}}"}</code> sebagai placeholder — akan di-resolve via <code className="bg-[#f6f5f4] px-1 rounded border">/resolve?department=...</code>.</div>}
         {form.type==="entity" && <div className="text-[11px] text-[#6b7280] mt-1">Entity akan di-resolve otomatis dengan filter department/status via <code className="bg-[#f6f5f4] px-1 rounded border">?department=Bidang TI</code></div>}
       </div>
       <div><Label>Deskripsi</Label><Textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} /></div>
-      <div className="flex justify-end gap-2 border-t pt-4"><Button variant="outline" onClick={()=>router.push("/generated/surat-platform/data-sources")}>Batal</Button><Button onClick={handleSubmit}>Simpan</Button></div>
+      <div className="flex justify-end gap-1.5 border-t pt-2.5"><Button variant="outline" onClick={()=>router.push("/generated/surat-platform/data-sources")}>Batal</Button><Button onClick={handleSubmit}>Simpan</Button></div>
     </div>
   )
 }

@@ -59,9 +59,9 @@ function HasilPersuratanInner(){
   }
 
   return (
-    <PageShell title="Hasil Administrasi Persuratan" description="Pilih administrasi untuk melihat hasil, buat persuratan baru dengan melengkapi data dan tahapan, serta hapus jika diperlukan." breadcrumbs={[{label:"Persuratan"},{label:"Hasil"}]} actions={<div className="flex gap-2"><Button variant="outline" onClick={()=> window.open(`/api/persuratan/administrations/${selectedAdmin}/datas?preview=pdf`,"_blank")}><FileText size={14}/> Preview PDF</Button><Link href={selectedAdmin ? `/hasil-persuratan/new?administrationId=${selectedAdmin}` : "/hasil-persuratan/new"}><Button><PlusIcon/> Buat Persuratan</Button></Link></div>}>
+    <PageShell title="Hasil Administrasi Persuratan" description="Pilih administrasi untuk melihat hasil, buat persuratan baru dengan melengkapi data dan tahapan, serta hapus jika diperlukan." breadcrumbs={[{label:"Persuratan"},{label:"Hasil"}]} actions={<div className="flex gap-2"><Button variant="outline" onClick={()=> window.open(`/api/persuratan/administrations/${selectedAdmin}/datas?preview=pdf`,"_blank")}><FileText size={12}/> Preview PDF</Button><Link href={selectedAdmin ? `/hasil-persuratan/new?administrationId=${selectedAdmin}` : "/hasil-persuratan/new"}><Button><PlusIcon/> Buat Persuratan</Button></Link></div>}>
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><ClipboardList size={14} className="text-[#0075de]"/> Pilih Administrasi</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><ClipboardList size={12} className="text-[#0075de]"/> Pilih Administrasi</CardTitle></CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
             {administrations.map(a=>(
@@ -85,9 +85,9 @@ function HasilPersuratanInner(){
       {selectedAdmin ? (
         <DataTable data={datas} total={total} page={page} limit={10} totalPages={Math.ceil(total/10)} onPageChange={(p)=>{setPage(p); loadDatas(selectedAdmin,p,search)}} onSearch={(s)=>{setSearch(s); setPage(1); loadDatas(selectedAdmin,1,s)}} searchPlaceholder="Cari nama persuratan..." loading={loading}
           columns={[
-            {key:"name", header:"Nama Persuratan", render:(r)=><div className="flex items-center gap-2"><div className="w-8 h-8 rounded bg-emerald-100 flex items-center justify-center text-emerald-700"><FileText size={14}/></div><div><div className="font-bold text-xs">{r.name}</div><div className="text-[11px] text-[#6b7280]">ID:{r.id}</div></div></div>},
+            {key:"name", header:"Nama Persuratan", render:(r)=><div className="flex items-center gap-2"><div className="w-7 h-7 rounded bg-emerald-100 flex items-center justify-center text-emerald-700"><FileText size={12}/></div><div><div className="font-bold text-xs">{r.name}</div><div className="text-[11px] text-[#6b7280]">ID:{r.id}</div></div></div>},
             {key:"values", header:"Data", render:(r)=>{ try{ const v=JSON.parse(r.valuesJson||"{}"); const keys=Object.keys(v); return <span className="text-xs">{keys.slice(0,2).map(k=>`${k}:${String(v[k]).slice(0,20)}`).join(" • ")}{keys.length>2?" …":""}</span>}catch{return "-"}}},
-            {key:"actions", header:"Aksi", render:(r)=><div className="flex gap-1"><button onClick={()=>setDetail(r)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><Eye size={14}/></button><Link href={`/hasil-persuratan/${r.id}/edit?administrationId=${selectedAdmin}`} className="p-1.5 hover:bg-[#f6f5f4] rounded inline-flex"><Pencil size={14}/></Link><button onClick={()=>handleDelete(r.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded"><Trash2 size={14}/></button></div>}
+            {key:"actions", header:"Aksi", render:(r)=><div className="flex gap-1"><button onClick={()=>setDetail(r)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><Eye size={12}/></button><Link href={`/hasil-persuratan/${r.id}/edit?administrationId=${selectedAdmin}`} className="p-1.5 hover:bg-[#f6f5f4] rounded inline-flex"><Pencil size={12}/></Link><button onClick={()=>handleDelete(r.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded"><Trash2 size={12}/></button></div>}
           ]}
         />
       ) : (
@@ -97,9 +97,9 @@ function HasilPersuratanInner(){
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30" onClick={()=>setDetail(null)} />
-          <div className="relative bg-white rounded-[12px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between"><div className="font-bold text-sm">{detail.name}</div><button onClick={()=>setDetail(null)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={16}/></button></div>
-            <div className="p-6">
+          <div className="relative bg-white rounded-[8px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="sticky top-0 bg-white border-b p-2.5 flex items-center justify-between"><div className="font-bold text-sm">{detail.name}</div><button onClick={()=>setDetail(null)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={14}/></button></div>
+            <div className="p-3">
               <div className="detail-view">
                 <div className="detail-field"><span className="detail-label">Values</span><pre className="detail-value bg-[#f6f5f4] p-3 rounded text-xs font-mono overflow-auto">{detail.valuesJson||"{}"}</pre></div>
                 <div className="detail-field"><span className="detail-label">Steps Data</span><pre className="detail-value bg-[#f6f5f4] p-3 rounded text-xs font-mono overflow-auto">{detail.stepsDataJson||"[]"}</pre></div>
@@ -112,7 +112,7 @@ function HasilPersuratanInner(){
   )
 }
 
-function PlusIcon(){ return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> }
+function PlusIcon(){ return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> }
 
 export default function HasilPersuratanPage(){
   return <Suspense fallback={<div className="p-8 text-center text-sm text-[#6b7280]">Loading...</div>}><HasilPersuratanInner/></Suspense>

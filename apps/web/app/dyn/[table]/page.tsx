@@ -123,14 +123,14 @@ export default function DynTablePage(){
     loadData(page,search,sortBy,sortOrder)
   }
 
-  if(!meta) return <div className="p-8 text-center text-sm text-[#6b7280]">Loading meta untuk {tableName}...</div>
+  if(!meta) return <div className="p-4 text-center text-[13px] text-[#6b7280]">Loading meta untuk {tableName}...</div>
 
   const visibleColumns = columns.filter(c=>visibleCols[c.name]!==false)
 
   return (
     <PageShell title={meta.displayName} description={`Browse table ${tableName} — dyn_${tableName} • searching: ${columns.filter(c=>c.isSearchable).map(c=>c.displayName).join(", ")||"tidak ada"} • ${columns.length} kolom`} breadcrumbs={[{label:"Dyn", href:"/dyn"}, {label: meta.displayName}]} actions={<div className="flex gap-2"><Link href="/global-tables"><Button variant="outline" size="sm"><Settings size={14}/> Kelola Tabel</Button></Link><Link href={`/dyn/${tableName}/new`}><Button><Plus size={14}/> Tambah Data</Button></Link></div>}>
       <Card>
-        <CardContent className="p-4 flex flex-wrap gap-4 items-end">
+        <CardContent className="p-3 flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[240px]">
             <Label className="text-xs flex items-center gap-1"><Search size={12}/> Searching (hanya kolom yang di-check searching)</Label>
             <div className="flex gap-2 mt-1">
@@ -177,7 +177,7 @@ export default function DynTablePage(){
             header: col.displayName + (col.isOrderable ? " ↕" : ""),
             render: (r:any)=>{
               const raw=r[col.name]
-              if(col.type==="image" && raw) return <img src={raw} alt="img" className="w-12 h-12 object-cover rounded border" />
+              if(col.type==="image" && raw) return <img src={raw} alt="img" className="w-8 h-8 object-cover rounded border" />
               if(col.type==="richtext") return <span className="text-xs line-clamp-2" dangerouslySetInnerHTML={{__html: String(raw||"").slice(0,120)}} />
               if(col.type==="number"){
                 const opts= col.optionsJson?JSON.parse(col.optionsJson):{}
@@ -202,15 +202,15 @@ export default function DynTablePage(){
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30" onClick={()=>setDetail(null)} />
-          <div className="relative bg-white rounded-[12px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between"><div className="font-bold text-sm">{meta.displayName} #{detail.id}</div><button onClick={()=>setDetail(null)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={16}/></button></div>
-            <div className="p-6">
+          <div className="relative bg-white rounded-[8px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="sticky top-0 bg-white border-b p-3 flex items-center justify-between"><div className="font-bold text-[13px]">{meta.displayName} #{detail.id}</div><button onClick={()=>setDetail(null)} className="p-1.5 hover:bg-[#f6f5f4] rounded"><X size={14}/></button></div>
+            <div className="p-3">
               <div className="detail-view">
                 {columns.map(c=>(
-                  <div key={c.name} className="detail-field"><span className="detail-label">{c.displayName} ({c.type})</span><span className="detail-value">{c.type==="image" && detail[c.name] ? <img src={detail[c.name]} alt="img" className="w-24 h-24 object-cover rounded" /> : String(detail[c.name]??"-").slice(0,200)}</span></div>
+                  <div key={c.name} className="detail-field"><span className="detail-label">{c.displayName} ({c.type})</span><span className="detail-value">{c.type==="image" && detail[c.name] ? <img src={detail[c.name]} alt="img" className="w-16 h-16 object-cover rounded" /> : String(detail[c.name]??"-").slice(0,200)}</span></div>
                 ))}
               </div>
-              <div className="mt-4 flex justify-end"><Button variant="outline" onClick={()=>setDetail(null)}>Tutup</Button></div>
+              <div className="mt-3 flex justify-end"><Button variant="outline" onClick={()=>setDetail(null)}>Tutup</Button></div>
             </div>
           </div>
         </div>

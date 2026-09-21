@@ -50,15 +50,15 @@ export default function GeneratedDocumentForm({ mode, id }: { mode:"create"|"edi
   }
   if(loading) return <div className="p-8 text-center text-sm text-[#6b7280]">Memuat...</div>
   return (
-    <div className="space-y-4 bg-white rounded-[12px] border border-[#e6e6e6] p-6">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-2.5 bg-white rounded-[8px] border border-[#e6e6e6] p-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <div><Label>Template</Label><Select value={form.template_id} onChange={e=>setForm({...form, template_id:e.target.value})}><option value="">-- Tanpa template --</option>{templates.map(t=><option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}</Select></div>
         <div><Label>Nomor Surat</Label><Input value={form.document_number} onChange={e=>setForm({...form, document_number:e.target.value})} /></div>
         <div className="col-span-2"><Label>Judul</Label><Input value={form.title} onChange={e=>setForm({...form, title:e.target.value})} placeholder="SK Pengangkatan Tim IT 2026" /></div>
         <div><Label>Penerima</Label><Input value={form.recipient_name} onChange={e=>setForm({...form, recipient_name:e.target.value})} placeholder="Tim TI" /></div>
         <div><Label>Status</Label><Select value={form.status} onChange={e=>setForm({...form, status:e.target.value})}><option value="draft">draft</option><option value="rendered">rendered</option><option value="published">published</option><option value="archived">archived</option></Select></div>
         <div className="col-span-2"><Label>Tanggal Terbit</Label><Input type="datetime-local" value={form.issued_at} onChange={e=>setForm({...form, issued_at:e.target.value})} /></div>
-        <div className="col-span-2"><Label>Data JSON <span className="text-[11px] text-[#6b7280]">— binding untuk Repeater/Condition. Contoh: {"{employees:[{name, nip, position}]}"}</span></Label><Textarea className="font-mono text-xs min-h-[180px]" value={form.data_json} onChange={e=>setForm({...form, data_json:e.target.value})} /></div>
+        <div className="col-span-2"><Label>Data JSON <span className="text-[11px] text-[#6b7280]">— binding untuk Repeater/Condition. Contoh: {"{employees:[{name, nip, position}]}"}</span></Label><Textarea className="font-mono text-xs min-h-[140px]" value={form.data_json} onChange={e=>setForm({...form, data_json:e.target.value})} /></div>
         <div className="col-span-2"><Label>Catatan</Label><Textarea value={form.notes} onChange={e=>setForm({...form, notes:e.target.value})} /></div>
       </div>
       <div className="rounded-[8px] bg-[#f6f5f4] p-3 text-xs leading-relaxed">
@@ -66,7 +66,7 @@ export default function GeneratedDocumentForm({ mode, id }: { mode:"create"|"edi
         <div className="mt-1 font-mono text-[11px]">{"{{letter.number}} {{letter.title}} {{employee.name}} {{employee.nip}} {{office.name}} {{current_date}} {{signer.name}}"}</div>
         <div className="mt-1 text-[#6b7280]">Repeater: <code className="bg-white px-1 rounded border">source: "employees"</code> Nested: <code className="bg-white px-1 rounded border">source: "employee.trips"</code> Condition: <code className="bg-white px-1 rounded border">field: "employee.status" operator: "equals" value: "active"</code></div>
       </div>
-      <div className="flex justify-end gap-2 border-t pt-4"><Button variant="outline" onClick={()=>router.push("/generated/surat-platform/documents")}>Batal</Button><Button onClick={handleSubmit}>Simpan</Button></div>
+      <div className="flex justify-end gap-1.5 border-t pt-2.5"><Button variant="outline" onClick={()=>router.push("/generated/surat-platform/documents")}>Batal</Button><Button onClick={handleSubmit}>Simpan</Button></div>
     </div>
   )
 }

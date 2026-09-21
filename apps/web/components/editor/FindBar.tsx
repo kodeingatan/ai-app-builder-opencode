@@ -117,16 +117,16 @@ export function FindBar({ editor, open, onClose }: FindBarProps) {
   if (!open) return null
 
   return (
-    <div className="bg-white border border-[#e6e6e6] rounded-[10px] shadow-sm p-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0 bg-[#f6f5f4] border border-[#e6e6e6] rounded-[8px] px-2.5 py-1.5">
+    <div className="bg-white border border-[#e6e6e6] rounded-[8px] shadow-sm p-1.5 flex flex-col sm:flex-row gap-1.5 items-stretch sm:items-center">
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 bg-[#f6f5f4] border border-[#e6e6e6] rounded-[8px] px-2.5 py-1">
           <Search size={14} className="text-[#9ca3af] shrink-0" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleFind(1) }}
             placeholder="Find (Ctrl+F)"
-            className="flex-1 min-w-0 bg-transparent outline-none text-sm placeholder:text-[#9ca3af]"
+            className="flex-1 min-w-0 bg-transparent outline-none text-[13px] placeholder:text-[#9ca3af]"
             autoFocus
           />
           {query && (
@@ -136,30 +136,30 @@ export function FindBar({ editor, open, onClose }: FindBarProps) {
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => handleFind(-1)} className="w-7 h-7 grid place-items-center rounded hover:bg-[#f6f5f4] border border-[#e6e6e6]" title="Previous (Shift+Enter)">
-            <ChevronUp size={14} />
+          <button onClick={() => handleFind(-1)} className="w-6 h-6 grid place-items-center rounded hover:bg-[#f6f5f4] border border-[#e6e6e6]" title="Previous (Shift+Enter)">
+            <ChevronUp size={13} />
           </button>
-          <button onClick={() => handleFind(1)} className="w-7 h-7 grid place-items-center rounded hover:bg-[#f6f5f4] border border-[#e6e6e6]" title="Next (Enter)">
-            <ChevronDown size={14} />
+          <button onClick={() => handleFind(1)} className="w-6 h-6 grid place-items-center rounded hover:bg-[#f6f5f4] border border-[#e6e6e6]" title="Next (Enter)">
+            <ChevronDown size={13} />
           </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0 bg-[#f6f5f4] border border-[#e6e6e6] rounded-[8px] px-2.5 py-1.5">
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 bg-[#f6f5f4] border border-[#e6e6e6] rounded-[8px] px-2.5 py-1">
           <Replace size={14} className="text-[#9ca3af] shrink-0" />
           <input
             value={replace}
             onChange={(e) => setReplace(e.target.value)}
             placeholder="Replace (Ctrl+H)"
-            className="flex-1 min-w-0 bg-transparent outline-none text-sm placeholder:text-[#9ca3af]"
+            className="flex-1 min-w-0 bg-transparent outline-none text-[13px] placeholder:text-[#9ca3af]"
             onKeyDown={(e) => { if (e.key === 'Enter') handleReplaceOne() }}
           />
         </div>
-        <button onClick={handleReplaceOne} className="px-3 py-1.5 rounded-[8px] bg-white border border-[#e6e6e6] text-xs font-semibold hover:bg-[#f6f5f4]">Replace</button>
-        <button onClick={handleReplaceAll} className="px-3 py-1.5 rounded-[8px] bg-[#0075de] text-white text-xs font-semibold hover:bg-[#0066c4]">All</button>
-        <button onClick={onClose} className="w-7 h-7 grid place-items-center rounded hover:bg-[#f6f5f4]">
-          <X size={14} />
+        <button onClick={handleReplaceOne} className="px-2.5 py-1 rounded-[8px] bg-white border border-[#e6e6e6] text-xs font-semibold hover:bg-[#f6f5f4]">Replace</button>
+        <button onClick={handleReplaceAll} className="px-2.5 py-1 rounded-[8px] bg-[#0075de] text-white text-xs font-semibold hover:bg-[#0066c4]">All</button>
+        <button onClick={onClose} className="w-6 h-6 grid place-items-center rounded hover:bg-[#f6f5f4]">
+          <X size={13} />
         </button>
       </div>
     </div>

@@ -34,16 +34,16 @@ export default function GeneratedComponentForm({ mode, id }: { mode:"create"|"ed
   }
   if(loading) return <div className="p-8 text-center text-sm text-[#6b7280]">Memuat...</div>
   return (
-    <div className="space-y-4 bg-white rounded-[12px] border border-[#e6e6e6] p-6">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-2.5 bg-white rounded-[8px] border border-[#e6e6e6] p-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <div><Label>Tipe</Label><Input value={form.type} onChange={e=>setForm({...form,type:e.target.value})} placeholder="text" /></div>
         <div><Label>Nama</Label><Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Text" /></div>
         <div><Label>Kategori</Label><Select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option value="basic">basic</option><option value="layout">layout</option><option value="data">data</option><option value="dynamic">dynamic</option><option value="branding">branding</option></Select></div>
         <div><Label>Icon</Label><Select value={form.icon} onChange={e=>setForm({...form,icon:e.target.value})}>{icons.map(i=><option key={i} value={i}>{i}</option>)}</Select></div>
-        <div className="col-span-2"><Label>Default Props JSON</Label><Textarea className="font-mono text-xs min-h-[100px]" value={form.default_props_json} onChange={e=>setForm({...form,default_props_json:e.target.value})} /></div>
-        <div className="col-span-2"><Label>Schema JSON</Label><Textarea className="font-mono text-xs min-h-[100px]" value={form.schema_json} onChange={e=>setForm({...form,schema_json:e.target.value})} placeholder='{"type":"text","props":{"content":""}}' /></div>
+        <div className="col-span-2"><Label>Default Props JSON</Label><Textarea className="font-mono text-xs min-h-[80px]" value={form.default_props_json} onChange={e=>setForm({...form,default_props_json:e.target.value})} /></div>
+        <div className="col-span-2"><Label>Schema JSON</Label><Textarea className="font-mono text-xs min-h-[80px]" value={form.schema_json} onChange={e=>setForm({...form,schema_json:e.target.value})} placeholder='{"type":"text","props":{"content":""}}' /></div>
       </div>
-      <div className="flex justify-end gap-2 border-t pt-4"><Button variant="outline" onClick={()=>router.push("/generated/surat-platform/components")}>Batal</Button><Button onClick={handleSubmit}>Simpan</Button></div>
+      <div className="flex justify-end gap-1.5 border-t pt-2.5"><Button variant="outline" onClick={()=>router.push("/generated/surat-platform/components")}>Batal</Button><Button onClick={handleSubmit}>Simpan</Button></div>
     </div>
   )
 }

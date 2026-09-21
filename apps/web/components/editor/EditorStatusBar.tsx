@@ -27,8 +27,8 @@ export function EditorStatusBar({ editor, pageConfig, variant = "page", saved = 
   const zoom = pageConfig?.zoom ?? 90
 
   return (
-    <div className="h-8 bg-white border border-[#e6e6e6] rounded-[8px] px-3 flex items-center justify-between text-[11px] text-[#6b7280] gap-2">
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="h-7 bg-white border border-[#e6e6e6] rounded-[8px] px-2.5 flex items-center justify-between text-[11px] text-[#6b7280] gap-1.5">
+      <div className="flex items-center gap-1.5 min-w-0">
         <span className="inline-flex items-center gap-1.5">
           <FileText size={12} className="text-[#9ca3af]" />
           {wc ? (
@@ -48,7 +48,7 @@ export function EditorStatusBar({ editor, pageConfig, variant = "page", saved = 
         </span>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0">
         {variant === "page" && onZoomChange && (
           <div className="flex items-center gap-1 bg-[#f6f5f4] rounded-full p-0.5 border border-[#e6e6e6]">
             <button

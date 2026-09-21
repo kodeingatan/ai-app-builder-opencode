@@ -704,8 +704,8 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       {/* Toasts */}
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto min-w-[280px] max-w-[420px] rounded-[10px] border px-4 py-3 shadow-lg flex items-start gap-2.5 text-sm ${t.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : t.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${t.type === 'error' ? 'bg-red-600 text-white' : t.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'}`}>
+          <div key={t.id} className={`pointer-events-auto min-w-[280px] max-w-[420px] rounded-[8px] border px-2.5 py-2 shadow-lg flex items-start gap-2.5 text-sm ${t.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : t.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${t.type === 'error' ? 'bg-red-600 text-white' : t.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'}`}>
               {t.type === 'error' ? <X size={14} /> : t.type === 'success' ? <Copy size={12} /> : <Info size={14} />}
             </div>
             <div className="flex-1 pt-0.5 leading-relaxed">{t.message}</div>
@@ -718,13 +718,13 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       {linkModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setLinkModal({ open: false, url: '' })} />
-          <div className="relative bg-white rounded-[12px] w-full max-w-md shadow-xl border border-[#e6e6e6] p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="font-bold text-sm flex items-center gap-2"><Link2 size={14} className="text-[#0075de]" /> Atur Link</div>
-              <button onClick={() => setLinkModal({ open: false, url: '' })} className="w-7 h-7 rounded-full hover:bg-[#f6f5f4] flex items-center justify-center"><X size={14} /></button>
+          <div className="relative bg-white rounded-[8px] w-full max-w-md shadow-xl border border-[#e6e6e6] p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-bold text-[13px] flex items-center gap-2"><Link2 size={14} className="text-[#0075de]" /> Atur Link</div>
+              <button onClick={() => setLinkModal({ open: false, url: '' })} className="w-6 h-6 rounded-full hover:bg-[#f6f5f4] flex items-center justify-center"><X size={14} /></button>
             </div>
-            <div className="space-y-3">
-              <div><Label className="text-xs font-semibold">URL Link</Label><Input value={linkModal.url} onChange={e => setLinkModal({ ...linkModal, url: e.target.value })} placeholder="https://example.com" className="mt-1 h-9 text-sm" autoFocus /></div>
+            <div className="space-y-2">
+              <div><Label className="text-xs font-semibold">URL Link</Label><Input value={linkModal.url} onChange={e => setLinkModal({ ...linkModal, url: e.target.value })} placeholder="https://example.com" className="mt-1 h-7 text-[13px]" autoFocus /></div>
               <div className="flex gap-2 justify-end pt-2"><Button variant="outline" size="sm" onClick={() => setLinkModal({ open: false, url: '' })}>Batal</Button><Button size="sm" onClick={submitLinkModal} className="bg-[#0075de] hover:bg-[#0063be]">Simpan Link</Button></div>
             </div>
           </div>
@@ -733,13 +733,13 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       {imageModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setImageModal({ open: false, url: '' })} />
-          <div className="relative bg-white rounded-[12px] w-full max-w-md shadow-xl border border-[#e6e6e6] p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="font-bold text-sm flex items-center gap-2"><ImageIcon size={14} className="text-[#0075de]" /> Sisipkan Gambar</div>
-              <button onClick={() => setImageModal({ open: false, url: '' })} className="w-7 h-7 rounded-full hover:bg-[#f6f5f4] flex items-center justify-center"><X size={14} /></button>
+          <div className="relative bg-white rounded-[8px] w-full max-w-md shadow-xl border border-[#e6e6e6] p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-bold text-[13px] flex items-center gap-2"><ImageIcon size={14} className="text-[#0075de]" /> Sisipkan Gambar</div>
+              <button onClick={() => setImageModal({ open: false, url: '' })} className="w-6 h-6 rounded-full hover:bg-[#f6f5f4] flex items-center justify-center"><X size={14} /></button>
             </div>
-            <div className="space-y-3">
-              <div><Label className="text-xs font-semibold">URL Gambar</Label><Input value={imageModal.url} onChange={e => setImageModal({ ...imageModal, url: e.target.value })} placeholder="https://example.com/image.jpg" className="mt-1 h-9 text-sm" autoFocus /></div>
+            <div className="space-y-2">
+              <div><Label className="text-xs font-semibold">URL Gambar</Label><Input value={imageModal.url} onChange={e => setImageModal({ ...imageModal, url: e.target.value })} placeholder="https://example.com/image.jpg" className="mt-1 h-7 text-[13px]" autoFocus /></div>
               {imageModal.url && <div className="border border-[#e6e6e6] rounded-[8px] p-2 bg-[#f9fafb]"><div className="text-[11px] font-semibold mb-1">Preview</div><img src={imageModal.url} alt="preview" className="max-h-[180px] w-auto mx-auto rounded" onError={e => (e.currentTarget.style.display = 'none')} /></div>}
               <div className="flex gap-2 justify-end pt-2"><Button variant="outline" size="sm" onClick={() => setImageModal({ open: false, url: '' })}>Batal</Button><Button size="sm" onClick={submitImageModal} className="bg-[#0075de] hover:bg-[#0063be]"><ImageIcon size={14} /> Sisipkan</Button></div>
             </div>
@@ -748,7 +748,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       )}
 
       {/* Header info */}
-      <div className="mb-6 flex flex-col gap-1">
+      <div className="mb-3 flex flex-col gap-1">
         <div className="flex items-center gap-2 text-xs text-[#6b7280]">
           <span className="inline-flex items-center gap-1.5 bg-white border border-[#e6e6e6] rounded-full px-3 py-1"><FileStack size={12} className="text-[#0075de]" /> Template Builder Persuratan</span>
           <span className="hidden sm:inline">·</span>
@@ -756,19 +756,19 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-4 items-start">
+      <div className="grid grid-cols-12 gap-3 items-start">
         {/* LEFT: Components Palette */}
-        <Card className="col-span-12 lg:col-span-3 sticky top-4 order-2 lg:order-1">
+        <Card className="col-span-12 lg:col-span-3 sticky top-2.5 order-2 lg:order-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2"><Sparkles size={14} className="text-[#0075de]" /> Components</CardTitle>
+            <CardTitle className="text-[13px] flex items-center gap-2"><Sparkles size={14} className="text-[#0075de]" /> Components</CardTitle>
             <CardDescription className="text-[11px]">Klik untuk tambah ke canvas. Pilih node di tengah lalu tambah sebagai child. Klik kanan di editor untuk insert tepat di kursor.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2.5">
             <div>
               <div className="text-[11px] font-semibold tracking-widest uppercase text-[#9ca3af] mb-2 flex items-center gap-1.5"><Building2 size={11} /> Persuratan (Branding)</div>
-              <div className="grid grid-cols-2 gap-2 max-h-[320px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
                 {components.length === 0 ? <div className="col-span-2 text-[11px] text-[#6b7280] py-6 text-center border border-dashed rounded-[8px]">Belum ada component — buat dulu di Components Persuratan</div> : components.map(comp => (
-                  <button key={comp.id} onClick={() => { setSelectedCompId(String(comp.id)); const rect = editorContainerRef.current?.getBoundingClientRect(); const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2; const y = rect ? rect.top + 120 : window.innerHeight / 2; savedPosRef.current = editor.state.selection.from; setContextMenu({ x, y }) }} className="flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-[#e6e6e6] bg-white hover:border-[#0075de] hover:bg-[#0075de]/5 transition-colors text-center group">
+                  <button key={comp.id} onClick={() => { setSelectedCompId(String(comp.id)); const rect = editorContainerRef.current?.getBoundingClientRect(); const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2; const y = rect ? rect.top + 120 : window.innerHeight / 2; savedPosRef.current = editor.state.selection.from; setContextMenu({ x, y }) }} className="flex flex-col items-center gap-1 p-2.5 rounded-[8px] border border-[#e6e6e6] bg-white hover:border-[#0075de] hover:bg-[#0075de]/5 transition-colors text-center group">
                     <Boxes size={18} className="text-[#0075de] group-hover:scale-110 transition-transform" />
                     <span className="text-[11px] font-medium leading-tight line-clamp-2">{comp.name}</span>
                     <span className="text-[10px] font-mono text-[#6b7280]">{comp.isLooping ? "looping" : "single"}</span>
@@ -779,19 +779,19 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
             </div>
             <div>
               <div className="text-[11px] font-semibold tracking-widest uppercase text-[#9ca3af] mb-2 flex items-center gap-1.5"><Layers size={11} /> Dynamic</div>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={handleInsertRepeater} className="flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-amber-200 bg-amber-50 hover:border-amber-400 hover:bg-amber-100 transition-colors text-center group">
+              <div className="grid grid-cols-2 gap-1.5">
+                <button onClick={handleInsertRepeater} className="flex flex-col items-center gap-1 p-2.5 rounded-[8px] border border-amber-200 bg-amber-50 hover:border-amber-400 hover:bg-amber-100 transition-colors text-center group">
                   <Repeat size={18} className="text-amber-600 group-hover:scale-110 transition-transform" />
                   <span className="text-[11px] font-bold text-amber-800">Repeater</span>
                   <span className="text-[10px] text-amber-700">Loop</span>
                 </button>
-                <button onClick={handleInsertCondition} className="flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-violet-200 bg-violet-50 hover:border-violet-400 hover:bg-violet-100 transition-colors text-center group">
+                <button onClick={handleInsertCondition} className="flex flex-col items-center gap-1 p-2.5 rounded-[8px] border border-violet-200 bg-violet-50 hover:border-violet-400 hover:bg-violet-100 transition-colors text-center group">
                   <GitBranch size={18} className="text-violet-600 group-hover:scale-110 transition-transform" />
                   <span className="text-[11px] font-bold text-violet-800">Condition</span>
                   <span className="text-[10px] text-violet-700">IF</span>
                 </button>
               </div>
-              <div className="rounded-[8px] bg-[#f6f5f4] p-3 text-[11px] leading-relaxed mt-3">
+              <div className="rounded-[8px] bg-[#f6f5f4] p-2.5 text-[11px] leading-relaxed mt-2">
                 <div className="font-semibold">Binding syntax:</div>
                 <div className="font-mono mt-1">{"{{nama_karyawan}} {{tanggal}} {{office.name}}"}</div>
                 <div className="mt-1">Loop: <code className="bg-white px-1 rounded border">Repeater source="pegawai"</code></div>
@@ -802,50 +802,50 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
         </Card>
 
         {/* CENTER: Document Editor Office Doc */}
-        <div className="col-span-12 lg:col-span-6 space-y-4 order-1 lg:order-2">
+        <div className="col-span-12 lg:col-span-6 space-y-2.5 order-1 lg:order-2">
           <Card className="overflow-hidden">
             <CardHeader className="pb-3 border-b bg-white">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm flex items-center gap-2">
+                <CardTitle className="text-[13px] flex items-center gap-2">
                   <FileText size={16} className="text-[#0075de]" /> Document Editor
                   <span className="hidden sm:inline text-[11px] font-normal text-[#6b7280]">— Simple Office Doc (Tiptap)</span>
                 </CardTitle>
                 <Badge variant="secondary" className="text-[11px] hidden sm:flex">{pageConfig.paper} {pageConfig.orientation} • {pageConfig.zoom}% • {previewHtml.length} chars</Badge>
                 <span className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${!pageConfig.isPageless ? "bg-[#0075de] text-white border-[#0075de]" : "bg-white text-[#6b7280] border-[#e6e6e6]"}`}>{pageConfig.isPageless ? "Pageless" : "Pages"}</span>
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <div><Label className="text-[11px]">Nama Template *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Surat Tugas" className="h-8 text-xs" /></div>
-                <div><Label className="text-[11px]">Deskripsi</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Deskripsi template" className="h-8 text-xs" /></div>
+              <div className="grid grid-cols-2 gap-2.5 mt-2">
+                <div><Label className="text-[11px]">Nama Template *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Surat Tugas" className="h-7 text-[13px]" /></div>
+                <div><Label className="text-[11px]">Deskripsi</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Deskripsi template" className="h-7 text-[13px]" /></div>
               </div>
               {/* Page Config — kertas hanya di Template, sesuai pengecualian Component tanpa kertas */}
-              <div className="mt-4 rounded-[12px] border border-[#e6e6e6] bg-white p-3 space-y-3">
+              <div className="mt-2 rounded-[8px] border border-[#e6e6e6] bg-white p-2.5 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-bold text-[#111]"><Ruler size={14} className="text-[#0075de]"/> Pengaturan Kertas — Template only</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
                   <div><Label className="text-[11px]">Kertas</Label><Select value={pageConfig.paper} onChange={e=>setPageConfig(c=>({...c, paper:e.target.value as any}))}><option value="A4">A4 (210×297mm)</option><option value="Letter">Letter (216×279mm)</option><option value="Legal">Legal (216×356mm)</option><option value="Custom">Custom</option></Select></div>
                   <div><Label className="text-[11px]">Orientasi</Label><Select value={pageConfig.orientation} onChange={e=>setPageConfig(c=>({...c, orientation:e.target.value as any}))}><option value="portrait">Portrait</option><option value="landscape">Landscape</option></Select></div>
-                  <div><Label className="text-[11px]">Margins (mm) T</Label><Input type="number" value={pageConfig.margins.top} onChange={e=>setPageConfig(c=>({...c, margins:{...c.margins, top:Number(e.target.value)}}))} className="h-8 text-xs" /></div>
-                  <div><Label className="text-[11px]">L</Label><Input type="number" value={pageConfig.margins.left} onChange={e=>setPageConfig(c=>({...c, margins:{...c.margins, left:Number(e.target.value)}}))} className="h-8 text-xs" /></div>
+                  <div><Label className="text-[11px]">Margins (mm) T</Label><Input type="number" value={pageConfig.margins.top} onChange={e=>setPageConfig(c=>({...c, margins:{...c.margins, top:Number(e.target.value)}}))} className="h-7 text-[13px]" /></div>
+                  <div><Label className="text-[11px]">L</Label><Input type="number" value={pageConfig.margins.left} onChange={e=>setPageConfig(c=>({...c, margins:{...c.margins, left:Number(e.target.value)}}))} className="h-7 text-[13px]" /></div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div><Label className="text-[11px]">R (mm)</Label><Input type="number" value={pageConfig.margins.right} onChange={e=>setPageConfig(c=>({...c, margins:{...c.margins, right:Number(e.target.value)}}))} className="h-8 text-xs" /></div>
-                  <div><Label className="text-[11px]">B (mm)</Label><Input type="number" value={pageConfig.margins.bottom} onChange={e=>setPageConfig(c=>({...c, margins:{...c.margins, bottom:Number(e.target.value)}}))} className="h-8 text-xs" /></div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                  <div><Label className="text-[11px]">R (mm)</Label><Input type="number" value={pageConfig.margins.right} onChange={e=>setPageConfig(c=>({...c, margins:{...c.margins, right:Number(e.target.value)}}))} className="h-7 text-[13px]" /></div>
+                  <div><Label className="text-[11px]">B (mm)</Label><Input type="number" value={pageConfig.margins.bottom} onChange={e=>setPageConfig(c=>({...c, margins:{...c.margins, bottom:Number(e.target.value)}}))} className="h-7 text-[13px]" /></div>
                   <div className="flex items-end gap-2">
                     <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={!pageConfig.isPageless} onChange={e=>setPageConfig(c=>({...c, isPageless:!e.target.checked}))} className="rounded" /> Pages</label>
                     <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={pageConfig.showRuler ?? true} onChange={e=>setPageConfig(c=>({...c, showRuler:e.target.checked}))} className="rounded" /> Ruler</label>
                   </div>
                   <div className="flex items-end gap-1">
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={()=>setPageConfig(c=>({...c, zoom:Math.max(50, c.zoom-10)}))}><ZoomOut size={12}/></Button>
+                    <Button variant="outline" size="sm" className="h-7 text-[13px]" onClick={()=>setPageConfig(c=>({...c, zoom:Math.max(50, c.zoom-10)}))}><ZoomOut size={12}/></Button>
                     <span className="text-xs font-mono w-10 text-center">{pageConfig.zoom}%</span>
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={()=>setPageConfig(c=>({...c, zoom:Math.min(200, c.zoom+10)}))}><ZoomIn size={12}/></Button>
+                    <Button variant="outline" size="sm" className="h-7 text-[13px]" onClick={()=>setPageConfig(c=>({...c, zoom:Math.min(200, c.zoom+10)}))}><ZoomIn size={12}/></Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div><Label className="text-[11px]">Watermark (opsional)</Label><Input value={pageConfig.watermark?.text || ""} onChange={e=>setPageConfig(c=>({...c, watermark: e.target.value ? { text:e.target.value, opacity:0.08, rotation:-30 } : null}))} placeholder="CONFIDENTIAL / DRAFT" className="h-8 text-xs" /></div>
-                  <div><Label className="text-[11px]">Header HTML (opsional)</Label><Input value={pageConfig.headerHtml || ""} onChange={e=>setPageConfig(c=>({...c, headerHtml:e.target.value}))} placeholder="<div>Kop surat</div>" className="h-8 text-xs font-mono" /></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                  <div><Label className="text-[11px]">Watermark (opsional)</Label><Input value={pageConfig.watermark?.text || ""} onChange={e=>setPageConfig(c=>({...c, watermark: e.target.value ? { text:e.target.value, opacity:0.08, rotation:-30 } : null}))} placeholder="CONFIDENTIAL / DRAFT" className="h-7 text-[13px]" /></div>
+                  <div><Label className="text-[11px]">Header HTML (opsional)</Label><Input value={pageConfig.headerHtml || ""} onChange={e=>setPageConfig(c=>({...c, headerHtml:e.target.value}))} placeholder="<div>Kop surat</div>" className="h-7 text-[13px] font-mono" /></div>
                 </div>
-                <div><Label className="text-[11px]">Footer HTML (opsional)</Label><Input value={pageConfig.footerHtml || ""} onChange={e=>setPageConfig(c=>({...c, footerHtml:e.target.value}))} placeholder="Footer • halaman" className="h-8 text-xs font-mono" /></div>
+                <div><Label className="text-[11px]">Footer HTML (opsional)</Label><Input value={pageConfig.footerHtml || ""} onChange={e=>setPageConfig(c=>({...c, footerHtml:e.target.value}))} placeholder="Footer • halaman" className="h-7 text-[13px] font-mono" /></div>
               </div>
-              <div className="mt-3 flex items-center gap-1 bg-[#f6f5f4] p-1 rounded-[10px] w-fit">
+              <div className="mt-3 flex items-center gap-1 bg-[#f6f5f4] p-1 rounded-[8px] w-fit">
                 {(["office", "structure", "json"] as const).map(m => (
                   <button key={m} onClick={() => setOfficeMode(m)} className={`px-3 py-1.5 rounded-[8px] text-xs font-medium transition-colors flex items-center gap-1.5 ${officeMode === m ? "bg-white shadow text-[#111] border border-[#e6e6e6]" : "text-[#6b7280] hover:text-[#111]"}`}>
                     {m === "office" && <FileText size={12} />}
@@ -860,13 +860,13 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
               <>
                 {/* Toolbar exact snippet + pageSize/ruler/zoom */}
                 <div className="sticky top-0 z-10 bg-gradient-to-b from-[#fcfcfc] to-[#f9fafb] border-y border-[#e6e6e6]">
-                  <div className="p-2.5 flex flex-wrap items-center gap-1.5">
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                  <div className="p-1.5 flex flex-wrap items-center gap-1.5">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm">
                       <span className="hidden xl:flex items-center px-2 text-[10px] font-semibold tracking-wide text-[#9ca3af] uppercase">Riwayat</span>
                       <button type="button" title="Undo (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()} disabled={!can(() => editor.can().chain().focus().undo().run())} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center disabled:opacity-30 transition-colors"><Undo size={14} /></button>
                       <button type="button" title="Redo (Ctrl+Y)" onClick={() => editor.chain().focus().redo().run()} disabled={!can(() => editor.can().chain().focus().redo().run())} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center disabled:opacity-30 transition-colors"><Redo size={14} /></button>
                     </div>
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm">
                       <span className="hidden xl:flex items-center px-1 text-[10px] font-semibold tracking-wide text-[#9ca3af] uppercase">Format</span>
                       <button type="button" title="Bold (Ctrl+B)" onClick={() => editor.chain().focus().toggleBold().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('bold') ? 'bg-[#111827] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Bold size={14} /></button>
                       <button type="button" title="Italic (Ctrl+I)" onClick={() => editor.chain().focus().toggleItalic().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('italic') ? 'bg-[#111827] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Italic size={14} /></button>
@@ -876,20 +876,20 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                       <button type="button" title="Clear formatting" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} className="w-7 h-7 rounded-[6px] hover:bg-amber-50 hover:text-amber-600 flex items-center justify-center text-[#6b7280] transition-colors"><Eraser size={14} /></button>
                     </div>
                     {/* Group: Font Family & Size */}
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm items-center">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm items-center">
                       <span className="hidden xl:flex items-center px-1 text-[10px] font-semibold tracking-wide text-[#9ca3af] uppercase">Font</span>
-                      <select value={fontFamily} onChange={e => { const v = e.target.value; setFontFamily(v); if (v) (editor.chain().focus() as any).setFontFamily(v).run(); else (editor.chain().focus() as any).unsetFontFamily().run() }} className="h-7 text-xs border-0 bg-transparent pr-1 focus:ring-0 focus:outline-none cursor-pointer max-w-[110px]" title="Font Family">
+                      <select value={fontFamily} onChange={e => { const v = e.target.value; setFontFamily(v); if (v) (editor.chain().focus() as any).setFontFamily(v).run(); else (editor.chain().focus() as any).unsetFontFamily().run() }} className="h-7 text-[13px] border-0 bg-transparent pr-1 focus:ring-0 focus:outline-none cursor-pointer max-w-[110px]" title="Font Family">
                         {FONT_FAMILIES.map(f => <option key={f.label} value={f.value} style={{ fontFamily: f.value || undefined }}>{f.label}</option>)}
                       </select>
                       <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center" />
-                      <select value={fontSize} onChange={e => { const v = e.target.value; setFontSize(v); if (v) (editor.chain().focus() as any).setFontSize(v).run(); else (editor.chain().focus() as any).unsetFontSize().run() }} className="h-7 text-xs border-0 bg-transparent pr-1 focus:ring-0 focus:outline-none cursor-pointer w-[68px]" title="Font Size">
+                      <select value={fontSize} onChange={e => { const v = e.target.value; setFontSize(v); if (v) (editor.chain().focus() as any).setFontSize(v).run(); else (editor.chain().focus() as any).unsetFontSize().run() }} className="h-7 text-[13px] border-0 bg-transparent pr-1 focus:ring-0 focus:outline-none cursor-pointer w-[68px]" title="Font Size">
                         {FONT_SIZES.map(f => <option key={f.label} value={f.value}>{f.label}{f.value ? ` (${f.value})` : ''}</option>)}
                       </select>
                     </div>
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm items-center">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm items-center">
                       <div className="hidden lg:flex items-center gap-1.5 px-2 border-r border-[#e6e6e6] mr-1">
                         <Type size={12} className="text-[#6b7280]" />
-                        <select value={getHeadingLevel()} onChange={e => { const v = e.target.value; if (v === 'p') editor.chain().focus().setParagraph().run(); else editor.chain().focus().toggleHeading({ level: Number(v) as any }).run(); }} className="h-7 text-xs font-medium border-0 bg-transparent pr-2 focus:ring-0 focus:outline-none cursor-pointer">
+                        <select value={getHeadingLevel()} onChange={e => { const v = e.target.value; if (v === 'p') editor.chain().focus().setParagraph().run(); else editor.chain().focus().toggleHeading({ level: Number(v) as any }).run(); }} className="h-7 text-[13px] font-medium border-0 bg-transparent pr-2 focus:ring-0 focus:outline-none cursor-pointer">
                           <option value="p">Paragraf</option><option value="1">Heading 1</option><option value="2">Heading 2</option><option value="3">Heading 3</option><option value="4">H4</option><option value="5">H5</option><option value="6">H6</option>
                         </select>
                       </div>
@@ -899,13 +899,13 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                       <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center hidden sm:block" />
                       <button type="button" title="Blockquote" onClick={() => editor.chain().focus().toggleBlockquote().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('blockquote') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Quote size={14} /></button>
                     </div>
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm">
                       <button type="button" title="Align left" onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isAlignActive('left') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#6b7280]'}`}><AlignLeft size={14} /></button>
                       <button type="button" title="Align center" onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isAlignActive('center') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#6b7280]'}`}><AlignCenter size={14} /></button>
                       <button type="button" title="Align right" onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isAlignActive('right') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#6b7280]'}`}><AlignRight size={14} /></button>
                       <button type="button" title="Justify" onClick={() => editor.chain().focus().setTextAlign('justify').run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isAlignActive('justify') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#6b7280]'}`}><AlignJustify size={14} /></button>
                     </div>
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm">
                       <button type="button" title="Bullet list" onClick={() => editor.chain().focus().toggleBulletList().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('bulletList') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><List size={14} /></button>
                       <button type="button" title="Ordered list" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('orderedList') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><ListOrdered size={14} /></button>
                       <div className="w-px h-5 bg-[#e6e6e6] mx-1 self-center" />
@@ -914,7 +914,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                     </div>
                     <SpacingDropdown editor={editor} tick={tick} />
                     {/* Group: Color & Highlight */}
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm items-center">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm items-center">
                       <div className="flex items-center gap-1">
                         <input type="color" value={textColor} onChange={e=>{setTextColor(e.target.value); (editor.chain().focus() as any).setColor(e.target.value).run()}} className="w-7 h-7 rounded-[6px] border border-[#e6e6e6] p-0.5 cursor-pointer" title="Warna teks" />
                         <input type="color" value={highlightColor} onChange={e=>setHighlightColor(e.target.value)} className="w-7 h-7 rounded-[6px] border border-[#e6e6e6] p-0.5 cursor-pointer" title="Highlight" />
@@ -922,14 +922,14 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                       <button type="button" title="Highlight" onClick={()=>editor.chain().focus().toggleHighlight({ color: highlightColor }).run()} className={`w-7 h-7 rounded-[6px] flex items-center justify-center ${isActive('highlight') ? 'bg-amber-400 text-white' : 'hover:bg-amber-50 text-[#374151]'}`}><Highlighter size={14}/></button>
                       <button type="button" title="Hapus warna" onClick={()=>{editor.chain().focus().unsetColor().run(); editor.chain().focus().unsetHighlight().run()}} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><Eraser size={12}/></button>
                     </div>
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm">
                       <button type="button" title="Checklist" onClick={()=>{try{(editor.chain().focus() as any).toggleTaskList().run()}catch{editor.chain().focus().toggleBulletList().run()}}} className={`w-7 h-7 rounded-[6px] flex items-center justify-center ${isActive('taskList') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><ListChecks size={14}/></button>
                       <button type="button" title="Superscript" onClick={()=>{try{(editor.chain().focus() as any).toggleSuperscript().run()}catch{}}} className={`w-7 h-7 rounded-[6px] flex items-center justify-center text-xs font-bold ${isActive('superscript') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>x²</button>
                       <button type="button" title="Subscript" onClick={()=>{try{(editor.chain().focus() as any).toggleSubscript().run()}catch{}}} className={`w-7 h-7 rounded-[6px] flex items-center justify-center text-xs font-bold ${isActive('subscript') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>x₂</button>
                       <button type="button" title="Find & Replace (Ctrl+F)" onClick={()=>setFindOpen(!findOpen)} className={`w-7 h-7 rounded-[6px] flex items-center justify-center ${findOpen ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Search size={14}/></button>
                       <button type="button" title="Outline" onClick={()=>setShowOutline(!showOutline)} className={`w-7 h-7 rounded-[6px] flex items-center justify-center ${showOutline ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Layers size={14}/></button>
                     </div>
-                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[10px] p-1 shadow-sm">
+                    <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm">
                       <button type="button" title="Insert table 3x3" onClick={() => { editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); showToast('Tabel 3×3 ditambahkan', 'success') }} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><TableIcon size={14} /></button>
                       <button type="button" title="Atur link (modal)" onClick={openLinkModal} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('link') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Link2 size={14} /></button>
                       <button type="button" title="Sisipkan gambar (modal)" onClick={openImageModal} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><ImageIcon size={14} /></button>
@@ -953,7 +953,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
 
                 {/* Ruler — Template only (Components tidak punya ruler) */}
                 {pageConfig.showRuler && !pageConfig.isPageless && (
-                  <div className="px-4 py-2 bg-[#e8ecef] border-y border-[#e6e6e6] flex justify-center">
+                  <div className="px-2.5 py-1.5 bg-[#e8ecef] border-y border-[#e6e6e6] flex justify-center">
                     <EditorRuler pageConfig={pageConfig} />
                   </div>
                 )}
@@ -964,7 +964,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                       <EditorOutline editor={editor} />
                     </div>
                   )}
-                  <div className="bg-[#e8ecef] p-4 md:p-6 flex justify-center overflow-auto" style={{ minHeight: 520 }}>
+                  <div className="bg-[#e8ecef] p-2.5 md:p-3 flex justify-center overflow-auto" style={{ minHeight: 520 }}>
                     <EditorCanvas pageConfig={pageConfig} variant={pageConfig.isPageless ? "continuous" : "page"} className="w-full flex justify-center">
                       <div className="w-full">
                         <div className="h-7 bg-white border-b border-[#e6e6e6] flex items-center justify-between px-4 text-[10px] text-[#9ca3af] font-mono rounded-t">
@@ -977,7 +977,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                       </div>
                     </EditorCanvas>
                   </div>
-                  <div className="px-4 pb-3 bg-[#e8ecef]">
+                  <div className="px-2.5 pb-2.5 bg-[#e8ecef]">
                     <EditorStatusBar editor={editor} pageConfig={pageConfig} variant={pageConfig.isPageless ? "continuous" : "page"} saved={saved} onZoomChange={(z)=>setPageConfig(c=>({...c, zoom:z}))} />
                   </div>
                 </div>
@@ -990,42 +990,42 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                 {/* Table Ops */}
                 {editor && editor.isActive('table') && (
                   <div className="border-t border-[#e6e6e6] bg-gradient-to-b from-white to-[#fcfcfc]">
-                    <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e6e6e6]">
+                    <div className="flex items-center justify-between px-2.5 py-2 bg-white border-b border-[#e6e6e6]">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-[10px] bg-[#0075de] text-white flex items-center justify-center shadow-sm"><Grid3x3 size={16} /></div>
+                        <div className="w-8 h-8 rounded-[8px] bg-[#0075de] text-white flex items-center justify-center shadow-sm"><Grid3x3 size={16} /></div>
                         <div><div className="text-[13px] font-bold text-[#111] flex items-center gap-2">Operasi Tabel <span className="px-2 py-0.5 rounded-full bg-[#eff6ff] border border-[#dbeafe] text-[#0075de] text-[10px] font-bold">AKTIF</span></div><div className="text-[11px] text-[#6b7280]">Atur baris, kolom, gabung cell, border & ukuran</div></div>
                       </div>
                       <button type="button" onClick={() => setTableOpsCollapsed(!tableOpsCollapsed)} className="w-8 h-8 rounded-full bg-white border border-[#e6e6e6] hover:bg-[#f6f5f4] flex items-center justify-center">{tableOpsCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}</button>
                     </div>
                     {!tableOpsCollapsed && (
-                      <div className="p-4 space-y-4">
+                      <div className="p-4 space-y-2.5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-                            <div className="flex items-center gap-2 mb-3"><div className="w-7 h-7 rounded-[8px] bg-[#eff6ff] border border-[#dbeafe] text-[#0075de] flex items-center justify-center"><Rows3 size={13} /></div><span className="text-xs font-bold text-[#111]">Baris</span><Badge variant="secondary" className="ml-auto text-[10px]">Rows</Badge></div>
+                          <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+                            <div className="flex items-center gap-1.5 mb-2"><div className="w-7 h-7 rounded-[8px] bg-[#eff6ff] border border-[#dbeafe] text-[#0075de] flex items-center justify-center"><Rows3 size={13} /></div><span className="text-xs font-bold text-[#111]">Baris</span><Badge variant="secondary" className="ml-auto text-[10px]">Rows</Badge></div>
                             <div className="grid grid-cols-3 gap-1.5">
-                              <button type="button" onClick={() => { editor.chain().focus().addRowBefore().run(); showToast('Baris ditambahkan di atas', 'success') }} className="h-8 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Sebelum</button>
-                              <button type="button" onClick={() => { editor.chain().focus().addRowAfter().run(); showToast('Baris ditambahkan di bawah', 'success') }} className="h-8 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Sesudah</button>
-                              <button type="button" onClick={() => { editor.chain().focus().deleteRow().run(); showToast('Baris dihapus', 'info') }} className="h-8 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-[8px] hover:bg-red-100 flex items-center justify-center gap-1"><Trash size={11} /> Hapus</button>
+                              <button type="button" onClick={() => { editor.chain().focus().addRowBefore().run(); showToast('Baris ditambahkan di atas', 'success') }} className="h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Sebelum</button>
+                              <button type="button" onClick={() => { editor.chain().focus().addRowAfter().run(); showToast('Baris ditambahkan di bawah', 'success') }} className="h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Sesudah</button>
+                              <button type="button" onClick={() => { editor.chain().focus().deleteRow().run(); showToast('Baris dihapus', 'info') }} className="h-7 text-[13px] font-medium bg-red-50 text-red-600 border border-red-200 rounded-[8px] hover:bg-red-100 flex items-center justify-center gap-1"><Trash size={11} /> Hapus</button>
                             </div>
                             <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex items-center gap-2">
                               <span className="text-[11px] font-semibold text-[#374151] flex items-center gap-1"><MoveVertical size={11} /> Tinggi Baris</span>
-                              <input value={rowHeight} onChange={e => setRowHeight(e.target.value)} placeholder="48px" className="flex-1 h-7 text-xs border border-[#e6e6e6] rounded-[6px] px-2 bg-white" />
+                              <input value={rowHeight} onChange={e => setRowHeight(e.target.value)} placeholder="48px" className="flex-1 h-7 text-[13px] border border-[#e6e6e6] rounded-[6px] px-2 bg-white" />
                               <button type="button" onClick={applyRowHeight} className="h-7 px-3 text-xs font-medium bg-[#111827] text-white rounded-[6px] hover:bg-black">Set</button>
                               <button type="button" onMouseDown={handleRowDragMouseDown} className="h-7 w-7 rounded-[6px] border border-[#e6e6e6] bg-white hover:bg-[#f6f5f4] flex items-center justify-center cursor-row-resize" title="Drag untuk ubah tinggi baris"><GripVertical size={12} /></button>
                             </div>
                           </div>
-                          <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-                            <div className="flex items-center gap-2 mb-3"><div className="w-7 h-7 rounded-[8px] bg-violet-50 border border-violet-100 text-violet-600 flex items-center justify-center"><Columns3 size={13} /></div><span className="text-xs font-bold text-[#111]">Kolom</span><Badge variant="secondary" className="ml-auto text-[10px]">Columns</Badge></div>
+                          <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+                            <div className="flex items-center gap-1.5 mb-2"><div className="w-7 h-7 rounded-[8px] bg-violet-50 border border-violet-100 text-violet-600 flex items-center justify-center"><Columns3 size={13} /></div><span className="text-xs font-bold text-[#111]">Kolom</span><Badge variant="secondary" className="ml-auto text-[10px]">Columns</Badge></div>
                             <div className="grid grid-cols-3 gap-1.5">
-                              <button type="button" onClick={() => { editor.chain().focus().addColumnBefore().run(); showToast('Kolom ditambahkan di kiri', 'success') }} className="h-8 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Kiri</button>
-                              <button type="button" onClick={() => { editor.chain().focus().addColumnAfter().run(); showToast('Kolom ditambahkan di kanan', 'success') }} className="h-8 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Kanan</button>
-                              <button type="button" onClick={() => { editor.chain().focus().deleteColumn().run(); showToast('Kolom dihapus', 'info') }} className="h-8 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-[8px] hover:bg-red-100 flex items-center justify-center gap-1"><Trash size={11} /> Hapus</button>
+                              <button type="button" onClick={() => { editor.chain().focus().addColumnBefore().run(); showToast('Kolom ditambahkan di kiri', 'success') }} className="h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Kiri</button>
+                              <button type="button" onClick={() => { editor.chain().focus().addColumnAfter().run(); showToast('Kolom ditambahkan di kanan', 'success') }} className="h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Kanan</button>
+                              <button type="button" onClick={() => { editor.chain().focus().deleteColumn().run(); showToast('Kolom dihapus', 'info') }} className="h-7 text-[13px] font-medium bg-red-50 text-red-600 border border-red-200 rounded-[8px] hover:bg-red-100 flex items-center justify-center gap-1"><Trash size={11} /> Hapus</button>
                             </div>
                             <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex items-center gap-1.5 text-[11px] text-[#6b7280]"><MoveHorizontal size={11} className="text-[#0075de]" /> Drag handle di tepi kolom (biru, cursor col-resize) untuk ubah lebar</div>
                           </div>
                         </div>
-                        <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-                          <div className="flex items-center gap-2 mb-3"><div className="w-7 h-7 rounded-[8px] bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center"><Layers size={13} /></div><span className="text-xs font-bold text-[#111]">Aksi Tabel</span><span className="text-[11px] text-[#6b7280] hidden sm:inline">— pilih cell lalu eksekusi</span><button type="button" onClick={() => { editor.chain().focus().deleteTable().run(); showToast('Tabel dihapus', 'info') }} className="ml-auto h-7 px-3 text-xs font-medium bg-red-600 text-white rounded-[8px] hover:bg-red-700 flex items-center gap-1.5"><Trash2 size={12} /> Hapus Tabel</button></div>
+                        <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+                          <div className="flex items-center gap-1.5 mb-2"><div className="w-7 h-7 rounded-[8px] bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center"><Layers size={13} /></div><span className="text-xs font-bold text-[#111]">Aksi Tabel</span><span className="text-[11px] text-[#6b7280] hidden sm:inline">— pilih cell lalu eksekusi</span><button type="button" onClick={() => { editor.chain().focus().deleteTable().run(); showToast('Tabel dihapus', 'info') }} className="ml-auto h-7 px-3 text-xs font-medium bg-red-600 text-white rounded-[8px] hover:bg-red-700 flex items-center gap-1.5"><Trash2 size={12} /> Hapus Tabel</button></div>
                           <div className="flex flex-wrap gap-1.5">
                             <button type="button" onClick={() => { editor.chain().focus().mergeCells().run(); showToast('Cell digabung', 'success') }} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center gap-1.5"><Combine size={12} /> Gabung Cell</button>
                             <button type="button" onClick={() => { editor.chain().focus().splitCell().run(); showToast('Cell dipecah', 'success') }} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center gap-1.5"><Split size={12} /> Pecah Cell</button>
@@ -1037,7 +1037,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                           </div>
                         </div>
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                          <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)] space-y-3">
+                          <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)] space-y-2">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-[8px] bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center"><Brush size={13} /></div><span className="text-xs font-bold text-[#111]">Gaya Cell</span><Badge variant="outline" className="ml-auto text-[10px]">Cell</Badge></div>
                             <div className="flex items-center gap-2">
                               <div className="flex items-center gap-1.5 border border-[#e6e6e6] rounded-[8px] px-2 py-1.5 bg-[#f9fafb] flex-1">
@@ -1048,30 +1048,30 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                                 <button type="button" onClick={() => { editor.chain().focus().setCellAttribute('backgroundColor', null).run(); showToast('Background dihapus', 'info') }} className="h-6 px-2 text-xs border border-[#e6e6e6] rounded-[6px] bg-white hover:bg-[#f6f5f4]">Hapus</button>
                               </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <select onChange={e => { const v = e.target.value; if (v) { editor.chain().focus().setCellAttribute('verticalAlign', v).run(); showToast(`Vertical: ${v}`, 'success') } }} defaultValue="" className="h-8 text-xs border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="" disabled>Align Vertical</option><option value="top">Top</option><option value="middle">Middle</option><option value="bottom">Bottom</option></select>
-                              <div className="flex gap-1"><input value={cellHeight} onChange={e => setCellHeight(e.target.value)} placeholder="Tinggi cell 40px" className="flex-1 h-8 text-xs border border-[#e6e6e6] rounded-[8px] px-2 bg-white" /><button type="button" onClick={applyCellHeight} className="h-8 px-3 text-xs font-medium bg-[#111827] text-white rounded-[8px] hover:bg-black">Set</button></div>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <select onChange={e => { const v = e.target.value; if (v) { editor.chain().focus().setCellAttribute('verticalAlign', v).run(); showToast(`Vertical: ${v}`, 'success') } }} defaultValue="" className="h-7 text-[13px] border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="" disabled>Align Vertical</option><option value="top">Top</option><option value="middle">Middle</option><option value="bottom">Bottom</option></select>
+                              <div className="flex gap-1"><input value={cellHeight} onChange={e => setCellHeight(e.target.value)} placeholder="Tinggi cell 40px" className="flex-1 h-7 text-[13px] border border-[#e6e6e6] rounded-[8px] px-2 bg-white" /><button type="button" onClick={applyCellHeight} className="h-8 px-3 text-xs font-medium bg-[#111827] text-white rounded-[8px] hover:bg-black">Set</button></div>
                             </div>
                           </div>
-                          <div className="bg-white border border-[#e6e6e6] rounded-[12px] p-3 shadow-[0_1px_6px_rgba(0,0,0,0.04)] space-y-3">
+                          <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)] space-y-2">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-[8px] bg-[#f5f3ff] border border-violet-100 text-violet-600 flex items-center justify-center"><Palette size={13} /></div><span className="text-xs font-bold text-[#111]">Border Cell</span><span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">7 posisi</span></div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-3 gap-1.5">
                               <div className="flex items-center gap-1.5 border border-[#e6e6e6] rounded-[8px] px-2 py-1.5 bg-white"><Grid3x3 size={12} className="text-[#6b7280] shrink-0" /><input type="color" value={borderColor} onChange={e => setBorderColor(e.target.value)} className="w-6 h-6 p-0 border-0 rounded-[6px] cursor-pointer" /></div>
-                              <select value={borderWidth} onChange={e => setBorderWidth(e.target.value)} className="h-8 text-xs border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="1px">1px</option><option value="2px">2px</option><option value="3px">3px</option><option value="4px">4px</option></select>
-                              <select value={borderStyle} onChange={e => setBorderStyle(e.target.value)} className="h-8 text-xs border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option><option value="hidden">Hidden</option></select>
+                              <select value={borderWidth} onChange={e => setBorderWidth(e.target.value)} className="h-7 text-[13px] border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="1px">1px</option><option value="2px">2px</option><option value="3px">3px</option><option value="4px">4px</option></select>
+                              <select value={borderStyle} onChange={e => setBorderStyle(e.target.value)} className="h-7 text-[13px] border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option><option value="hidden">Hidden</option></select>
                             </div>
                             <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
                               {[
                                 { id: 'none', label: 'Tanpa', icon: Square }, { id: 'left', label: 'Kiri', icon: PanelLeft }, { id: 'right', label: 'Kanan', icon: PanelRight }, { id: 'leftRight', label: 'Kiri+Kanan', icon: Columns2 },
                                 { id: 'top', label: 'Atas', icon: PanelTop }, { id: 'bottom', label: 'Bawah', icon: PanelBottom }, { id: 'outer', label: 'Luar', icon: Frame },
                               ].map(p => (
-                                <button key={p.id} type="button" onClick={() => applyBorderPreset(p.id)} className="flex flex-col items-center gap-1 p-2 rounded-[10px] border border-[#e6e6e6] bg-white hover:border-[#0075de] hover:bg-[#eff6ff] hover:text-[#0075de] group transition-colors">
+                                <button key={p.id} type="button" onClick={() => applyBorderPreset(p.id)} className="flex flex-col items-center gap-1 p-2 rounded-[8px] border border-[#e6e6e6] bg-white hover:border-[#0075de] hover:bg-[#eff6ff] hover:text-[#0075de] group transition-colors">
                                   <p.icon size={16} className="text-[#6b7280] group-hover:text-[#0075de]" /><span className="text-[10px] font-semibold leading-none">{p.label}</span>
                                 </button>
                               ))}
                             </div>
                             <div className="flex gap-1.5">
-                              <button type="button" onClick={() => applyBorderPreset('all')} className="flex-1 h-7 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-[#f9fafb] hover:bg-white flex items-center justify-center gap-1"><Grid3x3 size={12} /> Semua sisi</button>
+                              <button type="button" onClick={() => applyBorderPreset('all')} className="flex-1 h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-[#f9fafb] hover:bg-white flex items-center justify-center gap-1"><Grid3x3 size={12} /> Semua sisi</button>
                               <button type="button" onClick={() => applyBorderPreset('none')} className="h-7 px-3 text-xs border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200">Hapus Border</button>
                             </div>
                           </div>
@@ -1080,7 +1080,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                     )}
                   </div>
                 )}
-                <div className="px-4 py-2 bg-[#f9fafb] border-t border-[#e6e6e6] flex items-center justify-between">
+                <div className="px-2.5 py-1.5 bg-[#f9fafb] border-t border-[#e6e6e6] flex items-center justify-between">
                   <div className="text-[11px] text-[#6b7280] flex items-center gap-1.5"><Info size={12} /> Data terikat & Repeater/Condition akan tersisip tepat di posisi kursor</div>
                   <button type="button" onClick={() => { const rect = editorContainerRef.current?.getBoundingClientRect(); const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2; const y = rect ? rect.top + 120 : window.innerHeight / 2; savedPosRef.current = editor.state.selection.from; setContextMenu({ x, y }) }} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0075de] hover:text-[#005bb5]"><Plus size={12} /> Tambah data terikat</button>
                 </div>
@@ -1089,11 +1089,11 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
 
             {officeMode === "structure" && (
               <CardContent>
-                <div className="rounded-[12px] border-2 border-dashed border-[#e6e6e6] bg-[#fafafa] p-4 min-h-[380px]">
-                  <div className="text-[11px] font-semibold tracking-widest uppercase text-[#9ca3af] mb-3 flex items-center gap-1.5"><Layers size={12} /> Structure — daftar komponen & repeater/condition</div>
+                <div className="rounded-[8px] border-2 border-dashed border-[#e6e6e6] bg-[#fafafa] p-2.5 min-h-[300px]">
+                  <div className="text-[11px] font-semibold tracking-widest uppercase text-[#9ca3af] mb-2 flex items-center gap-1.5"><Layers size={12} /> Structure — daftar komponen & repeater/condition</div>
                   <div className="space-y-2">
                     {usages.length === 0 ? <div className="py-12 text-center text-xs text-[#9ca3af]">Belum ada component — tambah dari palette kiri atau klik kanan di Office Doc</div> : usages.map((u, idx) => (
-                      <div key={idx} onClick={() => setSelectedUsageIdx(idx)} className={`p-3 rounded-[10px] border text-xs cursor-pointer transition-colors ${selectedUsageIdx === idx ? "bg-[#0075de] text-white border-[#0075de] shadow" : "bg-white border-[#e6e6e6] hover:border-[#0075de]/30"}`}>
+                      <div key={idx} onClick={() => setSelectedUsageIdx(idx)} className={`p-2.5 rounded-[8px] border text-xs cursor-pointer transition-colors ${selectedUsageIdx === idx ? "bg-[#0075de] text-white border-[#0075de] shadow" : "bg-white border-[#e6e6e6] hover:border-[#0075de]/30"}`}>
                         <div className="flex items-center gap-2">
                           <span className={`w-6 h-6 rounded-[6px] flex items-center justify-center text-[11px] font-bold shrink-0 ${selectedUsageIdx === idx ? "bg-white/20 text-white" : "bg-[#f6f5f4] text-[#6b7280]"}`}>{u.componentId}</span>
                           <span className="font-medium flex-1 truncate">{u.componentName}</span>
@@ -1111,7 +1111,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
             {officeMode === "json" && (
               <CardContent>
                 <Label className="text-[11px]">Raw JSON — contentHtml + componentsJson</Label>
-                <Textarea className="font-mono text-[11px] min-h-[420px]" value={JSON.stringify({ contentHtml: form.contentHtml, usages }, null, 2)} onChange={e => { try { const parsed = JSON.parse(e.target.value); if (parsed.contentHtml) { setForm(prev => ({ ...prev, contentHtml: parsed.contentHtml })); editor?.commands.setContent(parsed.contentHtml) } if (parsed.usages) setUsages(parsed.usages) } catch {} }} />
+                <Textarea className="font-mono text-[11px] min-h-[320px]" value={JSON.stringify({ contentHtml: form.contentHtml, usages }, null, 2)} onChange={e => { try { const parsed = JSON.parse(e.target.value); if (parsed.contentHtml) { setForm(prev => ({ ...prev, contentHtml: parsed.contentHtml })); editor?.commands.setContent(parsed.contentHtml) } if (parsed.usages) setUsages(parsed.usages) } catch {} }} />
               </CardContent>
             )}
           </Card>
@@ -1119,25 +1119,25 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
           {/* Live Preview — Render Engine */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2"><Eye size={14} className="text-[#0075de]" /> Live Preview — Render Engine</CardTitle>
+              <CardTitle className="text-[13px] flex items-center gap-2"><Eye size={14} className="text-[#0075de]" /> Live Preview — Render Engine</CardTitle>
               <CardDescription className="text-[11px]">Pratinjau 1:1 Office Doc + data sample di bawah. Coba ganti status jadi inactive untuk lihat Condition.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               <div>
                 <Label className="text-xs">Data JSON Sample (Binding)</Label>
-                <Textarea className="font-mono text-[11px] min-h-[140px]" value={previewData} onChange={e => setPreviewData(e.target.value)} placeholder='{"employees":[{"name":"Afdal"}]}' />
+                <Textarea className="font-mono text-[11px] min-h-[110px]" value={previewData} onChange={e => setPreviewData(e.target.value)} placeholder='{"employees":[{"name":"Afdal"}]}' />
               </div>
-              <div className="border rounded-[12px] bg-white overflow-hidden shadow-sm">
+              <div className="border rounded-[8px] bg-white overflow-hidden shadow-sm">
                 <div className="h-8 bg-[#f6f5f4] border-b flex items-center px-3 gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-400"></span><span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span><span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
                   <span className="ml-2 text-[11px] text-[#6b7280] font-mono">preview — Document → Repeater → Condition</span>
                   <span className="ml-auto text-[11px] text-[#6b7280]">{previewHtml.length} chars</span>
                 </div>
-                <div className="p-4 max-h-[520px] overflow-auto bg-[#e5e7eb]">
+                <div className="p-2.5 max-h-[520px] overflow-auto bg-[#e5e7eb]">
                   <div className="bg-white shadow-lg rounded-[4px] min-h-[300px] p-6 text-[13px] leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewHtml || "<div style='padding:24px; text-align:center; color:#9ca3af;'>Preview kosong</div>" }} />
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 <Button size="sm" variant="outline" onClick={() => { const w = window.open("", "_blank"); if (w) { w.document.write(`<html><head><title>${form.name}</title><style>body{font-family:Inter, sans-serif; padding:24px;}</style></head><body>${previewHtml}</body></html>`); w.document.close(); w.print() } }}><Printer size={14} /> Cetak</Button>
                 <Button size="sm" onClick={async () => {
                   try {
@@ -1163,22 +1163,22 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
         </div>
 
         {/* RIGHT: Properties */}
-        <Card className="col-span-12 lg:col-span-3 sticky top-4 order-3">
+        <Card className="col-span-12 lg:col-span-3 sticky top-2.5 order-3">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2"><Settings2 size={14} className="text-[#0075de]" /> Properties</CardTitle>
+            <CardTitle className="text-[13px] flex items-center gap-2"><Settings2 size={14} className="text-[#0075de]" /> Properties</CardTitle>
             <CardDescription className="text-[11px]">Pilih komponen di tengah atau daftar di Structure untuk edit mapping, loop & condition.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2.5">
             {usages.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-[#e6e6e6] rounded-[10px] bg-[#fafafa]">
-                <div className="w-10 h-10 rounded-full bg-white border border-[#e6e6e6] flex items-center justify-center mx-auto mb-2"><Boxes size={16} className="text-[#9ca3af]" /></div>
+              <div className="text-center py-5 border border-dashed border-[#e6e6e6] rounded-[8px] bg-[#fafafa]">
+                <div className="w-8 h-8 rounded-full bg-white border border-[#e6e6e6] flex items-center justify-center mx-auto mb-1.5"><Boxes size={16} className="text-[#9ca3af]" /></div>
                 <div className="text-xs font-semibold text-[#374151]">Belum ada komponen</div>
                 <div className="text-[11px] text-[#6b7280] mt-1 px-4">Tambah dari palette kiri atau klik kanan di Office Doc → Insert Component / Repeater / Condition</div>
               </div>
             ) : (
-              <div className="space-y-3 max-h-[60vh] overflow-auto pr-1">
+              <div className="space-y-2 max-h-[60vh] overflow-auto pr-1">
                 {usages.map((u, idx) => (
-                  <div key={idx} onClick={() => setSelectedUsageIdx(idx)} className={`rounded-[12px] border p-3 cursor-pointer transition-colors ${selectedUsageIdx === idx ? "bg-[#eff6ff] border-[#0075de] shadow-sm" : "bg-[#fafafa] border-[#e6e6e6] hover:border-[#0075de]/30 hover:bg-white"}`}>
+                  <div key={idx} onClick={() => setSelectedUsageIdx(idx)} className={`rounded-[8px] border p-2.5 cursor-pointer transition-colors ${selectedUsageIdx === idx ? "bg-[#eff6ff] border-[#0075de] shadow-sm" : "bg-[#fafafa] border-[#e6e6e6] hover:border-[#0075de]/30 hover:bg-white"}`}>
                     <div className="flex items-center justify-between">
                       <div className="font-bold text-xs flex items-center gap-2"><Boxes size={12} className={selectedUsageIdx === idx ? "text-[#0075de]" : "text-[#6b7280]"} />{u.componentName} <Badge variant="secondary" className="text-[10px]">{u.componentId}</Badge></div>
                       <div className="flex gap-1">
@@ -1188,7 +1188,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                       </div>
                     </div>
                     {selectedUsageIdx === idx && (
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-2 space-y-2">
                         {Object.entries(u.dataMapping).map(([k, v]) => (
                           <div key={k} className="space-y-1">
                             <Label className="text-[11px] font-mono">{k}</Label>
@@ -1196,7 +1196,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                               <Select value={v.source} onChange={e => { const next = [...usages]; next[idx].dataMapping[k].source = e.target.value as any; setUsages(next) }}>
                                 <option value="manual">Manual</option><option value="administrasi">Administrasi</option><option value="tabel">Tabel Global</option>
                               </Select>
-                              <Input value={v.value} onChange={e => { const next = [...usages]; next[idx].dataMapping[k].value = e.target.value; setUsages(next) }} placeholder={v.source === "manual" ? "ketik manual" : v.source === "tabel" ? "nama_tabel.kolom" : "field administrasi"} className="h-7 text-xs" />
+                              <Input value={v.value} onChange={e => { const next = [...usages]; next[idx].dataMapping[k].value = e.target.value; setUsages(next) }} placeholder={v.source === "manual" ? "ketik manual" : v.source === "tabel" ? "nama_tabel.kolom" : "field administrasi"} className="h-7 text-[13px]" />
                             </div>
                           </div>
                         ))}
@@ -1217,15 +1217,15 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                         <div className="pt-2 border-t border-[#e6e6e6] space-y-2">
                           <div className="text-[11px] font-semibold flex items-center gap-1"><GitBranch size={11} className="text-violet-600" /> Condition / IF</div>
                           <div className="grid grid-cols-3 gap-1">
-                            <Input value={u.conditionConfig?.field || ""} onChange={e => { const next = [...usages]; if (!next[idx].conditionConfig) next[idx].conditionConfig = { field: "", operator: "equals", value: "" }; next[idx].conditionConfig!.field = e.target.value; setUsages(next) }} placeholder="field" className="h-7 text-xs" />
+                            <Input value={u.conditionConfig?.field || ""} onChange={e => { const next = [...usages]; if (!next[idx].conditionConfig) next[idx].conditionConfig = { field: "", operator: "equals", value: "" }; next[idx].conditionConfig!.field = e.target.value; setUsages(next) }} placeholder="field" className="h-7 text-[13px]" />
                             <Select value={u.conditionConfig?.operator || "equals"} onChange={e => { const next = [...usages]; if (!next[idx].conditionConfig) next[idx].conditionConfig = { field: "", operator: "equals", value: "" }; next[idx].conditionConfig!.operator = e.target.value as any; setUsages(next) }}>
                               <option value="equals">equals</option><option value="not_equals">not equals</option><option value="contains">contains</option>
                             </Select>
-                            <Input value={u.conditionConfig?.value || ""} onChange={e => { const next = [...usages]; if (!next[idx].conditionConfig) next[idx].conditionConfig = { field: "", operator: "equals", value: "" }; next[idx].conditionConfig!.value = e.target.value; setUsages(next) }} placeholder="value" className="h-7 text-xs" />
+                            <Input value={u.conditionConfig?.value || ""} onChange={e => { const next = [...usages]; if (!next[idx].conditionConfig) next[idx].conditionConfig = { field: "", operator: "equals", value: "" }; next[idx].conditionConfig!.value = e.target.value; setUsages(next) }} placeholder="value" className="h-7 text-[13px]" />
                           </div>
                           <div className="flex gap-1">
-                            <Button size="sm" variant="ghost" className="flex-1 h-7 text-xs" onClick={() => { const next = [...usages]; delete (next[idx] as any).conditionConfig; setUsages(next); showToast('Condition dihapus', 'info') }}>Hapus Condition</Button>
-                            {!u.conditionConfig && <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={() => { const next = [...usages]; next[idx].conditionConfig = { field: "status", operator: "equals", value: "active" }; setUsages(next) }}>+ Tambah IF</Button>}
+                            <Button size="sm" variant="ghost" className="flex-1 h-7 text-[13px]" onClick={() => { const next = [...usages]; delete (next[idx] as any).conditionConfig; setUsages(next); showToast('Condition dihapus', 'info') }}>Hapus Condition</Button>
+                            {!u.conditionConfig && <Button size="sm" variant="outline" className="flex-1 h-7 text-[13px]" onClick={() => { const next = [...usages]; next[idx].conditionConfig = { field: "status", operator: "equals", value: "active" }; setUsages(next) }}>+ Tambah IF</Button>}
                           </div>
                         </div>
                       </div>
@@ -1234,7 +1234,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                 ))}
               </div>
             )}
-            <div className="pt-3 border-t border-[#e6e6e6] flex gap-2">
+            <div className="pt-2.5 border-t border-[#e6e6e6] flex gap-1.5">
               <Button variant="outline" className="flex-1" size="sm" onClick={() => router.push("/templates-persuratan")}>Batal</Button>
               <Button onClick={handleSubmit} className="flex-1 bg-[#0075de] hover:bg-[#0063be]" size="sm"><Save size={14} /> {mode === "edit" ? "Update" : "Simpan"}</Button>
             </div>
@@ -1245,32 +1245,32 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       {/* Bottom preview for mobile */}
       <div className="lg:hidden">
         <Card>
-          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Eye size={14} /> Pratinjau</CardTitle></CardHeader>
-          <CardContent><div className="bg-[#e5e7eb] p-3 rounded-[8px]"><div className="bg-white p-4 min-h-[200px] text-xs prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewHtml || "<div style='color:#9ca3af; text-align:center;'>Preview kosong</div>" }} /></div></CardContent>
+          <CardHeader><CardTitle className="text-[13px] flex items-center gap-2"><Eye size={14} /> Pratinjau</CardTitle></CardHeader>
+          <CardContent><div className="bg-[#e5e7eb] p-2.5 rounded-[8px]"><div className="bg-white p-2.5 min-h-[200px] text-xs prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewHtml || "<div style='color:#9ca3af; text-align:center;'>Preview kosong</div>" }} /></div></CardContent>
         </Card>
       </div>
 
       {/* Context Menu */}
       {contextMenu && (
         <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} onContextMenu={e => e.preventDefault()}>
-          <div className="fixed bg-white border border-[#e6e6e6] rounded-[12px] shadow-2xl w-[360px] max-h-[85vh] overflow-y-auto" style={{ left: Math.min(contextMenu.x, window.innerWidth - 380), top: Math.min(contextMenu.y, window.innerHeight - 340) }} onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white rounded-t-[12px] p-4 pb-3 border-b border-[#f0f0f0] flex items-center justify-between">
-              <div className="font-bold text-sm flex items-center gap-2"><div className="w-7 h-7 rounded-full bg-[#0075de] text-white flex items-center justify-center"><Sparkles size={12} /></div> Tambah ke Template</div>
-              <button onClick={() => setContextMenu(null)} className="w-7 h-7 rounded-full hover:bg-[#f6f5f4] flex items-center justify-center"><X size={14} /></button>
+          <div className="fixed bg-white border border-[#e6e6e6] rounded-[8px] shadow-2xl w-[360px] max-h-[85vh] overflow-y-auto" style={{ left: Math.min(contextMenu.x, window.innerWidth - 380), top: Math.min(contextMenu.y, window.innerHeight - 340) }} onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white rounded-t-[8px] p-2.5 pb-2 border-b border-[#f0f0f0] flex items-center justify-between">
+              <div className="font-bold text-[13px] flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-[#0075de] text-white flex items-center justify-center"><Sparkles size={12} /></div> Tambah ke Template</div>
+              <button onClick={() => setContextMenu(null)} className="w-6 h-6 rounded-full hover:bg-[#f6f5f4] flex items-center justify-center"><X size={14} /></button>
             </div>
-            <div className="p-4 space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                <button onClick={handleInsertRepeater} className="flex flex-col items-center gap-1 p-3 rounded-[10px] border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800"><Repeat size={16} /><span className="text-xs font-bold">Repeater</span><span className="text-[10px]">Loop</span></button>
-                <button onClick={handleInsertCondition} className="flex flex-col items-center gap-1 p-3 rounded-[10px] border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-800"><GitBranch size={16} /><span className="text-xs font-bold">Condition</span><span className="text-[10px]">IF</span></button>
-                <button onClick={() => { setContextMenu(null); const rect = editorContainerRef.current?.getBoundingClientRect(); const x = rect ? rect.left + 100 : 100; const y = rect ? rect.top + 100 : 100; setContextMenu({ x, y }) }} className="flex flex-col items-center gap-1 p-3 rounded-[10px] border border-[#e6e6e6] bg-white hover:bg-[#f6f5f4]"><Boxes size={16} className="text-[#0075de]" /><span className="text-xs font-bold">Component</span><span className="text-[10px] text-[#6b7280]">Branding</span></button>
+            <div className="p-4 space-y-2">
+              <div className="grid grid-cols-3 gap-1.5">
+                <button onClick={handleInsertRepeater} className="flex flex-col items-center gap-1 p-2.5 rounded-[8px] border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800"><Repeat size={16} /><span className="text-xs font-bold">Repeater</span><span className="text-[10px]">Loop</span></button>
+                <button onClick={handleInsertCondition} className="flex flex-col items-center gap-1 p-2.5 rounded-[8px] border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-800"><GitBranch size={16} /><span className="text-xs font-bold">Condition</span><span className="text-[10px]">IF</span></button>
+                <button onClick={() => { setContextMenu(null); const rect = editorContainerRef.current?.getBoundingClientRect(); const x = rect ? rect.left + 100 : 100; const y = rect ? rect.top + 100 : 100; setContextMenu({ x, y }) }} className="flex flex-col items-center gap-1 p-2.5 rounded-[8px] border border-[#e6e6e6] bg-white hover:bg-[#f6f5f4]"><Boxes size={16} className="text-[#0075de]" /><span className="text-xs font-bold">Component</span><span className="text-[10px] text-[#6b7280]">Branding</span></button>
               </div>
-              <div className="border-t pt-3">
+              <div className="border-t pt-2">
                 <Label className="text-xs font-semibold">Pilih Component Persuratan</Label>
                 <Select value={selectedCompId} onChange={e => setSelectedCompId(e.target.value)} className="mt-1">
                   <option value="">-- pilih component --</option>
                   {components.map(c => <option key={c.id} value={c.id}>{c.name} {c.isLooping ? "(looping)" : ""}</option>)}
                 </Select>
-                <div className="flex gap-2 mt-3">
+                <div className="flex gap-1.5 mt-2">
                   <Button size="sm" variant="outline" onClick={() => setContextMenu(null)} className="flex-1">Batal</Button>
                   <Button size="sm" onClick={handleInsertComponent} className="flex-1 bg-[#0075de] hover:bg-[#0063be]"><Plus size={12} /> Insert Component</Button>
                 </div>

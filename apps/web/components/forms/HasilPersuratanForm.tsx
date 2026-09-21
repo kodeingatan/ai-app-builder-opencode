@@ -96,10 +96,10 @@ export default function HasilPersuratanForm({ mode, id, administrationId: propAd
   if(loading) return <div className="p-8 text-center text-sm text-[#6b7280]">Memuat data...</div>
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Admin selector if not fixed */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Administrasi</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-[13px]">Administrasi</CardTitle></CardHeader>
         <CardContent>
           <Label>Pilih Administrasi</Label>
           <Select value={selectedAdmin} onChange={e=>setSelectedAdmin(e.target.value)}>
@@ -107,7 +107,7 @@ export default function HasilPersuratanForm({ mode, id, administrationId: propAd
             {administrations.map(a=> <option key={a.id} value={String(a.id)}>{a.name}</option>)}
           </Select>
           {adminDetail && (
-            <div className="mt-3 p-3 bg-[#f6f5f4] rounded-[8px] text-xs">
+            <div className="mt-2 p-2.5 bg-[#f6f5f4] rounded-[8px] text-xs">
               <div className="font-bold">{adminDetail.name}</div>
               <div className="text-[#6b7280]">{adminDetail.description||"-"}</div>
               <div className="mt-1">Fields: {(() => { try{ return JSON.parse(adminDetail.fieldsJson||"[]").map((f:any)=>f.name).join(", ")}catch{return "-"}})()}</div>
@@ -120,7 +120,7 @@ export default function HasilPersuratanForm({ mode, id, administrationId: propAd
       <div><Label>Nama Persuratan *</Label><Input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="Surat Tugas Dinas — Afdal" /></div>
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Data Administrasi — lengkapi sesuai fields</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-[13px]">Data Administrasi — lengkapi sesuai fields</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {(() => {
             let fields:any[]=[]
@@ -133,9 +133,9 @@ export default function HasilPersuratanForm({ mode, id, administrationId: propAd
                 <div key={idx}>
                   <Label className="text-xs">{f.name} <Badge variant="secondary" className="text-[10px] ml-1">{f.type}</Badge></Label>
                   {f.type==="richtext" ? (
-                    <Textarea value={form.values[key]||""} onChange={e=> setForm({...form, values:{...form.values, [key]: e.target.value}})} placeholder={`Isi ${f.name}...`} className="min-h-[80px] text-sm mt-1" />
+                    <Textarea value={form.values[key]||""} onChange={e=> setForm({...form, values:{...form.values, [key]: e.target.value}})} placeholder={`Isi ${f.name}...`} className="min-h-[60px] text-[13px] mt-1" />
                   ) : (
-                    <Input value={form.values[key]||""} onChange={e=> setForm({...form, values:{...form.values, [key]: e.target.value}})} placeholder={`Isi ${f.name}`} className="h-9 text-sm mt-1" />
+                    <Input value={form.values[key]||""} onChange={e=> setForm({...form, values:{...form.values, [key]: e.target.value}})} placeholder={`Isi ${f.name}`} className="h-7 text-[13px] mt-1" />
                   )}
                 </div>
               )
@@ -145,14 +145,14 @@ export default function HasilPersuratanForm({ mode, id, administrationId: propAd
       </Card>
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center justify-between"><span className="flex items-center gap-2"><FileStack size={14}/> Steps — Pilih Template</span><Button size="sm" variant="outline" onClick={()=>{
+        <CardHeader className="pb-2"><CardTitle className="text-[13px] flex items-center justify-between"><span className="flex items-center gap-2"><FileStack size={14}/> Steps — Pilih Template</span><Button size="sm" variant="outline" onClick={()=>{
           if(!adminDetail?.steps?.length) return alert("Administrasi ini belum punya steps template — edit administrasi dulu")
           const next=[...form.stepsData, {templateId: adminDetail.steps[0].templateId, templateName: adminDetail.steps[0].templateName, data:{}}]
           setForm({...form, stepsData: next})
         }}><Plus size={12}/> Tambah Step</Button></CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {form.stepsData.map((s:any, idx:number)=>(
-            <div key={idx} className="border border-[#e6e6e6] rounded-[8px] p-3 bg-[#fafafa]">
+            <div key={idx} className="border border-[#e6e6e6] rounded-[8px] p-2.5 bg-[#fafafa]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2"><span className="w-6 h-6 rounded-full bg-[#0075de] text-white flex items-center justify-center text-xs font-bold">{idx+1}</span><span className="font-bold text-xs">{s.templateName}</span></div>
                 <button onClick={()=> setForm({...form, stepsData: form.stepsData.filter((_,i)=>i!==idx)})} className="p-1 hover:bg-white rounded"><X size={12}/></button>
@@ -172,16 +172,16 @@ export default function HasilPersuratanForm({ mode, id, administrationId: propAd
                     const parsed=JSON.parse(e.target.value)
                     const next=[...form.stepsData]; next[idx].data=parsed; setForm({...form, stepsData: next})
                   }catch{}
-                }} placeholder='{"field1":"value"}' className="font-mono text-xs min-h-[60px] mt-1" />
+                }} placeholder='{"field1":"value"}' className="font-mono text-xs min-h-[48px] mt-1" />
                 <div className="text-[11px] text-[#6b7280] mt-1">Isi sesuai permintaan component di template (akan muncul form generated)</div>
               </div>
             </div>
           ))}
-          {form.stepsData.length===0 && <div className="text-xs text-[#6b7280] p-4 text-center border-2 border-dashed rounded-[8px]">Belum ada step — klik Tambah Step. Dapat buat step baru terus sesuai kebutuhan.</div>}
+          {form.stepsData.length===0 && <div className="text-xs text-[#6b7280] p-2.5 text-center border-2 border-dashed rounded-[8px]">Belum ada step — klik Tambah Step. Dapat buat step baru terus sesuai kebutuhan.</div>}
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
+      <div className="flex justify-end gap-1.5 pt-2.5 border-t">
         <Button variant="outline" onClick={()=>router.push(`/hasil-persuratan${selectedAdmin?`?administrationId=${selectedAdmin}`:""}`)}>Batal</Button>
         <Button onClick={handleSubmit}>{mode==="edit"?"Update":"Simpan"}</Button>
       </div>

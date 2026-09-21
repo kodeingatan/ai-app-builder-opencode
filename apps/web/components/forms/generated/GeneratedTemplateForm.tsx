@@ -50,21 +50,21 @@ export default function GeneratedTemplateForm({ mode, id }: { mode:"create"|"edi
   if(loading) return <div className="p-8 text-center text-sm text-[#6b7280]">Memuat...</div>
 
   return (
-    <div className="space-y-4 bg-white rounded-[12px] border border-[#e6e6e6] p-6">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-2.5 bg-white rounded-[8px] border border-[#e6e6e6] p-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <div className="col-span-2"><Label>Nama Template</Label><Input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="Surat Keputusan Pengangkatan" /></div>
         <div><Label>Kode</Label><Input value={form.code} onChange={e=>setForm({...form, code:e.target.value})} placeholder="SK-001" /></div>
         <div><Label>Kategori</Label><Select value={form.category} onChange={e=>setForm({...form, category:e.target.value})}>{categories.map(c=><option key={c} value={c}>{c}</option>)}</Select></div>
         <div><Label>Versi</Label><Input type="number" value={form.version} onChange={e=>setForm({...form, version: Number(e.target.value)})} /></div>
         <div><Label>Status</Label><Select value={form.status} onChange={e=>setForm({...form, status:e.target.value})}><option value="draft">draft</option><option value="published">published</option><option value="archived">archived</option></Select></div>
         <div className="col-span-2"><Label>Deskripsi</Label><Textarea value={form.description} onChange={e=>setForm({...form, description:e.target.value})} placeholder="Deskripsi template..." /></div>
-        <div className="col-span-2"><Label>Schema JSON Tree <span className="text-[11px] text-[#6b7280]">— Document → Layout → Component → Repeater/Condition</span></Label><Textarea className="font-mono text-xs min-h-[220px]" value={form.schema_json} onChange={e=>setForm({...form, schema_json:e.target.value})} placeholder='{"type":"document","children":[...]}' /></div>
+        <div className="col-span-2"><Label>Schema JSON Tree <span className="text-[11px] text-[#6b7280]">— Document → Layout → Component → Repeater/Condition</span></Label><Textarea className="font-mono text-xs min-h-[160px]" value={form.schema_json} onChange={e=>setForm({...form, schema_json:e.target.value})} placeholder='{"type":"document","children":[...]}' /></div>
       </div>
       <div className="rounded-[8px] bg-amber-50 border border-amber-200 p-3 text-xs leading-relaxed">
         <div className="font-semibold text-amber-800">Tips Binding & Engine:</div>
         <div className="text-amber-700 mt-1">Gunakan <code className="bg-white px-1 rounded border">{"{{employee.name}}"}</code> <code className="bg-white px-1 rounded border">{"{{letter.number}}"}</code> <code className="bg-white px-1 rounded border">{"{{current_date}}"}</code> — Repeater <code className="bg-white px-1 rounded border">source: "employees"</code> — Condition <code className="bg-white px-1 rounded border">field: "employee.status" operator: "equals"</code></div>
       </div>
-      <div className="flex justify-end gap-2 pt-2 border-t">
+      <div className="flex justify-end gap-1.5 pt-2 border-t">
         <Button variant="outline" onClick={()=>router.push("/generated/surat-platform/templates")}>Batal</Button>
         <Button onClick={handleSubmit}>Simpan</Button>
       </div>

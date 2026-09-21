@@ -10,5 +10,5 @@ const variants: Record<string, string> = {
 }
 
 export function Badge({ variant = "default", className = "", ...props }: React.HTMLAttributes<HTMLDivElement> & { variant?: keyof typeof variants }) {
-  return <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${variants[variant]} ${className}`} {...props} />
+  return <div className={`inline-flex items-center rounded-full px-2 py-px text-[11px] font-medium leading-4 transition-colors ${variants[variant]} ${className}`} {...props} />
 }

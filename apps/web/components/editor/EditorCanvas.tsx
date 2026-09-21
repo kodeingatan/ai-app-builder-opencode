@@ -15,8 +15,8 @@ export function EditorCanvas({ children, pageConfig, variant = "page", className
   // Continuous (Component) — no paper, no shadow page
   if (variant === "continuous" || !pageConfig || pageConfig.isPageless) {
     return (
-      <div className={`bg-white rounded-[12px] border border-[#e6e6e6] overflow-hidden ${className || ""}`}>
-        <div className="min-h-[280px] bg-white">
+      <div className={`bg-white rounded-[8px] border border-[#e6e6e6] overflow-hidden ${className || ""}`}>
+        <div className="min-h-[240px] bg-white">
           {children}
         </div>
       </div>
@@ -34,7 +34,7 @@ export function EditorCanvas({ children, pageConfig, variant = "page", className
 
   return (
     <div
-      className={`rounded-[12px] border border-[#e6e6e6] overflow-auto p-6 md:p-8 flex justify-center ${className || ""}`}
+      className={`rounded-[8px] border border-[#e6e6e6] overflow-auto p-3 flex justify-center ${className || ""}`}
       style={{ background: "#e8ecef" }}
     >
       <div
@@ -88,7 +88,7 @@ export function EditorCanvas({ children, pageConfig, variant = "page", className
           {/* Header (if set) */}
           {pageConfig.headerHtml && (
             <div
-              className="border-b border-[#e5e7eb] pb-3 mb-4 text-[10px] text-[#6b7280] text-center leading-relaxed"
+              className="border-b border-[#e5e7eb] pb-2 mb-2 text-[10px] text-[#6b7280] text-center leading-relaxed"
               dangerouslySetInnerHTML={{ __html: pageConfig.headerHtml }}
             />
           )}
@@ -99,7 +99,7 @@ export function EditorCanvas({ children, pageConfig, variant = "page", className
           {/* Footer (if set) */}
           {pageConfig.footerHtml && (
             <div
-              className="border-t border-[#e5e7eb] pt-3 mt-6 text-[10px] text-[#6b7280] text-center leading-relaxed"
+              className="border-t border-[#e5e7eb] pt-2 mt-3 text-[10px] text-[#6b7280] text-center leading-relaxed"
               dangerouslySetInnerHTML={{ __html: pageConfig.footerHtml }}
             />
           )}

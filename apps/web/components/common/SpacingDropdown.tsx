@@ -111,7 +111,7 @@ export default function SpacingDropdown({ editor, tick }: Props) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-30 w-[320px] bg-white border border-[#e6e6e6] rounded-[12px] shadow-xl overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="absolute left-0 top-[calc(100%+8px)] z-30 w-[300px] bg-white border border-[#e6e6e6] rounded-[8px] shadow-xl overflow-hidden animate-in fade-in zoom-in-95">
           {/* Kelompok 1 */}
           <div className="p-2">
             <div className="px-2 py-1.5 flex items-center gap-1.5">
@@ -133,7 +133,7 @@ export default function SpacingDropdown({ editor, tick }: Props) {
                   <button
                     key={opt.value}
                     onClick={() => setLineHeight(opt.value)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-xs transition-colors ${isActive ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[8px] text-[13px] transition-colors ${isActive ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}
                   >
                     <span className="flex items-center gap-2">
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-[#f6f5f4] text-[#6b7280]"}`}>{opt.value === "1" ? "1" : opt.value.replace(".", ",")}</span>
@@ -155,20 +155,20 @@ export default function SpacingDropdown({ editor, tick }: Props) {
               <span className="text-[11px] text-[#9ca3af]">• luar paragraf</span>
             </div>
             <div className="space-y-0.5">
-              <button onClick={toggleBefore} className={`w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-xs transition-colors ${isSpacingBefore ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}>
+              <button onClick={toggleBefore} className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[8px] text-[13px] transition-colors ${isSpacingBefore ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}>
                 <span>Tambahkan spasi sebelum paragraf</span>
-                {isSpacingBefore && <Check size={14} />}
+                {isSpacingBefore && <Check size={13} />}
               </button>
-              <button onClick={toggleAfter} className={`w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-xs transition-colors ${isSpacingAfter ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}>
+              <button onClick={toggleAfter} className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[8px] text-[13px] transition-colors ${isSpacingAfter ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}>
                 <span>Tambahkan spasi sesudah paragraf</span>
-                {isSpacingAfter && <Check size={14} />}
+                {isSpacingAfter && <Check size={13} />}
               </button>
-              <button onClick={() => setCustomOpen(!customOpen)} className={`w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-xs transition-colors ${customOpen ? "bg-[#111827] text-white" : "hover:bg-[#f6f5f4] text-[#374151] border border-dashed border-[#e6e6e6]"}`}>
+              <button onClick={() => setCustomOpen(!customOpen)} className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[8px] text-[13px] transition-colors ${customOpen ? "bg-[#111827] text-white" : "hover:bg-[#f6f5f4] text-[#374151] border border-dashed border-[#e6e6e6]"}`}>
                 <span className="flex items-center gap-1.5"><SlidersHorizontal size={12} /> Spasi kustom</span>
                 <ChevronDown size={12} className={`${customOpen ? "rotate-180" : ""} transition-transform`} />
               </button>
               {customOpen && (
-                <div className="mx-1 mt-1 p-3 rounded-[10px] border border-[#e6e6e6] bg-[#fafafa] space-y-2">
+                <div className="mx-1 mt-1 p-2.5 rounded-[8px] border border-[#e6e6e6] bg-[#fafafa] space-y-2">
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="text-[11px] font-semibold text-[#374151]">Jarak baris</label>
@@ -198,25 +198,25 @@ export default function SpacingDropdown({ editor, tick }: Props) {
               <span className="text-[11px] font-bold tracking-wide text-[#111] uppercase">Aturan Halaman</span>
             </div>
             <div className="space-y-0.5">
-              <button onClick={toggleKeepWithNext} className={`w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-xs transition-colors ${keepWithNext ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}>
+              <button onClick={toggleKeepWithNext} className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[8px] text-[13px] transition-colors ${keepWithNext ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}>
                 <span>Satukan dengan berikutnya</span>
-                {keepWithNext && <Check size={14} />}
+                {keepWithNext && <Check size={13} />}
               </button>
-              <button onClick={toggleKeepTogether} className={`w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-xs transition-colors ${keepTogether ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}>
+              <button onClick={toggleKeepTogether} className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[8px] text-[13px] transition-colors ${keepTogether ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151]"}`}>
                 <span>Satukan baris</span>
-                {keepTogether && <Check size={14} />}
+                {keepTogether && <Check size={13} />}
               </button>
-              <button onClick={toggleWidow} className={`w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-xs transition-colors ${widowControl ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151] border border-amber-200 bg-amber-50"}`}>
+              <button onClick={toggleWidow} className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[8px] text-[13px] transition-colors ${widowControl ? "bg-[#0075de] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151] border border-amber-200 bg-amber-50"}`}>
                 <span>Cegah baris tunggal</span>
-                {widowControl ? <Check size={14} /> : <span className="text-[11px] text-amber-700">Off</span>}
+                {widowControl ? <Check size={13} /> : <span className="text-[11px] text-amber-700">Off</span>}
               </button>
-              <button onClick={togglePageBreak} className={`w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-xs transition-colors ${pageBreakBefore ? "bg-[#111827] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151] border border-dashed border-[#e6e6e6]"}`}>
+              <button onClick={togglePageBreak} className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[8px] text-[13px] transition-colors ${pageBreakBefore ? "bg-[#111827] text-white shadow-sm" : "hover:bg-[#f6f5f4] text-[#374151] border border-dashed border-[#e6e6e6]"}`}>
                 <span>Tambahkan batas halaman sebelum</span>
-                {pageBreakBefore && <Check size={14} />}
+                {pageBreakBefore && <Check size={13} />}
               </button>
             </div>
           </div>
-          <div className="px-3 py-2 bg-[#f9fafb] border-t border-[#e6e6e6] text-[11px] text-[#6b7280] flex items-center gap-1.5">
+          <div className="px-2.5 py-1.5 bg-[#f9fafb] border-t border-[#e6e6e6] text-[11px] text-[#6b7280] flex items-center gap-1.5">
             <FileText size={11} /> Urutan tidak boleh diubah • garis pemisah wajib • centang = aktif
           </div>
         </div>

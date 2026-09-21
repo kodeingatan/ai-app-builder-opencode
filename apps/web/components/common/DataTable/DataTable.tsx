@@ -39,10 +39,10 @@ export default function DataTable<T extends Record<string, any>>({
   const to = Math.min(page * limit, total)
 
   return (
-    <div className="bg-white rounded-[12px] border border-[#e6e6e6] overflow-hidden shadow-sm">
+    <div className="bg-white rounded-[8px] border border-[#e6e6e6] overflow-hidden shadow-sm">
       {onSearch && (
-        <div className="p-4 border-b border-[#e6e6e6] flex items-center gap-3">
-          <div className="relative flex-1 max-w-[320px]">
+        <div className="px-2.5 py-2 border-b border-[#e6e6e6] flex items-center gap-2">
+          <div className="relative flex-1 max-w-[240px]">
             <input
               placeholder={searchPlaceholder}
               value={search}
@@ -50,25 +50,25 @@ export default function DataTable<T extends Record<string, any>>({
               onKeyDown={(e) => {
                 if (e.key === "Enter") onSearch(search)
               }}
-              className="w-full h-9 rounded-[4px] border border-[#e6e6e6] bg-white px-3 pr-9 text-sm placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0075de]"
+              className="w-full h-7 rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 pr-14 text-[13px] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0075de]"
             />
             <button
               onClick={() => onSearch(search)}
-              className="absolute right-1 top-1 bottom-1 px-3 rounded-[4px] bg-[#0075de] text-white text-xs font-medium hover:bg-[#0066c2]"
+              className="absolute right-0.5 top-0.5 bottom-0.5 px-2.5 rounded-[4px] bg-[#0075de] text-white text-[11px] font-medium hover:bg-[#0066c2]"
             >
               Cari
             </button>
           </div>
-          <div className="text-xs text-[#6b7280] hidden sm:block">Menampilkan {from}-{to} dari {total}</div>
+          <div className="text-[11px] text-[#6b7280] hidden sm:block ml-auto whitespace-nowrap">Menampilkan {from}-{to} dari {total}</div>
         </div>
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-[13px]">
           <thead>
             <tr className="bg-[#f6f5f4] border-b border-[#e6e6e6]">
               {columns.map((col) => (
-                <th key={col.key} className="text-left px-4 py-3 text-xs font-semibold tracking-widest uppercase text-[#6b7280] whitespace-nowrap">
+                <th key={col.key} className="text-left px-3 py-2 text-[11px] font-semibold tracking-wide uppercase text-[#6b7280] whitespace-nowrap">
                   {col.header}
                 </th>
               ))}
@@ -77,25 +77,25 @@ export default function DataTable<T extends Record<string, any>>({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-[#6b7280]">
+                <td colSpan={columns.length} className="px-3 py-8 text-center text-[13px] text-[#6b7280]">
                   Memuat...
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-[#f6f5f4] flex items-center justify-center text-[#9ca3af]">∅</div>
-                    <div className="text-sm font-medium text-[#6b7280]">Tidak ada data</div>
-                    <div className="text-xs text-[#9ca3af]">Coba ubah filter atau tambah data baru</div>
+                <td colSpan={columns.length} className="px-3 py-8 text-center">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-8 h-8 rounded-full bg-[#f6f5f4] flex items-center justify-center text-[#9ca3af] text-sm">∅</div>
+                    <div className="text-[13px] font-medium text-[#6b7280]">Tidak ada data</div>
+                    <div className="text-[11px] text-[#9ca3af]">Coba ubah filter atau tambah data baru</div>
                   </div>
                 </td>
               </tr>
             ) : (
               data.map((row, idx) => (
-                <tr key={idx} className="border-b border-[#f3f4f6] hover:bg-[#fafafa] transition-colors">
+                <tr key={idx} className="border-b border-[#f3f4f6] last:border-0 hover:bg-[#fafafa] transition-colors">
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-sm text-[#111] whitespace-nowrap">
+                    <td key={col.key} className="px-3 py-1.5 text-[13px] leading-snug text-[#111] whitespace-nowrap max-w-[280px] truncate">
                       {col.render ? col.render(row) : String(row[col.key] ?? "-")}
                     </td>
                   ))}
@@ -107,13 +107,13 @@ export default function DataTable<T extends Record<string, any>>({
       </div>
 
       {totalPages > 1 && (
-        <div className="p-4 border-t border-[#e6e6e6] flex items-center justify-between">
-          <div className="text-xs text-[#6b7280]">Halaman {page} dari {totalPages} • Total {total} data</div>
+        <div className="px-2.5 py-2 border-t border-[#e6e6e6] flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-[11px] text-[#6b7280]">Halaman {page} dari {totalPages} • Total {total} data</div>
           <div className="flex items-center gap-1">
             <button
               disabled={page <= 1}
               onClick={() => onPageChange?.(page - 1)}
-              className="h-8 px-3 rounded-[8px] border border-[#e6e6e6] bg-white text-xs font-medium disabled:opacity-50 hover:bg-[#f6f5f4]"
+              className="h-7 px-2.5 rounded-[6px] border border-[#e6e6e6] bg-white text-[11px] font-medium disabled:opacity-50 hover:bg-[#f6f5f4]"
             >
               Prev
             </button>
@@ -128,7 +128,7 @@ export default function DataTable<T extends Record<string, any>>({
                 <button
                   key={p}
                   onClick={() => onPageChange?.(p)}
-                  className={`w-8 h-8 rounded-[8px] text-xs font-medium ${active ? "bg-[#0075de] text-white" : "border border-[#e6e6e6] bg-white hover:bg-[#f6f5f4]"}`}
+                  className={`w-7 h-7 rounded-[6px] text-[11px] font-medium ${active ? "bg-[#0075de] text-white" : "border border-[#e6e6e6] bg-white hover:bg-[#f6f5f4]"}`}
                 >
                   {p}
                 </button>
@@ -137,7 +137,7 @@ export default function DataTable<T extends Record<string, any>>({
             <button
               disabled={page >= totalPages}
               onClick={() => onPageChange?.(page + 1)}
-              className="h-8 px-3 rounded-[8px] border border-[#e6e6e6] bg-white text-xs font-medium disabled:opacity-50 hover:bg-[#f6f5f4]"
+              className="h-7 px-2.5 rounded-[6px] border border-[#e6e6e6] bg-white text-[11px] font-medium disabled:opacity-50 hover:bg-[#f6f5f4]"
             >
               Next
             </button>
@@ -145,7 +145,7 @@ export default function DataTable<T extends Record<string, any>>({
         </div>
       )}
       {!onSearch && total > 0 && (
-        <div className="px-4 py-3 border-t border-[#e6e6e6] text-xs text-[#6b7280] bg-[#fafafa]">Menampilkan {from}-{to} dari {total}</div>
+        <div className="px-3 py-2 border-t border-[#e6e6e6] text-[11px] text-[#6b7280] bg-[#fafafa]">Menampilkan {from}-{to} dari {total}</div>
       )}
     </div>
   )
