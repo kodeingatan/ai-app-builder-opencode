@@ -3,9 +3,11 @@ import { PersuratanComponentsService } from "@/lib/services/persuratan/component
 import { z } from "zod"
 const CreateSchema = z.object({ name: z.string().min(1), isLooping: z.boolean().optional(), contentHtml: z.string().min(1), contentJson: z.string().optional().nullable(), bindingsJson: z.string().optional().nullable() })
 export async function GET(req: NextRequest){
-  const q=Object.fromEntries(req.nextUrl.searchParams)
-  const r=await PersuratanComponentsService.findAll({ page: Number(q.page)||1, limit: Number(q.limit)||20, search: q.search })
-  return NextResponse.json(r)
+  try {
+    const q=Object.fromEntries(req.nextUrl.searchParams)
+    const r=await PersuratanComponentsService.findAll({ page: Number(q.page)||1, limit: Number(q.limit)||20, search: q.search })
+    return NextResponse.json(r)
+  } catch(e:any){ return NextResponse.json({message:e.message ?? "Gagal memuat components", data:[], total:0, page:1, limit:20, totalPages:0},{status:500}) }
 }
 export async function POST(req: NextRequest){
   try{

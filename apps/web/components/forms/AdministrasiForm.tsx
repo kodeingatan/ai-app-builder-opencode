@@ -17,16 +17,27 @@ export default function AdministrasiForm({ mode, id }: { mode:"create"|"edit"; i
   const [steps, setSteps] = useState<{templateId:number, templateName?:string}[]>([])
   const [loading, setLoading]=useState(false)
 
+  const safeJson = async (res: Response) => {
+    try {
+      const text = await res.text()
+      if (!text) return null
+      return JSON.parse(text)
+    } catch { return null }
+  }
+
   const loadTemplates=async()=>{
-    const res=await fetch(`/api/persuratan/templates?limit=100`)
-    const j=await res.json()
-    setTemplates(j.data??[])
+    try {
+      const res=await fetch(`/api/persuratan/templates?limit=100`)
+      const j=await safeJson(res)
+      setTemplates(j?.data??[])
+    } catch { setTemplates([]) }
   }
   useEffect(()=>{ loadTemplates() },[])
   useEffect(()=>{
     if(mode==="edit" && id){
       setLoading(true)
-      fetch(`/api/persuratan/administrations/${id}`).then(r=>r.json()).then(full=>{
+      fetch(`/api/persuratan/administrations/${id}`).then(safeJson).then(full=>{
+        if(!full){ setLoading(false); return }
         let fields:FieldDef[]=[]
         try{ fields=JSON.parse(full.fieldsJson||"[]") }catch{ fields=[]}
         setForm({ name: full.name, description: full.description||"", fields: fields.length?fields:[{name:"judul", type:"text"}] })
@@ -53,7 +64,10 @@ export default function AdministrasiForm({ mode, id }: { mode:"create"|"edit"; i
     const url=mode==="edit"?`/api/persuratan/administrations/${id}`:`/api/persuratan/administrations`
     const method=mode==="edit"?"PUT":"POST"
     const res=await fetch(url,{method, headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)})
-    if(res.ok){ router.push("/administrasi-persuratan"); router.refresh() } else alert((await res.json()).message)
+    if(res.ok){ router.push("/administrasi-persuratan"); router.refresh() } else {
+      const err = await safeJson(res)
+      alert(err?.message || `Gagal simpan (${res.status})`)
+    }
   }
 
   if(loading) return <div className="p-8 text-center text-sm text-[#6b7280]">Memuat data...</div>

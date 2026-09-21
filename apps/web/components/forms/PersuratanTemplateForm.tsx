@@ -143,12 +143,24 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
   }
 
   const loadDeps = async () => {
-    const [c, t] = await Promise.all([
-      fetch("/api/persuratan/components?limit=100").then(r => r.json()),
-      fetch("/api/global-tables?limit=100").then(r => r.json()),
-    ])
-    setComponents(c.data ?? [])
-    setGlobalTables(t.data ?? [])
+    try {
+      const safeJson = async (res: Response) => {
+        try {
+          const text = await res.text()
+          if (!text) return null
+          return JSON.parse(text)
+        } catch { return null }
+      }
+      const [c, t] = await Promise.all([
+        fetch("/api/persuratan/components?limit=100").then(safeJson),
+        fetch("/api/global-tables?limit=100").then(safeJson),
+      ])
+      setComponents(c?.data ?? [])
+      setGlobalTables(t?.data ?? [])
+    } catch {
+      setComponents([])
+      setGlobalTables([])
+    }
   }
   useEffect(() => { loadDeps() }, [])
 
@@ -214,7 +226,8 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
   useEffect(() => {
     if (mode === "edit" && id) {
       setLoading(true)
-      fetch(`/api/persuratan/templates/${id}`).then(r => r.json()).then(row => {
+      fetch(`/api/persuratan/templates/${id}`).then(async r => { try { const t = await r.text(); return t ? JSON.parse(t) : null } catch { return null } }).then(row => {
+        if(!row){ setLoading(false); return }
         const html = row.contentHtml || "<p></p>"
         const json = row.contentJson || ""
         setForm({ name: row.name, description: row.description || "", contentHtml: html, contentJson: json } as any)
@@ -501,7 +514,11 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
     const url = mode === "edit" ? `/api/persuratan/templates/${id}` : `/api/persuratan/templates`
     const method = mode === "edit" ? "PUT" : "POST"
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-    if (res.ok) { showToast(mode === "edit" ? 'Template diperbarui' : 'Template disimpan', 'success'); setTimeout(() => { router.push("/templates-persuratan"); router.refresh() }, 400) } else showToast((await res.json()).message || "Gagal simpan", 'error')
+    if (res.ok) { showToast(mode === "edit" ? 'Template diperbarui' : 'Template disimpan', 'success'); setTimeout(() => { router.push("/templates-persuratan"); router.refresh() }, 400) } else {
+      let msg = "Gagal simpan"
+      try { const t = await res.text(); if (t) msg = (JSON.parse(t) as any)?.message || msg } catch {}
+      showToast(`${msg} (${res.status})`, 'error')
+    }
   }
 
   const isActive = (name: any, attrs?: any) => { if (!editor) return false; try { return (editor.isActive as any)(name, attrs) } catch { return false } }

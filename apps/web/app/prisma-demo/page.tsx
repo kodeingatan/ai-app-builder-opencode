@@ -2,13 +2,23 @@ import prisma from "@/lib/prisma"
 import fs from "fs"
 import path from "path"
 
+export const dynamic = "force-dynamic"
+
 // Server Component — langsung query SQLite via Prisma tanpa API Route
 export default async function PrismaDemoPage() {
-  const users = await prisma.user.findMany({
-    select: { id: true, username: true, email: true, firstName: true, lastName: true, createdAt: true },
-    take: 20,
-    orderBy: { id: "asc" },
-  })
+  let users: { id: number; username: string; email: string; firstName: string; lastName: string; createdAt: Date }[] = []
+  let stats = { users: 0, roles: 0, permissions: 0, projects: 0 }
+
+  try {
+    users = await prisma.user.findMany({
+      select: { id: true, username: true, email: true, firstName: true, lastName: true, createdAt: true },
+      take: 20,
+      orderBy: { id: "asc" },
+    })
+  } catch {
+    // DB belum di-migrate — fallback kosong agar build tidak crash
+    users = []
+  }
 
   // File-based builder projects (ai_* tables sudah dihapus, ganti file di docs/ai-builder/projects/)
   let projects = 0
@@ -17,11 +27,16 @@ export default async function PrismaDemoPage() {
     if (fs.existsSync(dir)) projects = fs.readdirSync(dir).filter((f) => f.endsWith(".json") && !f.endsWith(".spec.json") && !f.endsWith(".meta.json")).length
   } catch {}
 
-  const stats = {
-    users: await prisma.user.count(),
-    roles: await prisma.role.count(),
-    permissions: await prisma.permission.count(),
-    projects,
+  try {
+    const [userCount, roleCount, permissionCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.role.count(),
+      prisma.permission.count(),
+    ])
+    stats = { users: userCount, roles: roleCount, permissions: permissionCount, projects }
+  } catch {
+    // DB belum di-migrate (mis. build tanpa dev.db) — tampilkan fallback kosong
+    stats = { users: 0, roles: 0, permissions: 0, projects }
   }
 
   return (

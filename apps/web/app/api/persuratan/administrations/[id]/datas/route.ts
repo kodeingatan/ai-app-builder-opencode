@@ -3,6 +3,7 @@ import { PersuratanAdministrationsService } from "@/lib/services/persuratan/admi
 import prisma from "@/lib/prisma"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
   const { id } = await params
   const adminId = Number(id)
   const q = Object.fromEntries(req.nextUrl.searchParams)
@@ -22,9 +23,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ ...result, data: filtered, total: filtered.length })
   }
   return NextResponse.json(result)
+  } catch(e:any){ return NextResponse.json({message:e.message ?? "Gagal memuat datas", data:[], total:0, page:1, limit:20, totalPages:0},{status:500}) }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
   const { id } = await params
   const adminId = Number(id)
   const body = await req.json()
@@ -36,4 +39,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     stepsDataJson: body.stepsDataJson,
   })
   return NextResponse.json(created, { status: 201 })
+  } catch(e:any){ return NextResponse.json({message:e.message ?? "Gagal membuat data"},{status:400}) }
 }
