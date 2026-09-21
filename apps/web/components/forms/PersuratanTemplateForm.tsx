@@ -49,6 +49,9 @@ import {
 } from "lucide-react"
 import PasteChoicePopup from "@/components/common/PasteChoicePopup"
 import ImageCropModal from "@/components/editor/ImageCropModal"
+import ImageLayoutButtons from "@/components/editor/ImageLayoutButtons"
+import { compressImageFile, formatBytes } from "@/lib/utils/compressImage"
+import TableGridPicker from "@/components/editor/TableGridPicker"
 import { keepStyleHtml, adaptToEditorHtml, plainToHtml, isWordHtml } from "@/lib/tiptap/paste"
 
 const FONT_FAMILIES = [
@@ -120,6 +123,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
   const [editorHeight, setEditorHeight] = useState(480)
   const [pageConfig, setPageConfig] = useState<PageConfig>({ ...DEFAULT_PAGE_CONFIG })
   const [findOpen, setFindOpen] = useState(false)
+  const [tablePickerOpen, setTablePickerOpen] = useState(false)
   const [saved, setSaved] = useState(true)
   const [showOutline, setShowOutline] = useState(true)
   const [officeMode, setOfficeMode] = useState<'office' | 'structure' | 'json'>('office')
@@ -189,7 +193,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       SpacingExtension,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { class: 'text-[#0075de] underline underline-offset-2 cursor-pointer' } }),
-      ResizableImage.configure({ inline: false, allowBase64: true }),
+      ResizableImage.configure({ inline: true, allowBase64: true }),
       Table.configure({ resizable: true, handleWidth: 8, lastColumnResizable: true, allowTableNodeSelection: true }),
       CustomTableRow,
       CustomTableHeader,
@@ -271,6 +275,26 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
         e.preventDefault()
         editor.chain().focus().unsetAllMarks().clearNodes().run()
+      }
+      // Tab — indent list / sisip indentasi (Shift+Tab = outdent / hapus indent)
+      if (e.key === 'Tab') {
+        // Di dalam tabel biarkan navigasi sel bawaan (Tab = sel berikutnya)
+        if (editor.isActive('table')) return
+        e.preventDefault()
+        if (e.shiftKey) {
+          if (!editor.chain().focus().liftListItem('listItem').run()) {
+            try {
+              const { state } = editor.view
+              const { $from } = state.selection
+              if ($from.parentOffset >= 4) {
+                const before = $from.parent.textBetween(Math.max(0, $from.parentOffset - 4), $from.parentOffset, null, '￼')
+                if (/^[ \u00a0]{4}$/.test(before)) editor.view.dispatch(state.tr.delete($from.pos - 4, $from.pos))
+              }
+            } catch {}
+          }
+        } else if (!editor.chain().focus().sinkListItem('listItem').run()) {
+          editor.chain().focus().insertContent('    ').run()
+        }
       }
     }
     dom.addEventListener('keydown', onKey)
@@ -363,6 +387,22 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
     if (!editor) return
     const dom = editor.view.dom as HTMLElement
     const onPaste = (e: ClipboardEvent) => {
+      // Paste gambar hasil copy (screenshot / klik kanan copy image) → sisipkan sebagai base64
+      const clipFiles = e.clipboardData?.files
+      if (clipFiles && clipFiles.length > 0) {
+        const clipImg = Array.from(clipFiles).find(f => f.type.startsWith('image/'))
+        if (clipImg) {
+          e.preventDefault()
+          e.stopPropagation()
+          ;(e as any).stopImmediatePropagation?.()
+          compressImageFile(clipImg).then(({ dataUrl, bytes, compressed }) => {
+            editor.chain().focus().setImage({ src: dataUrl }).run()
+            setTick(v => v + 1)
+            showToast(compressed ? `Gambar dikompres ke ${formatBytes(bytes)} lalu disisipkan` : 'Gambar dari clipboard disisipkan', 'success')
+          }).catch(() => showToast('Gagal memproses gambar', 'error'))
+          return
+        }
+      }
       const html = e.clipboardData?.getData('text/html') || ''
       const text = e.clipboardData?.getData('text/plain') || ''
       if (!html && !text) return
@@ -552,19 +592,17 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
     editor.chain().focus().setImage({ src: url }).run(); showToast('Gambar disisipkan', 'success'); setImageModal({ open: false, url: '' })
   }
 
-  const handleImageFile = (f: File | undefined) => {
+  const handleImageFile = async (f: File | undefined) => {
     if (!f) return
     if (!f.type.startsWith('image/')) { showToast('File harus berupa gambar', 'error'); return }
-    if (f.size > 5 * 1024 * 1024) { showToast('Ukuran gambar maksimal 5MB', 'error'); return }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = String(reader.result || '')
+    try {
+      const { dataUrl, bytes, compressed } = await compressImageFile(f)
       if (!dataUrl.startsWith('data:image')) { showToast('Gagal membaca gambar', 'error'); return }
       setImageModal({ open: true, url: dataUrl })
-      showToast('Gambar siap disisipkan (base64)', 'success')
+      showToast(compressed ? `Gambar dikompres ke ${formatBytes(bytes)} — siap disisipkan` : 'Gambar siap disisipkan (base64)', 'success')
+    } catch {
+      showToast('Gagal memproses gambar', 'error')
     }
-    reader.onerror = () => showToast('Gagal membaca file', 'error')
-    reader.readAsDataURL(f)
   }
 
   const openCropFromSelection = () => {
@@ -969,7 +1007,10 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                       <button type="button" title="Outline" onClick={()=>setShowOutline(!showOutline)} className={`w-7 h-7 rounded-[6px] flex items-center justify-center ${showOutline ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Layers size={14}/></button>
                     </div>
                     <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm">
-                      <button type="button" title="Insert table 3x3" onClick={() => { editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); showToast('Tabel 3×3 ditambahkan', 'success') }} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><TableIcon size={14} /></button>
+                      <div className="relative">
+                        <button type="button" title="Sisipkan tabel — pilih ukuran (tanpa header otomatis)" onClick={() => setTablePickerOpen(o => !o)} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${tablePickerOpen ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><TableIcon size={14} /></button>
+                        {tablePickerOpen && <TableGridPicker onClose={() => setTablePickerOpen(false)} onPick={(r, c) => { editor.chain().focus().insertTable({ rows: r, cols: c, withHeaderRow: false }).run(); showToast(`Tabel ${c}×${r} ditambahkan — tanpa header`, 'success'); setTablePickerOpen(false) }} />}
+                      </div>
                       <button type="button" title="Atur link (modal)" onClick={openLinkModal} className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors ${isActive('link') ? 'bg-[#0075de] text-white shadow-sm' : 'hover:bg-[#f6f5f4] text-[#374151]'}`}><Link2 size={14} /></button>
                       <button type="button" title="Sisipkan gambar (modal)" onClick={openImageModal} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#374151]"><ImageIcon size={14} /></button>
                       <button type="button" title="Garis horizontal" onClick={() => editor.chain().focus().setHorizontalRule().run()} className="w-7 h-7 rounded-[6px] hover:bg-[#f6f5f4] flex items-center justify-center text-[#6b7280]"><Minus size={14} /></button>
@@ -1046,6 +1087,8 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                     <button type="button" title="Lebar 420px (tinggi otomatis)" onClick={()=>{editor.chain().focus().updateAttributes('image', { width: 420, height: null }).run(); showToast('Lebar gambar 420px','success')}} className="h-7 min-w-7 px-1.5 rounded-[6px] hover:bg-[#e9eef5] text-[11px] font-bold text-[#374151] transition-colors shrink-0">M</button>
                     <button type="button" title="Lebar 640px (tinggi otomatis)" onClick={()=>{editor.chain().focus().updateAttributes('image', { width: 640, height: null }).run(); showToast('Lebar gambar 640px','success')}} className="h-7 min-w-7 px-1.5 rounded-[6px] hover:bg-[#e9eef5] text-[11px] font-bold text-[#374151] transition-colors shrink-0">L</button>
                     <button type="button" title="Lebar 860px (tinggi otomatis)" onClick={()=>{editor.chain().focus().updateAttributes('image', { width: 860, height: null }).run(); showToast('Lebar gambar 860px','success')}} className="h-7 min-w-7 px-1.5 rounded-[6px] hover:bg-[#e9eef5] text-[11px] font-bold text-[#374151] transition-colors shrink-0">XL</button>
+                    <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
+                    <ImageLayoutButtons editor={editor} />
                     <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
                     <button type="button" title="Hapus gambar" onClick={()=>{editor.chain().focus().deleteSelection().run()}} className="w-7 h-7 rounded-[6px] hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-[#6b7280] transition-colors shrink-0"><Trash2 size={14}/></button>
                   </div>
