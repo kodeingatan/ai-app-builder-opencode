@@ -29,7 +29,7 @@ import SpacingDropdown from "@/components/common/SpacingDropdown"
 import { FontSize } from "@/lib/tiptap/extensions/fontSize"
 import { InlineBinding } from "@/lib/tiptap/extensions/inlineBinding"
 import { ComponentBinding } from "@/lib/tiptap/extensions/componentBinding"
-import { CustomImage } from "@/lib/tiptap/extensions/customImage"
+import { ResizableImage } from "@/lib/tiptap/extensions/resizableImage"
 import { CustomTableCell, CustomTableHeader, CustomTableRow } from "@/lib/tiptap/extensions/customTable"
 import { PageBreak } from "@/lib/tiptap/extensions/pageBreak"
 import { RepeaterNode } from "@/lib/tiptap/extensions/repeaterNode"
@@ -45,9 +45,10 @@ import {
   List, ListOrdered, Table as TableIcon, Link2, Image as ImageIcon, Undo, Redo, Heading1, Heading2, Heading3,
   Sparkles, Check, Trash2, Copy, Info, FileText, Settings2, Type, Quote, Eraser, Minus, Save, Printer, Download, Database,
   Ruler, ZoomIn, ZoomOut, Maximize2, Layers, Code, Repeat, GitBranch, Building2, Palette, Rows3, Columns3, Trash, Combine, Split,
-  PaintBucket, Grid3x3, Highlighter, Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, Brush, Search, ListChecks
+  PaintBucket, Grid3x3, Highlighter, Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, Brush, Search, ListChecks, ArrowUp, ArrowDown, Crop, Upload
 } from "lucide-react"
 import PasteChoicePopup from "@/components/common/PasteChoicePopup"
+import ImageCropModal from "@/components/editor/ImageCropModal"
 import { keepStyleHtml, adaptToEditorHtml, plainToHtml, isWordHtml } from "@/lib/tiptap/paste"
 
 const FONT_FAMILIES = [
@@ -109,6 +110,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
   const [toasts, setToasts] = useState<Toast[]>([])
   const [linkModal, setLinkModal] = useState<{ open: boolean; url: string }>({ open: false, url: '' })
   const [imageModal, setImageModal] = useState<{ open: boolean; url: string }>({ open: false, url: '' })
+  const [cropSrc, setCropSrc] = useState<string|null>(null)
   const [cellBg, setCellBg] = useState('#ffffff')
   const [borderColor, setBorderColor] = useState('#e6e6e6')
   const [borderWidth, setBorderWidth] = useState('1px')
@@ -116,7 +118,6 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
   const [cellHeight, setCellHeight] = useState('')
   const [rowHeight, setRowHeight] = useState('')
   const [editorHeight, setEditorHeight] = useState(480)
-  const [tableOpsCollapsed, setTableOpsCollapsed] = useState(false)
   const [pageConfig, setPageConfig] = useState<PageConfig>({ ...DEFAULT_PAGE_CONFIG })
   const [findOpen, setFindOpen] = useState(false)
   const [saved, setSaved] = useState(true)
@@ -188,7 +189,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
       SpacingExtension,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { class: 'text-[#0075de] underline underline-offset-2 cursor-pointer' } }),
-      CustomImage.configure({ inline: false, allowBase64: true }),
+      ResizableImage.configure({ inline: false, allowBase64: true }),
       Table.configure({ resizable: true, handleWidth: 8, lastColumnResizable: true, allowTableNodeSelection: true }),
       CustomTableRow,
       CustomTableHeader,
@@ -551,6 +552,39 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
     editor.chain().focus().setImage({ src: url }).run(); showToast('Gambar disisipkan', 'success'); setImageModal({ open: false, url: '' })
   }
 
+  const handleImageFile = (f: File | undefined) => {
+    if (!f) return
+    if (!f.type.startsWith('image/')) { showToast('File harus berupa gambar', 'error'); return }
+    if (f.size > 5 * 1024 * 1024) { showToast('Ukuran gambar maksimal 5MB', 'error'); return }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '')
+      if (!dataUrl.startsWith('data:image')) { showToast('Gagal membaca gambar', 'error'); return }
+      setImageModal({ open: true, url: dataUrl })
+      showToast('Gambar siap disisipkan (base64)', 'success')
+    }
+    reader.onerror = () => showToast('Gagal membaca file', 'error')
+    reader.readAsDataURL(f)
+  }
+
+  const openCropFromSelection = () => {
+    if (!editor) return
+    const src = ((editor.getAttributes('image') as any)?.src as string) || ''
+    if (!src) { showToast('Pilih gambar di editor dulu', 'error'); return }
+    setCropSrc(src)
+  }
+
+  const applyCrop = (dataUrl: string, cw: number, ch: number) => {
+    if (!editor) return
+    const w = Math.min(cw, 860)
+    const h = Math.max(24, Math.round((Math.min(cw, 860) * ch) / Math.max(1, cw)))
+    editor.chain().focus().updateAttributes('image', { src: dataUrl, width: w, height: h }).run()
+    setCropSrc(null)
+    setTimeout(() => { const html = editor.getHTML(); setForm(prev => ({ ...prev, contentHtml: html })); setTick(v => v + 1) }, 20)
+    showToast('Crop diterapkan', 'success')
+  }
+
+
   const handleEditorGripMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     isDraggingEditorRef.current = true
@@ -730,6 +764,9 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
           </div>
         </div>
       )}
+      {cropSrc && (
+        <ImageCropModal src={cropSrc} onClose={()=>setCropSrc(null)} onApply={applyCrop} showToast={showToast} />
+      )}
       {imageModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setImageModal({ open: false, url: '' })} />
@@ -740,6 +777,8 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
             </div>
             <div className="space-y-2">
               <div><Label className="text-xs font-semibold">URL Gambar</Label><Input value={imageModal.url} onChange={e => setImageModal({ ...imageModal, url: e.target.value })} placeholder="https://example.com/image.jpg" className="mt-1 h-7 text-[13px]" autoFocus /></div>
+              <div className="flex items-center gap-2 text-[11px] text-[#9ca3af]"><span className="flex-1 h-px bg-[#e6e6e6]"/>atau<span className="flex-1 h-px bg-[#e6e6e6]"/></div>
+              <label className="flex items-center justify-center gap-1.5 h-8 rounded-[6px] border border-dashed border-[#0075de]/40 bg-[#eff6ff] text-[#0075de] text-[13px] font-medium cursor-pointer hover:bg-[#dbeafe]" title="Upload gambar dari perangkat — otomatis jadi base64"><Upload size={14}/> Upload dari perangkat (base64)<input type="file" accept="image/*" className="hidden" onChange={e=>{handleImageFile(e.target.files?.[0]); (e.target as HTMLInputElement).value=""}} /></label>
               {imageModal.url && <div className="border border-[#e6e6e6] rounded-[8px] p-2 bg-[#f9fafb]"><div className="text-[11px] font-semibold mb-1">Preview</div><img src={imageModal.url} alt="preview" className="max-h-[180px] w-auto mx-auto rounded" onError={e => (e.currentTarget.style.display = 'none')} /></div>}
               <div className="flex gap-2 justify-end pt-2"><Button variant="outline" size="sm" onClick={() => setImageModal({ open: false, url: '' })}>Batal</Button><Button size="sm" onClick={submitImageModal} className="bg-[#0075de] hover:bg-[#0063be]"><ImageIcon size={14} /> Sisipkan</Button></div>
             </div>
@@ -958,6 +997,60 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                   </div>
                 )}
 
+                {/* Table Ops — satu baris ikon + tooltip */}
+                {editor && editor.isActive('table') && (
+                  <div className="border-b border-[#e6e6e6] bg-[#fcfcfc] px-2 py-1 flex items-center gap-0.5 flex-wrap">
+                    <span className="w-6 h-6 rounded-[6px] bg-[#0075de] text-white flex items-center justify-center shrink-0 mr-0.5" title="Operasi Tabel — muncul karena kursor di dalam tabel"><Grid3x3 size={13}/></span>
+                    <button type="button" title="Tambah baris di atas" onClick={()=>{editor.chain().focus().addRowBefore().run(); showToast('Baris ditambahkan di atas','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><ArrowUp size={14}/></button>
+                    <button type="button" title="Tambah baris di bawah" onClick={()=>{editor.chain().focus().addRowAfter().run(); showToast('Baris ditambahkan di bawah','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><ArrowDown size={14}/></button>
+                    <button type="button" title="Hapus baris" onClick={()=>{editor.chain().focus().deleteRow().run(); showToast('Baris dihapus','info')}} className="w-7 h-7 rounded-[6px] hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-[#6b7280] transition-colors shrink-0"><Trash size={14}/></button>
+                    <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
+                    <button type="button" title="Tambah kolom di kiri" onClick={()=>{editor.chain().focus().addColumnBefore().run(); showToast('Kolom ditambahkan di kiri','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><PanelLeft size={14}/></button>
+                    <button type="button" title="Tambah kolom di kanan" onClick={()=>{editor.chain().focus().addColumnAfter().run(); showToast('Kolom ditambahkan di kanan','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><PanelRight size={14}/></button>
+                    <button type="button" title="Hapus kolom" onClick={()=>{editor.chain().focus().deleteColumn().run(); showToast('Kolom dihapus','info')}} className="w-7 h-7 rounded-[6px] hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-[#6b7280] transition-colors shrink-0"><Trash2 size={14}/></button>
+                    <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
+                    <button type="button" title="Gabung cell terpilih" onClick={()=>{editor.chain().focus().mergeCells().run(); showToast('Cell digabung','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Combine size={14}/></button>
+                    <button type="button" title="Pecah cell" onClick={()=>{editor.chain().focus().splitCell().run(); showToast('Cell dipecah','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Split size={14}/></button>
+                    <button type="button" title="Baris pertama jadi header" onClick={()=>{editor.chain().focus().toggleHeaderRow().run()}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><PanelTop size={14}/></button>
+                    <button type="button" title="Kolom pertama jadi header" onClick={()=>{editor.chain().focus().toggleHeaderColumn().run()}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Columns3 size={14}/></button>
+                    <button type="button" title="Cell ini jadi header" onClick={()=>{editor.chain().focus().toggleHeaderCell().run()}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Square size={14}/></button>
+                    <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
+                    <input type="color" value={cellBg} onChange={e=>setCellBg(e.target.value)} className="w-7 h-7 p-1 rounded-[6px] border border-[#e6e6e6] bg-white cursor-pointer shrink-0" title="Warna background cell" />
+                    <button type="button" title="Terapkan warna ke cell terpilih" onClick={()=>{editor.chain().focus().setCellAttribute('backgroundColor', cellBg).run(); showToast('Background diterapkan','success')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><PaintBucket size={14}/></button>
+                    <button type="button" title="Hapus background cell" onClick={()=>{editor.chain().focus().setCellAttribute('backgroundColor', null).run()}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Eraser size={14}/></button>
+                    <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
+                    <input type="color" value={borderColor} onChange={e=>setBorderColor(e.target.value)} className="w-7 h-7 p-1 rounded-[6px] border border-[#e6e6e6] bg-white cursor-pointer shrink-0" title="Warna border" />
+                    <select value={borderWidth} onChange={e=>setBorderWidth(e.target.value)} className="h-7 text-xs border border-[#e6e6e6] rounded-[6px] px-1 bg-white shrink-0" title="Ketebalan border"><option value="1px">1px</option><option value="2px">2px</option><option value="3px">3px</option><option value="4px">4px</option></select>
+                    <select value={borderStyle} onChange={e=>setBorderStyle(e.target.value)} className="h-7 text-xs border border-[#e6e6e6] rounded-[6px] px-1 bg-white shrink-0" title="Gaya border"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option></select>
+                    <button type="button" title="Tanpa border" onClick={()=>{applyBorderPreset('none')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Minus size={14}/></button>
+                    <button type="button" title="Border kiri" onClick={()=>{applyBorderPreset('left')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><PanelLeft size={14}/></button>
+                    <button type="button" title="Border kanan" onClick={()=>{applyBorderPreset('right')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><PanelRight size={14}/></button>
+                    <button type="button" title="Border kiri + kanan" onClick={()=>{applyBorderPreset('leftRight')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Columns2 size={14}/></button>
+                    <button type="button" title="Border atas" onClick={()=>{applyBorderPreset('top')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><PanelTop size={14}/></button>
+                    <button type="button" title="Border bawah" onClick={()=>{applyBorderPreset('bottom')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><PanelBottom size={14}/></button>
+                    <button type="button" title="Hanya border luar tabel" onClick={()=>{applyBorderPreset('outer')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Frame size={14}/></button>
+                    <button type="button" title="Border semua sisi" onClick={()=>{applyBorderPreset('all')}} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Grid3x3 size={14}/></button>
+                    <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
+                    <button type="button" onMouseDown={handleRowDragMouseDown} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0 cursor-row-resize" title="Tahan + drag untuk atur tinggi baris"><GripVertical size={14}/></button>
+                    <button type="button" title="Hapus seluruh tabel" onClick={()=>{editor.chain().focus().deleteTable().run(); showToast('Tabel dihapus','info')}} className="w-7 h-7 rounded-[6px] hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-[#6b7280] transition-colors shrink-0"><Trash2 size={14}/></button>
+                  </div>
+                )}
+
+                {/* Image Ops — gambar terpilih: crop + resize */}
+                {editor && editor.isActive('image') && (
+                  <div className="border-b border-[#e6e6e6] bg-[#fcfcfc] px-2 py-1 flex items-center gap-0.5 flex-wrap">
+                    <span className="w-6 h-6 rounded-[6px] bg-[#0075de] text-white flex items-center justify-center shrink-0 mr-0.5" title="Gambar terpilih — tarik handle di sudut/tepi gambar untuk resize (tahan Shift di sudut = proporsional)"><ImageIcon size={13}/></span>
+                    <button type="button" title="Crop gambar" onClick={openCropFromSelection} className="w-7 h-7 rounded-[6px] hover:bg-[#e9eef5] flex items-center justify-center text-[#374151] transition-colors shrink-0"><Crop size={14}/></button>
+                    <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
+                    <button type="button" title="Lebar 240px (tinggi otomatis)" onClick={()=>{editor.chain().focus().updateAttributes('image', { width: 240, height: null }).run(); showToast('Lebar gambar 240px','success')}} className="h-7 min-w-7 px-1.5 rounded-[6px] hover:bg-[#e9eef5] text-[11px] font-bold text-[#374151] transition-colors shrink-0">S</button>
+                    <button type="button" title="Lebar 420px (tinggi otomatis)" onClick={()=>{editor.chain().focus().updateAttributes('image', { width: 420, height: null }).run(); showToast('Lebar gambar 420px','success')}} className="h-7 min-w-7 px-1.5 rounded-[6px] hover:bg-[#e9eef5] text-[11px] font-bold text-[#374151] transition-colors shrink-0">M</button>
+                    <button type="button" title="Lebar 640px (tinggi otomatis)" onClick={()=>{editor.chain().focus().updateAttributes('image', { width: 640, height: null }).run(); showToast('Lebar gambar 640px','success')}} className="h-7 min-w-7 px-1.5 rounded-[6px] hover:bg-[#e9eef5] text-[11px] font-bold text-[#374151] transition-colors shrink-0">L</button>
+                    <button type="button" title="Lebar 860px (tinggi otomatis)" onClick={()=>{editor.chain().focus().updateAttributes('image', { width: 860, height: null }).run(); showToast('Lebar gambar 860px','success')}} className="h-7 min-w-7 px-1.5 rounded-[6px] hover:bg-[#e9eef5] text-[11px] font-bold text-[#374151] transition-colors shrink-0">XL</button>
+                    <span className="w-px h-5 bg-[#e6e6e6] mx-1 shrink-0"/>
+                    <button type="button" title="Hapus gambar" onClick={()=>{editor.chain().focus().deleteSelection().run()}} className="w-7 h-7 rounded-[6px] hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-[#6b7280] transition-colors shrink-0"><Trash2 size={14}/></button>
+                  </div>
+                )}
+
                 <div ref={editorContainerRef} onContextMenu={handleContextMenu} className="relative">
                   {showOutline && (
                     <div className="absolute top-2 right-2 z-10 w-[240px] hidden xl:block">
@@ -987,99 +1080,7 @@ export default function PersuratanTemplateForm({ mode, id }: { mode: "create" | 
                   <MoveVertical size={12} className="text-[#9ca3af] group-hover:text-[#0075de]" />
                 </div>
 
-                {/* Table Ops */}
-                {editor && editor.isActive('table') && (
-                  <div className="border-t border-[#e6e6e6] bg-gradient-to-b from-white to-[#fcfcfc]">
-                    <div className="flex items-center justify-between px-2.5 py-2 bg-white border-b border-[#e6e6e6]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-[8px] bg-[#0075de] text-white flex items-center justify-center shadow-sm"><Grid3x3 size={16} /></div>
-                        <div><div className="text-[13px] font-bold text-[#111] flex items-center gap-2">Operasi Tabel <span className="px-2 py-0.5 rounded-full bg-[#eff6ff] border border-[#dbeafe] text-[#0075de] text-[10px] font-bold">AKTIF</span></div><div className="text-[11px] text-[#6b7280]">Atur baris, kolom, gabung cell, border & ukuran</div></div>
-                      </div>
-                      <button type="button" onClick={() => setTableOpsCollapsed(!tableOpsCollapsed)} className="w-8 h-8 rounded-full bg-white border border-[#e6e6e6] hover:bg-[#f6f5f4] flex items-center justify-center">{tableOpsCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}</button>
-                    </div>
-                    {!tableOpsCollapsed && (
-                      <div className="p-4 space-y-2.5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-                            <div className="flex items-center gap-1.5 mb-2"><div className="w-7 h-7 rounded-[8px] bg-[#eff6ff] border border-[#dbeafe] text-[#0075de] flex items-center justify-center"><Rows3 size={13} /></div><span className="text-xs font-bold text-[#111]">Baris</span><Badge variant="secondary" className="ml-auto text-[10px]">Rows</Badge></div>
-                            <div className="grid grid-cols-3 gap-1.5">
-                              <button type="button" onClick={() => { editor.chain().focus().addRowBefore().run(); showToast('Baris ditambahkan di atas', 'success') }} className="h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Sebelum</button>
-                              <button type="button" onClick={() => { editor.chain().focus().addRowAfter().run(); showToast('Baris ditambahkan di bawah', 'success') }} className="h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Sesudah</button>
-                              <button type="button" onClick={() => { editor.chain().focus().deleteRow().run(); showToast('Baris dihapus', 'info') }} className="h-7 text-[13px] font-medium bg-red-50 text-red-600 border border-red-200 rounded-[8px] hover:bg-red-100 flex items-center justify-center gap-1"><Trash size={11} /> Hapus</button>
-                            </div>
-                            <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex items-center gap-2">
-                              <span className="text-[11px] font-semibold text-[#374151] flex items-center gap-1"><MoveVertical size={11} /> Tinggi Baris</span>
-                              <input value={rowHeight} onChange={e => setRowHeight(e.target.value)} placeholder="48px" className="flex-1 h-7 text-[13px] border border-[#e6e6e6] rounded-[6px] px-2 bg-white" />
-                              <button type="button" onClick={applyRowHeight} className="h-7 px-3 text-xs font-medium bg-[#111827] text-white rounded-[6px] hover:bg-black">Set</button>
-                              <button type="button" onMouseDown={handleRowDragMouseDown} className="h-7 w-7 rounded-[6px] border border-[#e6e6e6] bg-white hover:bg-[#f6f5f4] flex items-center justify-center cursor-row-resize" title="Drag untuk ubah tinggi baris"><GripVertical size={12} /></button>
-                            </div>
-                          </div>
-                          <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-                            <div className="flex items-center gap-1.5 mb-2"><div className="w-7 h-7 rounded-[8px] bg-violet-50 border border-violet-100 text-violet-600 flex items-center justify-center"><Columns3 size={13} /></div><span className="text-xs font-bold text-[#111]">Kolom</span><Badge variant="secondary" className="ml-auto text-[10px]">Columns</Badge></div>
-                            <div className="grid grid-cols-3 gap-1.5">
-                              <button type="button" onClick={() => { editor.chain().focus().addColumnBefore().run(); showToast('Kolom ditambahkan di kiri', 'success') }} className="h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Kiri</button>
-                              <button type="button" onClick={() => { editor.chain().focus().addColumnAfter().run(); showToast('Kolom ditambahkan di kanan', 'success') }} className="h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center justify-center gap-1"><Plus size={11} /> Kanan</button>
-                              <button type="button" onClick={() => { editor.chain().focus().deleteColumn().run(); showToast('Kolom dihapus', 'info') }} className="h-7 text-[13px] font-medium bg-red-50 text-red-600 border border-red-200 rounded-[8px] hover:bg-red-100 flex items-center justify-center gap-1"><Trash size={11} /> Hapus</button>
-                            </div>
-                            <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex items-center gap-1.5 text-[11px] text-[#6b7280]"><MoveHorizontal size={11} className="text-[#0075de]" /> Drag handle di tepi kolom (biru, cursor col-resize) untuk ubah lebar</div>
-                          </div>
-                        </div>
-                        <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-                          <div className="flex items-center gap-1.5 mb-2"><div className="w-7 h-7 rounded-[8px] bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center"><Layers size={13} /></div><span className="text-xs font-bold text-[#111]">Aksi Tabel</span><span className="text-[11px] text-[#6b7280] hidden sm:inline">— pilih cell lalu eksekusi</span><button type="button" onClick={() => { editor.chain().focus().deleteTable().run(); showToast('Tabel dihapus', 'info') }} className="ml-auto h-7 px-3 text-xs font-medium bg-red-600 text-white rounded-[8px] hover:bg-red-700 flex items-center gap-1.5"><Trash2 size={12} /> Hapus Tabel</button></div>
-                          <div className="flex flex-wrap gap-1.5">
-                            <button type="button" onClick={() => { editor.chain().focus().mergeCells().run(); showToast('Cell digabung', 'success') }} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center gap-1.5"><Combine size={12} /> Gabung Cell</button>
-                            <button type="button" onClick={() => { editor.chain().focus().splitCell().run(); showToast('Cell dipecah', 'success') }} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4] flex items-center gap-1.5"><Split size={12} /> Pecah Cell</button>
-                            <button type="button" onClick={() => { try { (editor.chain().focus() as any).selectParentNode().run(); (editor.chain().focus() as any).selectParentNode().run(); showToast('Tabel dipilih', 'info') } catch { showToast('Gunakan drag untuk seleksi cell', 'info') } }} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4]">Pilih Tabel</button>
-                            <div className="w-px h-6 bg-[#e6e6e6] self-center mx-1" />
-                            <button type="button" onClick={() => { editor.chain().focus().toggleHeaderRow().run(); showToast('Header baris toggled', 'success') }} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4]">Header Baris</button>
-                            <button type="button" onClick={() => { editor.chain().focus().toggleHeaderColumn().run(); showToast('Header kolom toggled', 'success') }} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4]">Header Kolom</button>
-                            <button type="button" onClick={() => { editor.chain().focus().toggleHeaderCell().run(); showToast('Header cell toggled', 'success') }} className="h-8 px-3 text-xs font-medium border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-[#f6f5f4]">Header Cell</button>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                          <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)] space-y-2">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-[8px] bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center"><Brush size={13} /></div><span className="text-xs font-bold text-[#111]">Gaya Cell</span><Badge variant="outline" className="ml-auto text-[10px]">Cell</Badge></div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1.5 border border-[#e6e6e6] rounded-[8px] px-2 py-1.5 bg-[#f9fafb] flex-1">
-                                <PaintBucket size={12} className="text-[#6b7280] shrink-0" /><span className="text-[11px] font-medium">BG</span>
-                                <input type="color" value={cellBg} onChange={e => setCellBg(e.target.value)} className="w-7 h-7 p-0 border-0 rounded-[6px] overflow-hidden cursor-pointer" />
-                                <span className="text-[11px] font-mono text-[#6b7280] hidden sm:inline">{cellBg}</span>
-                                <button type="button" onClick={() => { editor.chain().focus().setCellAttribute('backgroundColor', cellBg).run(); showToast(`Background: ${cellBg}`, 'success') }} className="ml-auto h-6 px-2.5 text-xs font-medium bg-[#0075de] text-white rounded-[6px] hover:bg-[#0063be]">Terapkan</button>
-                                <button type="button" onClick={() => { editor.chain().focus().setCellAttribute('backgroundColor', null).run(); showToast('Background dihapus', 'info') }} className="h-6 px-2 text-xs border border-[#e6e6e6] rounded-[6px] bg-white hover:bg-[#f6f5f4]">Hapus</button>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <select onChange={e => { const v = e.target.value; if (v) { editor.chain().focus().setCellAttribute('verticalAlign', v).run(); showToast(`Vertical: ${v}`, 'success') } }} defaultValue="" className="h-7 text-[13px] border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="" disabled>Align Vertical</option><option value="top">Top</option><option value="middle">Middle</option><option value="bottom">Bottom</option></select>
-                              <div className="flex gap-1"><input value={cellHeight} onChange={e => setCellHeight(e.target.value)} placeholder="Tinggi cell 40px" className="flex-1 h-7 text-[13px] border border-[#e6e6e6] rounded-[8px] px-2 bg-white" /><button type="button" onClick={applyCellHeight} className="h-8 px-3 text-xs font-medium bg-[#111827] text-white rounded-[8px] hover:bg-black">Set</button></div>
-                            </div>
-                          </div>
-                          <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)] space-y-2">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-[8px] bg-[#f5f3ff] border border-violet-100 text-violet-600 flex items-center justify-center"><Palette size={13} /></div><span className="text-xs font-bold text-[#111]">Border Cell</span><span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">7 posisi</span></div>
-                            <div className="grid grid-cols-3 gap-1.5">
-                              <div className="flex items-center gap-1.5 border border-[#e6e6e6] rounded-[8px] px-2 py-1.5 bg-white"><Grid3x3 size={12} className="text-[#6b7280] shrink-0" /><input type="color" value={borderColor} onChange={e => setBorderColor(e.target.value)} className="w-6 h-6 p-0 border-0 rounded-[6px] cursor-pointer" /></div>
-                              <select value={borderWidth} onChange={e => setBorderWidth(e.target.value)} className="h-7 text-[13px] border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="1px">1px</option><option value="2px">2px</option><option value="3px">3px</option><option value="4px">4px</option></select>
-                              <select value={borderStyle} onChange={e => setBorderStyle(e.target.value)} className="h-7 text-[13px] border border-[#e6e6e6] rounded-[8px] px-2 bg-white"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option><option value="hidden">Hidden</option></select>
-                            </div>
-                            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
-                              {[
-                                { id: 'none', label: 'Tanpa', icon: Square }, { id: 'left', label: 'Kiri', icon: PanelLeft }, { id: 'right', label: 'Kanan', icon: PanelRight }, { id: 'leftRight', label: 'Kiri+Kanan', icon: Columns2 },
-                                { id: 'top', label: 'Atas', icon: PanelTop }, { id: 'bottom', label: 'Bawah', icon: PanelBottom }, { id: 'outer', label: 'Luar', icon: Frame },
-                              ].map(p => (
-                                <button key={p.id} type="button" onClick={() => applyBorderPreset(p.id)} className="flex flex-col items-center gap-1 p-2 rounded-[8px] border border-[#e6e6e6] bg-white hover:border-[#0075de] hover:bg-[#eff6ff] hover:text-[#0075de] group transition-colors">
-                                  <p.icon size={16} className="text-[#6b7280] group-hover:text-[#0075de]" /><span className="text-[10px] font-semibold leading-none">{p.label}</span>
-                                </button>
-                              ))}
-                            </div>
-                            <div className="flex gap-1.5">
-                              <button type="button" onClick={() => applyBorderPreset('all')} className="flex-1 h-7 text-[13px] font-medium border border-[#e6e6e6] rounded-[8px] bg-[#f9fafb] hover:bg-white flex items-center justify-center gap-1"><Grid3x3 size={12} /> Semua sisi</button>
-                              <button type="button" onClick={() => applyBorderPreset('none')} className="h-7 px-3 text-xs border border-[#e6e6e6] rounded-[8px] bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200">Hapus Border</button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+
                 <div className="px-2.5 py-1.5 bg-[#f9fafb] border-t border-[#e6e6e6] flex items-center justify-between">
                   <div className="text-[11px] text-[#6b7280] flex items-center gap-1.5"><Info size={12} /> Data terikat & Repeater/Condition akan tersisip tepat di posisi kursor</div>
                   <button type="button" onClick={() => { const rect = editorContainerRef.current?.getBoundingClientRect(); const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2; const y = rect ? rect.top + 120 : window.innerHeight / 2; savedPosRef.current = editor.state.selection.from; setContextMenu({ x, y }) }} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0075de] hover:text-[#005bb5]"><Plus size={12} /> Tambah data terikat</button>

@@ -57,6 +57,13 @@ export const CustomImage = Image.extend({
         class: 'rounded-[8px] border border-dashed border-[#3b82f6] bg-[#eff6ff] mx-1 align-middle'
       })]
     }
-    return ['img', mergeAttributes(HTMLAttributes, { class: 'rounded-[8px] max-w-full' })]
+    return ['img', mergeAttributes(HTMLAttributes, {
+      class: 'rounded-[8px] max-w-full',
+      style: [
+        (HTMLAttributes.width ? `width:${HTMLAttributes.width}px` : ''),
+        (HTMLAttributes.height ? `height:${HTMLAttributes.height}px` : ''),
+        'max-width:100%',
+      ].filter(Boolean).join('; '),
+    })]
   }
 })
