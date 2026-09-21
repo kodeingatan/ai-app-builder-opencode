@@ -38,7 +38,7 @@ import {
   List, ListOrdered, Table as TableIcon, Link2, Image as ImageIcon, Undo, Redo, Quote, Heading1, Heading2, Heading3,
   Minus, Eraser, X, Plus, Sparkles, Eye, Boxes, Trash2, Copy, Info, FileText, Settings2, LayoutTemplate, MousePointer2,
   Palette, Pipette, Rows3, Columns3, Trash, Combine, Split, ArrowUp, ArrowDown, MinusSquare, PaintBucket, Grid3x3, Type, Highlighter,
-  Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, Maximize2, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, SlidersHorizontal, Brush, Layers, Search, ListChecks
+  Square, PanelLeft, PanelRight, Columns2, PanelTop, PanelBottom, Frame, Maximize2, MoveVertical, MoveHorizontal, GripVertical, ChevronDown, ChevronUp, SlidersHorizontal, Brush, Layers, Search, ListChecks, BookOpen, Database
 } from "lucide-react"
 import PasteChoicePopup from "@/components/common/PasteChoicePopup"
 import { keepStyleHtml, adaptToEditorHtml, plainToHtml, isWordHtml } from "@/lib/tiptap/paste"
@@ -90,6 +90,9 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
   const [loading, setLoading] = useState(false)
   const [tick, setTick] = useState(0)
   const [showPreview, setShowPreview] = useState(true)
+  const [activeTab, setActiveTab] = useState<"editor"|"preview">("editor")
+  const [showBindingsPopup, setShowBindingsPopup] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
   const [saved, setSaved] = useState(true)
   const [textColor, setTextColor] = useState('#111827')
@@ -836,66 +839,75 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
         </div>
       )}
 
-      {/* Header info bar */}
-      <div className="mb-3 flex flex-col gap-1">
-        <div className="flex items-center gap-2 text-xs text-[#6b7280]">
-          <span className="inline-flex items-center gap-1.5 bg-white border border-[#e6e6e6] rounded-full px-3 py-1"><LayoutTemplate size={12} className="text-[#0075de]"/> Component Persuratan</span>
-          <span className="hidden sm:inline">·</span>
-          <span className="inline-flex items-center gap-1"><MousePointer2 size={12}/> Klik kanan di editor untuk insert tepat di kursor</span>
-        </div>
+      {/* Page top bar — status + tutorial */}
+      <div className="mb-3 flex items-center gap-2 flex-wrap">
+        <span className="inline-flex items-center gap-1.5 bg-white border border-[#e6e6e6] rounded-full px-3 py-1 text-xs text-[#6b7280]"><LayoutTemplate size={12} className="text-[#0075de]"/> Component Persuratan</span>
+        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-[#6b7280]"><MousePointer2 size={12}/> Klik kanan di editor untuk insert tepat di kursor</span>
+        <span className="ml-auto" />
+        <Badge variant={form.isLooping ? "default" : "secondary"} className="text-[11px]">{form.isLooping ? "Looping Aktif" : "Single"}</Badge>
+        <Button size="sm" variant="outline" onClick={()=>setShowTutorial(true)}><BookOpen size={14}/> Tutorial</Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-3 items-start">
-        {/* MAIN COLUMN */}
-        <div className="space-y-2.5">
-          {/* Informasi Komponen */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-2.5 border-b bg-[#fafafa]/50">
-              <div className="flex items-start justify-between gap-2.5">
-                <div>
-                  <CardTitle className="text-[13px] flex items-center gap-2"><FileText size={16} className="text-[#0075de]"/> Informasi Komponen</CardTitle>
-                  <CardDescription className="text-xs mt-1">Nama unik, atur apakah komponen akan diulang per data (looping).</CardDescription>
-                </div>
-                <Badge variant={form.isLooping ? "default" : "secondary"} className="text-[11px] shrink-0">{form.isLooping ? "Looping Aktif" : "Single"}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-3 space-y-2.5">
-              <div className="grid gap-2.5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="comp-name" className="text-xs font-semibold text-[#374151]">Nama Komponen <span className="text-red-500">*</span></Label>
-                  <Input id="comp-name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="Contoh: Kop Surat, Tanda Tangan, Daftar Hadir" className="h-7 text-[13px] bg-white" />
-                  <p className="text-[11px] text-[#6b7280]">Gunakan nama deskriptif — akan dipakai saat memilih komponen di Template.</p>
-                </div>
-                <div className="flex items-center justify-between rounded-[8px] border border-[#e6e6e6] bg-white p-2.5">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center ${form.isLooping ? 'bg-violet-600 text-white' : 'bg-[#f6f5f4] text-[#6b7280]'}`}><Settings2 size={16}/></div>
-                    <div>
-                      <div className="text-[13px] font-semibold">Mode Pengulangan</div>
-                      <div className="text-xs text-[#6b7280]">Jika aktif, komponen akan diulang untuk setiap baris data terpilih.</div>
-                    </div>
+      {/* FULL editor konten — single card */}
+      <div className="space-y-2.5">
+          {/* Editor */}
+          <Card className="overflow-hidden shadow-sm">
+            {/* Identity header — penamaan + mode pengulangan dalam satu card editor */}
+            <div className="border-b border-[#e6e6e6] bg-gradient-to-r from-[#eff6ff] via-white to-[#faf5ff]">
+              <div className="p-3 flex flex-col md:flex-row gap-2.5 md:items-center">
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className="w-9 h-9 rounded-[8px] bg-[#0075de] text-white flex items-center justify-center shadow-sm shrink-0"><FileText size={16}/></div>
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="comp-name" className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Nama Komponen <span className="text-red-500">*</span></Label>
+                    <Input id="comp-name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="Contoh: Kop Surat, Tanda Tangan, Daftar Hadir" className="h-8 text-sm font-semibold bg-white border-[#e6e6e6] mt-0.5" />
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
+                </div>
+                <div className={`flex items-center gap-2.5 rounded-[8px] border px-2.5 py-2 shrink-0 transition-colors ${form.isLooping ? 'bg-violet-600 border-violet-600 text-white shadow-sm' : 'bg-white border-[#e6e6e6]'}`}>
+                  <div className={`w-7 h-7 rounded-[6px] flex items-center justify-center ${form.isLooping ? 'bg-white/20 text-white' : 'bg-[#f6f5f4] text-[#6b7280]'}`}><Settings2 size={14}/></div>
+                  <div>
+                    <div className={`text-[13px] font-semibold leading-tight ${form.isLooping ? 'text-white' : ''}`}>Mode Pengulangan</div>
+                    <div className={`text-[11px] leading-tight ${form.isLooping ? 'text-white/80' : 'text-[#6b7280]'}`}>{form.isLooping ? 'Diulang per baris data' : 'Sekali tampil (single)'}</div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer ml-1">
                     <input type="checkbox" checked={form.isLooping} onChange={e=>setForm({...form, isLooping:e.target.checked})} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-[#e5e7eb] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#0075de]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0075de]"></div>
+                    <div className={`w-10 h-[22px] rounded-full transition-colors relative peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-white/40 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:after:translate-x-[18px] ${form.isLooping ? 'bg-white/30' : 'bg-[#e5e7eb]'}`}></div>
                   </label>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Editor */}
-          <Card className="overflow-hidden shadow-sm">
-            <CardHeader className="pb-0">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-[13px] font-bold flex items-center gap-2"><Sparkles size={14} className="text-[#0075de]"/> Editor Konten</CardTitle>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-[#6b7280] hidden sm:inline">Tiptap • Rich Text</span>
-                  <Badge variant="outline" className="text-[10px] font-mono">{previewHtml.length} chars</Badge>
+              {/* Tab Editor / Preview + quick actions */}
+              <div className="px-3 pb-2.5 flex items-center gap-2 flex-wrap">
+                <div className="flex bg-[#f0f0f0] border border-[#e6e6e6] rounded-full p-0.5">
+                  <button type="button" onClick={()=>setActiveTab("editor")} className={`h-7 px-3.5 rounded-full text-[13px] font-medium flex items-center gap-1.5 transition-colors ${activeTab==="editor" ? 'bg-white text-[#111] shadow-sm border border-[#e6e6e6]' : 'text-[#6b7280] hover:text-[#111]'}`}><Sparkles size={13}/> Editor</button>
+                  <button type="button" onClick={()=>setActiveTab("preview")} className={`h-7 px-3.5 rounded-full text-[13px] font-medium flex items-center gap-1.5 transition-colors ${activeTab==="preview" ? 'bg-white text-[#111] shadow-sm border border-[#e6e6e6]' : 'text-[#6b7280] hover:text-[#111]'}`}><Eye size={13}/> Preview {form.bindings.length > 0 && <span className="text-[10px] bg-[#0075de] text-white rounded-full px-1.5">{form.bindings.length}</span>}</button>
+                </div>
+                <span className="text-[11px] text-[#6b7280] hidden md:inline">Klik kanan di posisi kursor untuk menambah <span className="font-mono bg-white border px-1 py-0.5 rounded text-[#111]">{`{{data}}`}</span></span>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <Badge variant="outline" className="text-[10px] font-mono hidden sm:inline-flex">{previewHtml.length} chars</Badge>
+                  <Button size="sm" variant="outline" onClick={()=>{ savedPosRef.current = editor?.state.selection.from ?? null; setShowBindingsPopup(true) }} className="border-violet-200 text-violet-700 hover:bg-violet-50"><Database size={13}/> Data Terkait {form.bindings.length > 0 && <span className="ml-0.5 bg-violet-600 text-white text-[10px] rounded-full px-1.5">{form.bindings.length}</span>}</Button>
                 </div>
               </div>
-              <p className="text-[11px] text-[#6b7280] mt-1">Toolbar lengkap — heading H1-H6, list, tabel, link, gambar semua aktif. Klik kanan di posisi kursor untuk menambah <span className="font-mono bg-[#f6f5f4] px-1 py-0.5 rounded text-[#111]">{`{{data}}`}</span> tepat di pointer terbaru.</p>
-            </CardHeader>
+            </div>
             <CardContent className="p-0">
+              {activeTab === "preview" ? (
+                <div className="p-2.5 bg-[#f6f5f4]">
+                  <div className="bg-white rounded-[8px] shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-[#e6e6e6] min-h-[280px] overflow-auto">
+                    <div className="flex items-center justify-between px-3 py-2 bg-[#fcfcfc] border-b border-[#e6e6e6] text-[11px] text-[#6b7280]">
+                      <span className="flex items-center gap-1.5 font-medium"><Eye size={12} className="text-[#0075de]"/> Pratinjau — render 1:1 dengan editor</span>
+                      <button onClick={()=>{
+                        const html = previewHtml
+                        const w = window.open("","_blank")
+                        if(w){
+                          w.document.write(`<html><head><title>${form.name||'Preview'}</title></head><body><div>${html}</div></body></html>`)
+                          w.document.close()
+                        }
+                      }} className="text-[#0075de] hover:underline inline-flex items-center gap-1"><Eye size={11}/> Buka di tab</button>
+                    </div>
+                    <div className="tiptap prose prose-sm max-w-none p-6 min-h-[280px] leading-relaxed text-[14px] text-[#111827] prose-p:my-2 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-blockquote:border-l-4 prose-blockquote:border-[#e5e7eb] prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-[#0075de] prose-strong:font-bold prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-table:border-collapse prose-th:bg-[#f9fafb] prose-th:p-2 prose-th:border prose-td:p-2 prose-td:border prose-img:rounded-lg focus:outline-none" dangerouslySetInnerHTML={{__html: previewHtml || "<p class='text-[#9ca3af] italic'>Preview kosong — ketik di editor</p>"}} />
+                  </div>
+                  <div className="mt-2 text-[11px] text-[#6b7280] flex items-center gap-1.5"><Info size={12}/> Binding <span className="font-mono">{"{{nama}}"}</span> → nilai contoh. Heading, list, tabel tampil identik.</div>
+                </div>
+              ) : (
+              <>
               {/* FindBar — Ctrl+F */}
               {findOpen && (
                 <div className="p-2 bg-white border-b border-[#e6e6e6]">
@@ -1001,6 +1013,10 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
                     <div className="w-px h-6 bg-[#e6e6e6] mx-1 self-center"/>
                     <button type="button" title="Superscript (Ctrl+.)" onClick={()=>{try{(editor.chain().focus() as any).toggleSuperscript().run()}catch{}}} className={`w-7 h-7 rounded-[6px] flex items-center justify-center text-xs font-bold transition-colors ${isActive('superscript') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>x²</button>
                     <button type="button" title="Subscript (Ctrl+,)" onClick={()=>{try{(editor.chain().focus() as any).toggleSubscript().run()}catch{}}} className={`w-7 h-7 rounded-[6px] flex items-center justify-center text-xs font-bold transition-colors ${isActive('subscript') ? 'bg-[#0075de] text-white' : 'hover:bg-[#f6f5f4]'}`}>x₂</button>
+                  </div>
+                  {/* Group: Data Terkait — toolbar khusus */}
+                  <div className="flex gap-0.5 bg-violet-50 border border-violet-200 rounded-[8px] p-1 shadow-sm">
+                    <button type="button" title="Data Terkait — kelola binding" onClick={()=>{ savedPosRef.current = editor?.state.selection.from ?? null; setShowBindingsPopup(true) }} className="h-7 px-2 rounded-[6px] flex items-center gap-1.5 text-[13px] font-medium text-violet-700 hover:bg-violet-100 transition-colors"><Database size={14}/> Data {form.bindings.length > 0 && <span className="bg-violet-600 text-white text-[10px] rounded-full px-1.5 leading-4">{form.bindings.length}</span>}</button>
                   </div>
                   {/* Group: Find */}
                   <div className="flex gap-0.5 bg-white border border-[#e6e6e6] rounded-[8px] p-1 shadow-sm">
@@ -1266,89 +1282,11 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0075de] hover:text-[#005bb5]"
                 ><Plus size={12}/> Tambah data terikat</button>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Bindings list inline for mobile */}
-          <div className="lg:hidden">
-            <BindingsPanel form={form} setForm={setForm} allComponents={allComponents} savedPosRef={savedPosRef} editor={editor} tick={tick} showToast={showToast} />
-          </div>
-        </div>
-
-        {/* RIGHT SIDEBAR - Desktop */}
-        <div className="hidden lg:block space-y-2.5 sticky top-3">
-          <BindingsPanel form={form} setForm={setForm} allComponents={allComponents} savedPosRef={savedPosRef} editor={editor} tick={tick} showToast={showToast} />
-
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-[13px] flex items-center gap-2"><Eye size={14} className="text-[#0075de]"/> Pratinjau</CardTitle>
-                <label className="flex items-center gap-2 text-xs">
-                  <input type="checkbox" checked={showPreview} onChange={e=>setShowPreview(e.target.checked)} className="rounded border-[#e6e6e6]" />
-                  Live
-                </label>
-              </div>
-              <CardDescription className="text-[11px]">Render 1:1 dengan Editor. Binding <span className="font-mono">{"{{nama}}"}</span> → nilai contoh. Heading, list, tabel tampil identik.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {showPreview ? (
-                <div className="rounded-[8px] border border-[#e6e6e6] bg-[#f6f5f4] p-2.5">
-                  <div className="bg-white rounded-[8px] shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-[#e6e6e6] min-h-[180px] p-0 overflow-auto">
-                    {/* Preview 1:1 dengan EditorContent - class & style identik */}
-                    <div className="tiptap prose prose-sm max-w-none p-6 min-h-[280px] leading-relaxed text-[14px] text-[#111827] prose-p:my-2 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-blockquote:border-l-4 prose-blockquote:border-[#e5e7eb] prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-[#0075de] prose-strong:font-bold prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-table:border-collapse prose-th:bg-[#f9fafb] prose-th:p-2 prose-th:border prose-td:p-2 prose-td:border prose-img:rounded-lg focus:outline-none" dangerouslySetInnerHTML={{__html: previewHtml || "<p class='text-[#9ca3af] italic'>Preview kosong — ketik di editor</p>"}} />
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-[#6b7280]">
-                    <span>{form.bindings.length} binding • {previewHtml.length} chars</span>
-                    <button onClick={()=>{
-                      const html = previewHtml
-                      const w = window.open("","_blank")
-                      if(w){
-                        w.document.write(`<html><head><title>${form.name||'Preview'}</title><style>body{font-family:Inter,system-ui,sans-serif;padding:24px;max-width:800px;margin:auto;line-height:1.6;} .tiptap h1{font-size:1.75rem;font-weight:800;margin:16px 0 8px} .tiptap h2{font-size:1.35rem;font-weight:700;margin:14px 0 8px} .tiptap h3{font-size:1.1rem;font-weight:700;margin:12px 0 6px} .tiptap h4{font-size:1rem;font-weight:700} .tiptap h5{font-size:0.95rem;font-weight:600} .tiptap h6{font-size:0.85rem;font-weight:600} .tiptap ul{list-style:disc;padding-left:20px} .tiptap ol{list-style:decimal;padding-left:20px} .tiptap table{border-collapse:collapse;width:100%;margin:12px 0} .tiptap td,.tiptap th{border:1px solid #e6e6e6;padding:6px 10px;min-width:80px} .tiptap th{background:#f9fafb} img{max-width:100%;}</style></head><body><div class="tiptap">${html}</div></body></html>`)
-                        w.document.close()
-                      }
-                    }} className="text-[#0075de] hover:underline inline-flex items-center gap-1"><Eye size={11}/> Buka di tab</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-[#6b7280] bg-[#f9fafb] border border-dashed border-[#e6e6e6] rounded-[8px] p-2.5 text-center">Preview nonaktif — aktifkan untuk melihat hasil live</div>
+              </>
               )}
             </CardContent>
           </Card>
-
-          <Card className="border-dashed bg-[#fafafa]">
-            <CardContent className="pt-2.5">
-              <div className="flex gap-1.5">
-                <div className="w-8 h-8 rounded-[8px] bg-white border border-[#e6e6e6] flex items-center justify-center shrink-0"><Info size={14} className="text-[#0075de]"/></div>
-                <div className="text-xs leading-relaxed text-[#4b5563]">
-                  <div className="font-semibold text-[#111] mb-1">Cara pakai cepat</div>
-                  <ol className="list-decimal ml-4 space-y-1">
-                    <li>Letakkan kursor di editor pada posisi yang diinginkan.</li>
-                    <li>Klik kanan → isi <span className="font-mono bg-white border px-1 rounded">nama_data</span> & pilih jenis.</li>
-                    <li>Insert — pil akan muncul tepat di pointer terbaru.</li>
-                    <li>Heading H1-H6, list, tabel semua aktif. Saat tabel terpilih, panel Operasi Tabel muncul di bawah editor.</li>
-                  </ol>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
-      </div>
-
-      {/* Mobile Preview */}
-      <div className="lg:hidden mt-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-[13px] flex items-center gap-2"><Eye size={14}/> Pratinjau Langsung</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-[#f6f5f4] border border-[#e6e6e6] rounded-[8px] p-2.5">
-              <div className="bg-white rounded-[8px] border border-[#e6e6e6] min-h-[160px] p-0 overflow-auto">
-                <div className="tiptap prose prose-sm max-w-none p-6 min-h-[180px] leading-relaxed text-[14px] text-[#111827] prose-p:my-2 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-blockquote:border-l-4 prose-blockquote:border-[#e5e7eb] prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-[#0075de] prose-strong:font-bold prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-table:border-collapse prose-th:bg-[#f9fafb] prose-th:p-2 prose-th:border prose-td:p-2 prose-td:border prose-img:rounded-lg focus:outline-none" dangerouslySetInnerHTML={{__html: previewHtml || "<p class='text-[#9ca3af] italic'>Preview kosong</p>"}} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Bottom actions */}
       <div className="mt-3 flex flex-col sm:flex-row justify-between items-center gap-2 bg-white border border-[#e6e6e6] rounded-[8px] p-2.5 shadow-sm">
@@ -1359,7 +1297,50 @@ export default function PersuratanComponentForm({ mode, id }: { mode: "create"|"
         </div>
       </div>
 
-      {/* Context Menu - absolute, anti-terpotong */}
+      {/* Popup Data Terkait — toolbar khusus editor */}
+      {showBindingsPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={()=>setShowBindingsPopup(false)} />
+          <div className="relative bg-white rounded-[8px] w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-xl border border-[#e6e6e6] animate-in fade-in zoom-in-95">
+            <div className="sticky top-0 bg-white rounded-t-[8px] p-2.5 pb-2 border-b border-[#f0f0f0] flex items-center justify-between">
+              <div className="font-bold text-[13px] flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-violet-600 text-white flex items-center justify-center"><Database size={12}/></div> Data Terkait <Badge variant="secondary" className="text-[11px]">{form.bindings.length}</Badge></div>
+              <div className="flex items-center gap-1.5">
+                <Button size="sm" onClick={()=>{ setShowBindingsPopup(false); savedPosRef.current = editor?.state.selection.from ?? null; try{ editor?.chain().setTextSelection(savedPosRef.current ?? 0).run() }catch{}; const rect = editorContainerRef.current?.getBoundingClientRect(); const x = rect ? rect.left + rect.width/2 : window.innerWidth/2; const y = rect ? rect.top + 120 : window.innerHeight/2; setContextMenu({x,y}) }} className="bg-[#0075de] hover:bg-[#0063be]"><Plus size={13}/> Tambah Baru</Button>
+                <button onClick={()=>setShowBindingsPopup(false)} className="w-6 h-6 rounded-full hover:bg-[#f6f5f4] flex items-center justify-center"><X size={14}/></button>
+              </div>
+            </div>
+            <div className="p-2.5">
+              <BindingsPanel form={form} setForm={setForm} allComponents={allComponents} savedPosRef={savedPosRef} editor={editor} tick={tick} showToast={showToast} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup Tutorial — cara pakai */}
+      {showTutorial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={()=>setShowTutorial(false)} />
+          <div className="relative bg-white rounded-[8px] w-full max-w-md shadow-xl border border-[#e6e6e6] p-3 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-bold text-[13px] flex items-center gap-2"><div className="w-7 h-7 rounded-[8px] bg-[#0075de] text-white flex items-center justify-center"><BookOpen size={14}/></div> Tutorial Component Persuratan</div>
+              <button onClick={()=>setShowTutorial(false)} className="w-6 h-6 rounded-full hover:bg-[#f6f5f4] flex items-center justify-center"><X size={14}/></button>
+            </div>
+            <ol className="list-decimal ml-5 space-y-1.5 text-[13px] text-[#374151] leading-relaxed">
+              <li><b>Isi nama komponen</b> di header editor (mis. Kop Surat, Tanda Tangan).</li>
+              <li><b>Aktifkan Mode Pengulangan</b> jika komponen diulang per baris data (looping).</li>
+              <li><b>Letakkan kursor</b> di editor pada posisi yang diinginkan.</li>
+              <li>Klik tombol <b>Data Terkait</b> di toolbar (ungu) atau <b>klik kanan</b> → isi <span className="font-mono bg-[#f6f5f4] border px-1 rounded">nama_data</span> & pilih jenis (Teks/Gambar/Komponen).</li>
+              <li>Klik <b>Sisipkan di Kursor</b> — pill <span className="font-mono bg-[#dbeafe] px-1 rounded">{"{{nama}}"}</span> muncul tepat di pointer.</li>
+              <li>Cek hasil di tab <b>Preview</b> — binding tampil sebagai nilai contoh.</li>
+              <li>Klik <b>Simpan Komponen</b> — komponen siap dipakai di Template.</li>
+            </ol>
+            <div className="mt-3 rounded-[8px] bg-[#eff6ff] border border-[#dbeafe] p-2.5 text-xs text-[#1e40af] leading-relaxed">Heading H1-H6, list, tabel, link & gambar semua aktif. Saat tabel terpilih, panel <b>Operasi Tabel</b> muncul di bawah editor.</div>
+            <div className="mt-3 flex justify-end"><Button size="sm" onClick={()=>setShowTutorial(false)} className="bg-[#0075de] hover:bg-[#0063be]">Mengerti</Button></div>
+          </div>
+        </div>
+      )}
+
+            {/* Context Menu - absolute, anti-terpotong */}
       {contextMenu && (()=> {
         const vw = typeof window !== 'undefined' ? window.innerWidth : 1200
         const vh = typeof window !== 'undefined' ? window.innerHeight : 800
