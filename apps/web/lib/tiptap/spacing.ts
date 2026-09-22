@@ -82,6 +82,31 @@ export const SpacingExtension = Extension.create({
               return { "data-widow": "true", style: "orphans: 2; widows: 2" }
             },
           },
+          // Word-like paragraph indents — controlled by ruler
+          textIndent: {
+            default: null,
+            parseHTML: (el: HTMLElement) => el.style.textIndent || null,
+            renderHTML: (attrs: any) => {
+              if (!attrs.textIndent) return {}
+              return { style: `text-indent: ${attrs.textIndent}` }
+            },
+          },
+          marginLeft: {
+            default: null,
+            parseHTML: (el: HTMLElement) => el.style.marginLeft || null,
+            renderHTML: (attrs: any) => {
+              if (!attrs.marginLeft) return {}
+              return { style: `margin-left: ${attrs.marginLeft}` }
+            },
+          },
+          marginRight: {
+            default: null,
+            parseHTML: (el: HTMLElement) => el.style.marginRight || null,
+            renderHTML: (attrs: any) => {
+              if (!attrs.marginRight) return {}
+              return { style: `margin-right: ${attrs.marginRight}` }
+            },
+          },
         },
       },
     ]
